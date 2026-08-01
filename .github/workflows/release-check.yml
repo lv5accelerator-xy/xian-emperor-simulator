@@ -45,16 +45,23 @@ jobs:
 
       - name: Guard against observer and preload regressions
         run: |
-          if grep -Eq 'observe\(document\.(body|documentElement)' src/audio.js; then
-            echo 'Audio must not observe the entire document tree.'
-            exit 1
-          fi
-          if grep -Eq 'preload\s*=\s*["'"']auto["'"']' src/audio.js; then
-            echo 'Audio effects must remain lazy-loaded.'
-            exit 1
-          fi
-          grep -q 'observeStableTargets' src/audio.js
-          grep -q 'preload = "none"' src/audio.js
+          node <<'NODE'
+          const fs = require('fs');
+          const code = fs.readFileSync('src/audio.js', 'utf8');
+          if (/observe\(document\.(body|documentElement)/.test(code)) {
+            throw new Error('Audio must not observe the entire document tree.');
+          }
+          if (/preload\s*=\s*["']auto["']/.test(code)) {
+            throw new Error('Audio effects must remain lazy-loaded.');
+          }
+          if (!code.includes('observeStableTargets')) {
+            throw new Error('Targeted observer setup is missing.');
+          }
+          if (!code.includes('preload = "none"')) {
+            throw new Error('Lazy audio preload setting is missing.');
+          }
+          console.log('Audio runtime regression guards passed.');
+          NODE
 
       - name: Validate page references and version
         run: |
