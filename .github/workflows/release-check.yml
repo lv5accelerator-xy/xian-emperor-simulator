@@ -21,6 +21,8 @@ jobs:
           node --check src/world-hotfix.js
           node --check src/world-system.js
           node --check src/decree-world.js
+          node --check src/strategy-network-data.js
+          node --check src/strategy-network.js
 
       - name: Validate embedded audio
         run: |
@@ -84,10 +86,7 @@ jobs:
             getElementById() { return null; },
             dispatchEvent() {},
           };
-          const windowObject = {
-            setTimeout,
-            clearTimeout,
-          };
+          const windowObject = { setTimeout, clearTimeout };
           const context = {
             window: windowObject,
             document,
@@ -120,18 +119,78 @@ jobs:
           console.log('Targeted edict matching passed.');
           NODE
 
+      - name: Validate city route and promise matching
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+
+          class StorageMock {
+            constructor() { this.values = new Map(); }
+            getItem(key) { return this.values.has(key) ? this.values.get(key) : null; }
+            setItem(key, value) { this.values.set(key, String(value)); }
+            removeItem(key) { this.values.delete(key); }
+          }
+
+          const localStorage = new StorageMock();
+          const document = {
+            readyState: 'loading',
+            addEventListener() {},
+            getElementById() { return null; },
+            querySelector() { return null; },
+            querySelectorAll() { return []; },
+            body: { classList: { add() {}, remove() {} }, appendChild() {} },
+          };
+          const windowObject = { setTimeout, clearTimeout };
+          const context = {
+            window: windowObject,
+            document,
+            Storage: StorageMock,
+            localStorage,
+            console,
+            setTimeout,
+            clearTimeout,
+          };
+
+          vm.runInNewContext(fs.readFileSync('src/strategy-network-data.js', 'utf8'), context);
+          vm.runInNewContext(fs.readFileSync('src/strategy-network.js', 'utf8'), context);
+          const api = context.window.XianStrategyNetwork;
+          const edict = '命荆州牧刘表自襄阳出兵，经宛城驰援许都；三月内奉表并输粮三千石。';
+          const cities = api.detectCityTargets(edict);
+          const lords = api.detectLordTargets(edict);
+          const orders = api.detectOrders(edict);
+          const promises = api.detectPromises(edict);
+          const path = api.findRoutePath('xiangyang', 'xudu');
+
+          for (const city of ['xiangyang', 'wan', 'xudu']) {
+            if (!cities.includes(city)) throw new Error(`Missing city target: ${city}`);
+          }
+          if (!lords.includes('liu_biao')) throw new Error('Missing Liu Biao target.');
+          if (!orders.includes('support') || !orders.includes('supply')) throw new Error(`Missing strategic orders: ${JSON.stringify(orders)}`);
+          if (!promises.includes('tribute')) throw new Error(`Missing diplomatic promise: ${JSON.stringify(promises)}`);
+          if (!path.includes('wan_xiangyang') || !path.includes('xudu_wan')) throw new Error(`Unexpected route path: ${JSON.stringify(path)}`);
+
+          console.log('City, route and diplomacy matching passed.');
+          NODE
+
       - name: Validate page references and version
         run: |
-          grep -q 'v0.3.0' index.html
+          grep -q 'v0.4.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio.js' index.html
           grep -q 'src/world-hotfix.js' index.html
           grep -q 'src/decree-world.css' index.html
           grep -q 'src/decree-world.js' index.html
+          grep -q 'src/strategy-network.css' index.html
+          grep -q 'src/strategy-network-data.js' index.html
+          grep -q 'src/strategy-network.js' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio.js
           test -f src/world-hotfix.js
           test -f src/decree-world.css
           test -f src/decree-world.js
+          test -f src/strategy-network.css
+          test -f src/strategy-network-data.js
+          test -f src/strategy-network.js

@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17110e">
   <meta name="description" content="一款以建安元年许都朝廷为舞台的汉末政治策略模拟游戏。">
-  <title>天子蒙尘：献帝模拟器 v0.3.0</title>
+  <title>天子蒙尘：献帝模拟器 v0.4.0</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="src/world.css">
   <link rel="stylesheet" href="src/decree-world.css">
+  <link rel="stylesheet" href="src/strategy-network.css">
   <link rel="stylesheet" href="src/portraits.css">
   <link rel="stylesheet" href="src/audio.css">
 </head>
@@ -18,11 +19,11 @@
   <section id="start-screen" class="start-screen" aria-label="开始游戏">
     <div class="start-emblem" aria-hidden="true"><span>汉</span></div>
     <div class="start-copy">
-      <p class="eyebrow">汉末政治策略模拟 · 可玩原型 v0.3.0</p>
+      <p class="eyebrow">汉末政治策略模拟 · 可玩原型 v0.4.0</p>
       <h1>天子蒙尘</h1>
       <h2>献帝模拟器</h2>
       <p class="start-intro">建安元年，天子迁许。你拥有天下最高的法统，却缺少直属军队、财政与可信赖的执行者。用诏书、官爵、礼制和秘密关系，在曹氏控制下维持汉祚。</p>
-      <div class="scenario-card"><div><span>首发剧本</span><strong>建安元年·许都</strong></div><p>24个月 · 定向诏令影响州郡与诸侯 · 全国态势 · 人物四维 · 原创人物立绘 · 宫廷音画 · 历史时间线 · 多种政治结局</p></div>
+      <div class="scenario-card"><div><span>首发剧本</span><strong>建安元年·许都</strong></div><p>24个月 · 定向诏令 · 16座城池 · 18条军路 · 外交承诺 · 诸侯战略 · 全国态势 · 原创立绘 · 宫廷音画 · 多种政治结局</p></div>
       <label class="difficulty-label" for="difficulty-select">开局难度</label>
       <select id="difficulty-select" class="difficulty-select">
         <option value="lenient">宽政｜资源较多，适合第一次游玩</option>
@@ -63,7 +64,7 @@
         </section>
 
         <aside class="right-column">
-          <section class="panel decree-panel"><div class="panel-heading"><div><span class="section-kicker">自由政令</span><h2>拟写圣旨</h2></div><span class="local-ai-badge">本地规则解析</span></div><label class="sr-only" for="decree-input">输入圣旨</label><textarea id="decree-input" maxlength="600" placeholder="例如：命荆州牧刘表在襄阳减赋半年，开仓赈济流民，并遣使奉表许都。"></textarea><div class="decree-footer"><small>写明州郡、城池或诸侯姓名后，诏令会直接改变对应地区与诸侯战略。</small><button id="issue-decree-btn" class="primary-button compact" type="button">用玺颁诏</button></div></section>
+          <section class="panel decree-panel"><div class="panel-heading"><div><span class="section-kicker">自由政令</span><h2>拟写圣旨</h2></div><span class="local-ai-badge">本地规则解析</span></div><label class="sr-only" for="decree-input">输入圣旨</label><textarea id="decree-input" maxlength="600" placeholder="例如：命荆州牧刘表自襄阳出兵，经宛城驰援许都；三月内奉表并输粮三千石。"></textarea><div class="decree-footer"><small>写明城池、行军方向、诸侯与承诺后，诏令会改变城防、补给线、诸侯方略和履约关系。</small><button id="issue-decree-btn" class="primary-button compact" type="button">用玺颁诏</button></div></section>
           <section class="panel action-panel"><div class="panel-heading"><div><span class="section-kicker">御前处分</span><h2>常用行动</h2></div></div><div id="action-grid" class="action-grid"></div></section>
           <section class="panel assessment-panel"><div class="panel-heading"><div><span class="section-kicker">隐藏局势</span><h2>御前判断</h2></div></div><div id="court-assessment"></div></section>
           <button id="end-turn-btn" class="end-turn-button" type="button">结束本月</button>
@@ -71,7 +72,7 @@
       </div>
     </main>
 
-    <footer class="game-footer"><span>v0.3.0 · 定向诏令、全国态势、原创立绘与宫廷音画版 · 自动保存在当前浏览器</span><span>Ctrl + S 手动保存</span></footer>
+    <footer class="game-footer"><span>v0.4.0 · 城池、军路、外交承诺、定向诏令与宫廷音画版 · 自动保存在当前浏览器</span><span>Ctrl + S 手动保存</span></footer>
   </div>
 
   <div id="modal-backdrop" class="modal-backdrop hidden" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><span class="modal-seal" aria-hidden="true">诏</span><h2 id="modal-title">御前处分</h2></header><div id="modal-body" class="modal-body"></div><footer><button id="modal-cancel" class="secondary-button" type="button">取消</button><button id="modal-confirm" class="primary-button" type="button">确定</button></footer></section></div>
@@ -82,6 +83,7 @@
 
   <script src="src/data.js"></script>
   <script src="src/world-data.js"></script>
+  <script src="src/strategy-network-data.js"></script>
   <script src="src/portraits/liu_xie.js"></script>
   <script src="src/portraits/empress_fu.js"></script>
   <script src="src/portraits/dong_cheng.js"></script>
@@ -97,6 +99,7 @@
   <script src="src/world-hotfix.js"></script>
   <script src="src/world-system.js"></script>
   <script src="src/decree-world.js"></script>
+  <script src="src/strategy-network.js"></script>
   <script src="src/portraits.js"></script>
   <script src="src/audio-data.js"></script>
   <script src="src/audio.js"></script>
