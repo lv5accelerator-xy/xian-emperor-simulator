@@ -1,2 +1,38 @@
-/* 天子蒙尘 v0.2.2 音效控件 */
-.audio-controls{display:inline-flex;align-items:center;gap:.45rem;padding-left:.2rem}.audio-controls>button{white-space:nowrap}.audio-volume-wrap{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .45rem;border:1px solid rgba(222,185,105,.16);border-radius:7px;background:rgba(255,255,255,.018);color:#8f7e65;font-size:.62rem}.audio-volume-wrap input{width:76px;accent-color:#c99a4d}.audio-controls.muted .audio-volume-wrap{opacity:.45}@media(max-width:900px){.audio-volume-wrap span{display:none}.audio-volume-wrap input{width:58px}}@media(max-width:640px){.audio-volume-wrap{display:none}}
+/* 天子蒙尘 v0.2.3 音效与背景音乐控件 */
+.audio-controls{
+  display:inline-flex;
+  align-items:center;
+  gap:.35rem;
+  padding:0 .15rem;
+}
+.audio-control-group{
+  display:inline-flex;
+  align-items:center;
+  gap:.25rem;
+  border-left:1px solid rgba(222,185,105,.12);
+  padding-left:.3rem;
+}
+.audio-control-group>button{white-space:nowrap}
+.audio-volume-wrap{
+  display:inline-flex;
+  align-items:center;
+  gap:.25rem;
+  padding:.2rem .3rem;
+  border:1px solid rgba(222,185,105,.14);
+  border-radius:7px;
+  background:rgba(255,255,255,.018);
+  color:#8f7e65;
+  font-size:.58rem;
+}
+.audio-volume-wrap input{width:58px;accent-color:#c99a4d}
+.audio-control-group.muted .audio-volume-wrap{opacity:.38}
+.audio-control-group button[aria-pressed="false"]{color:#756856}
+@media(max-width:1280px){
+  .audio-volume-wrap span{display:none}
+  .audio-volume-wrap input{width:48px}
+}
+@media(max-width:1080px){.audio-volume-wrap{display:none}}
+@media(max-width:760px){
+  .audio-controls{width:100%;justify-content:flex-end;order:3}
+  .audio-control-group{border-left:0;padding-left:0}
+}
