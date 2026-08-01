@@ -1,225 +1,113 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#17110e">
-  <meta name="description" content="一款以建安元年许都朝廷为舞台的汉末政治策略模拟游戏。">
-  <title>天子蒙尘：献帝模拟器 v0.1</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <noscript>
-    <div class="noscript">本游戏需要启用 JavaScript。</div>
-  </noscript>
+# 天子蒙尘：献帝模拟器 v0.1
 
-  <section id="start-screen" class="start-screen" aria-label="开始游戏">
-    <div class="start-emblem" aria-hidden="true"><span>汉</span></div>
-    <div class="start-copy">
-      <p class="eyebrow">汉末政治策略模拟 · 可玩原型 v0.1</p>
-      <h1>天子蒙尘</h1>
-      <h2>献帝模拟器</h2>
-      <p class="start-intro">
-        建安元年，天子迁许。你拥有天下最高的法统，却缺少直属军队、财政与可信赖的执行者。
-        用诏书、官爵、礼制和秘密关系，在曹氏控制下维持汉祚。
-      </p>
+一款使用 **HTML + CSS + JavaScript** 制作的汉末政治策略模拟游戏原型。
 
-      <div class="scenario-card">
-        <div>
-          <span>首发剧本</span>
-          <strong>建安元年·许都</strong>
-        </div>
-        <p>24个月 · 10名关键人物 · 6项国家指标 · 多种政治结局</p>
-      </div>
+## 当前版本内容
 
-      <label class="difficulty-label" for="difficulty-select">开局难度</label>
-      <select id="difficulty-select" class="difficulty-select">
-        <option value="lenient">宽政｜资源较多，适合第一次游玩</option>
-        <option value="standard" selected>史实压力｜推荐</option>
-        <option value="crisis">危局｜国库与宫禁更加脆弱</option>
-      </select>
+- 剧本：**建安元年·许都**
+- 流程：24个月，每月先裁决奏报，再进行最多2次行动
+- 核心指标：皇权、汉室威望、宫廷安全、国库、百官支持、曹氏警戒
+- 隐藏指标：忠汉网络、泄密风险、外部制衡、民间稳定、南方退路
+- 关键人物：伏皇后、董承、杨彪、荀彧、曹操、袁绍、袁术、刘表、孙策
+- 固定历史背景事件 + 随机政治事件
+- 自由拟写圣旨：本版使用本地关键词规则解析，不调用付费 AI API
+- 多种终局：再振汉纲、诸侯共奉、衣冠南渡、帝国调停者、许都守成、有名无实等
+- 浏览器自动存档、JSON导入/导出、本局实录导出
+- 桌面与手机自适应界面
 
-      <div class="start-actions">
-        <button id="new-game-btn" class="primary-button" type="button">开启新局</button>
-        <button id="continue-game-btn" class="secondary-button" type="button">暂无存档</button>
-      </div>
+## 立即运行
 
-      <p class="disclaimer">本作是历史题材架空模拟。人物关系、事件结果与数值均为游戏化表达。</p>
-    </div>
-  </section>
+### 方法一：直接打开
 
-  <div id="game-shell" class="game-shell hidden">
-    <header class="topbar">
-      <div class="brand-lockup">
-        <span class="mini-seal">汉</span>
-        <div>
-          <p id="scenario-name">建安元年·许都</p>
-          <h1>天子蒙尘：献帝模拟器</h1>
-        </div>
-      </div>
+双击根目录里的：
 
-      <div class="turn-summary" aria-label="当前回合">
-        <strong id="date-label">建安元年十月</strong>
-        <span id="turn-label">第 1 / 24 月</span>
-        <span id="ap-label" class="ap-badge">可行动 2</span>
-      </div>
+```text
+index.html
+```
 
-      <nav class="utility-nav" aria-label="游戏工具">
-        <button id="save-btn" type="button">保存</button>
-        <button id="load-btn" type="button">读取</button>
-        <button id="export-btn" type="button">导出</button>
-        <button id="import-btn" type="button">导入</button>
-        <button id="help-btn" type="button">说明</button>
-        <button id="reset-btn" class="danger-link" type="button">重开</button>
-      </nav>
-    </header>
+现代 Chrome、Edge 或 Firefox 均可运行。
 
-    <input id="import-file" type="file" accept="application/json,.json" hidden>
+### 方法二：本地服务器
 
-    <div id="danger-banner" class="danger-banner hidden" role="alert"></div>
+在项目目录执行：
 
-    <main class="game-main">
-      <section id="stats-grid" class="stats-grid" aria-label="国家状态"></section>
+```bash
+python -m http.server 8000
+```
 
-      <div class="dashboard-grid">
-        <aside class="left-column">
-          <section class="panel faction-panel">
-            <div class="panel-heading">
-              <div>
-                <span class="section-kicker">天下结构</span>
-                <h2>六方势力</h2>
-              </div>
-            </div>
-            <div id="faction-list" class="faction-list"></div>
-          </section>
+然后打开：
 
-          <section class="panel people-panel">
-            <div class="panel-heading">
-              <div>
-                <span class="section-kicker">人物关系</span>
-                <h2>朝野关键人物</h2>
-              </div>
-              <small>点击查看立场</small>
-            </div>
-            <div id="character-list" class="character-list"></div>
-          </section>
-        </aside>
+```text
+http://localhost:8000
+```
 
-        <section class="center-column">
-          <article class="panel event-panel">
-            <div class="event-ornament" aria-hidden="true"></div>
-            <div class="event-head">
-              <span id="event-category" class="category-chip">朝政</span>
-              <span class="memorial-label">本月奏报</span>
-            </div>
-            <h2 id="event-title">许都新廷</h2>
-            <p id="event-text" class="event-text"></p>
-            <div id="event-choices" class="event-choices"></div>
-            <div id="event-resolved" class="event-resolved hidden">此奏报已经裁决，可继续施行政令。</div>
-          </article>
+## 部署到 GitHub Pages
 
-          <section class="panel reports-panel">
-            <div class="panel-heading">
-              <div>
-                <span class="section-kicker">执行反馈</span>
-                <h2>御前记录</h2>
-              </div>
-              <span class="live-mark">即时</span>
-            </div>
-            <div id="report-list" class="report-list"></div>
-          </section>
+将本项目**根目录里的全部内容**上传到 GitHub 仓库根目录，确保仓库首页直接能看到：
 
-          <section class="panel chronicle-panel">
-            <div class="panel-heading">
-              <div>
-                <span class="section-kicker">本局史书</span>
-                <h2>《建安实录·御前本》</h2>
-              </div>
-              <button id="chronicle-btn" class="text-button" type="button">展开全文</button>
-            </div>
-            <div id="chronicle-preview" class="chronicle-preview"></div>
-          </section>
-        </section>
+```text
+index.html
+styles.css
+src/
+README.md
+.nojekyll
+```
 
-        <aside class="right-column">
-          <section class="panel decree-panel">
-            <div class="panel-heading">
-              <div>
-                <span class="section-kicker">自由政令</span>
-                <h2>拟写圣旨</h2>
-              </div>
-              <span class="local-ai-badge">本地规则解析</span>
-            </div>
-            <label class="sr-only" for="decree-input">输入圣旨</label>
-            <textarea id="decree-input" maxlength="600" placeholder="例如：命户部在颍川减赋半年，开仓赈济流民，并令御史查办侵吞赈粮者。"></textarea>
-            <div class="decree-footer">
-              <small>会识别赈济、减赋、察吏、整军、礼制、密令、任官和外交等关键词。</small>
-              <button id="issue-decree-btn" class="primary-button compact" type="button">用玺颁诏</button>
-            </div>
-          </section>
+然后进入：
 
-          <section class="panel action-panel">
-            <div class="panel-heading">
-              <div>
-                <span class="section-kicker">御前处分</span>
-                <h2>常用行动</h2>
-              </div>
-            </div>
-            <div id="action-grid" class="action-grid"></div>
-          </section>
+```text
+Settings → Pages
+Source: Deploy from a branch
+Branch: main
+Folder: /(root)
+```
 
-          <section class="panel assessment-panel">
-            <div class="panel-heading">
-              <div>
-                <span class="section-kicker">隐藏局势</span>
-                <h2>御前判断</h2>
-              </div>
-            </div>
-            <div id="court-assessment"></div>
-          </section>
+保存并等待部署完成。
 
-          <button id="end-turn-btn" class="end-turn-button" type="button">结束本月</button>
-        </aside>
-      </div>
-    </main>
+网站地址通常是：
 
-    <footer class="game-footer">
-      <span>v0.1 · 纯前端原型 · 自动保存在当前浏览器</span>
-      <span>Ctrl + S 手动保存</span>
-    </footer>
-  </div>
+```text
+https://你的用户名.github.io/仓库名/
+```
 
-  <div id="modal-backdrop" class="modal-backdrop hidden" role="presentation">
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <header>
-        <span class="modal-seal" aria-hidden="true">诏</span>
-        <h2 id="modal-title">御前处分</h2>
-      </header>
-      <div id="modal-body" class="modal-body"></div>
-      <footer>
-        <button id="modal-cancel" class="secondary-button" type="button">取消</button>
-        <button id="modal-confirm" class="primary-button" type="button">确定</button>
-      </footer>
-    </section>
-  </div>
+## 存档位置
 
-  <section id="end-screen" class="end-screen hidden" aria-label="终局">
-    <div class="ending-scroll">
-      <p class="eyebrow">建安实录 · 本局终卷</p>
-      <h1 id="ending-title">风雨续祚</h1>
-      <p id="ending-text" class="ending-text"></p>
-      <div id="ending-stats" class="ending-stats"></div>
-      <div id="ending-chronicle" class="ending-chronicle"></div>
-      <div class="ending-actions">
-        <button id="ending-export" class="secondary-button" type="button">导出本局实录</button>
-        <button id="ending-restart" class="primary-button" type="button">返回开局</button>
-      </div>
-    </div>
-  </section>
+自动存档保存在玩家自己的浏览器 `localStorage` 中：
 
-  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+- 同一设备、同一浏览器、同一网址再次打开时可继续
+- 换电脑或换浏览器不会自动同步
+- 清除网站数据会删除本地存档
+- 使用游戏顶部的“导出”可下载 JSON 存档，再在其他设备“导入”
 
-  <script src="src/data.js"></script>
-  <script src="src/game.js"></script>
-</body>
-</html>
+## 项目结构
+
+```text
+xian-emperor-simulator-v0.1/
+├─ index.html              # 页面结构
+├─ styles.css              # 全部视觉样式
+├─ src/
+│  ├─ data.js              # 人物、势力、事件、行动数据
+│  └─ game.js              # 游戏规则、回合、存档和界面逻辑
+├─ GAME_DESIGN.md          # 完整设计说明
+├─ AI_INTEGRATION.md       # 后续接入大语言模型的安全方案
+├─ DEPLOY_GITHUB_PAGES.md  # GitHub Pages部署步骤
+├─ CHANGELOG.md
+└─ .nojekyll
+```
+
+## 当前限制
+
+- 自由圣旨由本地关键词规则解析，不具备真正的大语言理解能力
+- 没有服务器账号、云存档、排行榜或多人联机
+- 角色对话采用规则模板
+- 美术主要由 CSS 构成，尚未加入人物立绘、地图和音乐
+- 历史事件经过游戏化处理，不应视为学术结论
+
+## 推荐下一阶段
+
+1. 增加全国局势地图和各诸侯动态
+2. 将人物关系扩展为忠诚、恐惧、野心、利益四维模型
+3. 使用安全后端接入 AI 圣旨解析与人物对话
+4. 加入历史资料引用、事件来源与时间线
+5. 增加189年、195年、220年剧本
+6. 加入人物立绘、奏折音效、朝堂背景音乐
