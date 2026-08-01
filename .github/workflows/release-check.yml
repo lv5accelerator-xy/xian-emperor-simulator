@@ -23,6 +23,10 @@ jobs:
           node --check src/decree-world.js
           node --check src/strategy-network-data.js
           node --check src/strategy-network.js
+          node --check src/strategy-order-hotfix.js
+          node --check src/decree-confirmation.js
+          node --check src/army-data.js
+          node --check src/army-system.js
 
       - name: Validate embedded audio
         run: |
@@ -50,20 +54,24 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('fs');
-          const code = fs.readFileSync('src/audio.js', 'utf8');
-          if (/observe\(document\.(body|documentElement)/.test(code)) {
+          const audio = fs.readFileSync('src/audio.js', 'utf8');
+          const army = fs.readFileSync('src/army-system.js', 'utf8');
+          if (/observe\(document\.(body|documentElement)/.test(audio)) {
             throw new Error('Audio must not observe the entire document tree.');
           }
-          if (/preload\s*=\s*["']auto["']/.test(code)) {
+          if (/preload\s*=\s*["']auto["']/.test(audio)) {
             throw new Error('Audio effects must remain lazy-loaded.');
           }
-          if (!code.includes('observeStableTargets')) {
-            throw new Error('Targeted observer setup is missing.');
+          if (!audio.includes('observeStableTargets') || !audio.includes('preload = "none"')) {
+            throw new Error('Stable lazy audio setup is missing.');
           }
-          if (!code.includes('preload = "none"')) {
-            throw new Error('Lazy audio preload setting is missing.');
+          if (/MutationObserver/.test(army)) {
+            throw new Error('Army system must use save events, not DOM mutation observers.');
           }
-          console.log('Audio runtime regression guards passed.');
+          if (!army.includes('window.__xianArmyRefreshOnly')) {
+            throw new Error('Army storage recursion guard is missing.');
+          }
+          console.log('Runtime regression guards passed.');
           NODE
 
       - name: Validate targeted edict matching
@@ -119,7 +127,7 @@ jobs:
           console.log('Targeted edict matching passed.');
           NODE
 
-      - name: Validate city route and promise matching
+      - name: Validate ordered routes confirmation and armies
         run: |
           node <<'NODE'
           const fs = require('fs');
@@ -133,12 +141,23 @@ jobs:
           }
 
           const localStorage = new StorageMock();
+          localStorage.setItem('xian_emperor_simulator_v01', JSON.stringify({
+            turn: 1,
+            year: 196,
+            month: 10,
+            createdAt: 'test-game',
+            stats: { authority: 50, officials: 50, caoAlert: 40, prestige: 70 },
+            hidden: { leakRisk: 10 },
+            reports: [],
+          }));
+
           const document = {
             readyState: 'loading',
             addEventListener() {},
             getElementById() { return null; },
             querySelector() { return null; },
             querySelectorAll() { return []; },
+            dispatchEvent() {},
             body: { classList: { add() {}, remove() {} }, appendChild() {} },
           };
           const windowObject = { setTimeout, clearTimeout };
@@ -148,34 +167,58 @@ jobs:
             Storage: StorageMock,
             localStorage,
             console,
+            CustomEvent: class CustomEvent {},
             setTimeout,
             clearTimeout,
           };
 
-          vm.runInNewContext(fs.readFileSync('src/strategy-network-data.js', 'utf8'), context);
-          vm.runInNewContext(fs.readFileSync('src/strategy-network.js', 'utf8'), context);
-          const api = context.window.XianStrategyNetwork;
-          const edict = '命荆州牧刘表自襄阳出兵，经宛城驰援许都；三月内奉表并输粮三千石。';
-          const cities = api.detectCityTargets(edict);
-          const lords = api.detectLordTargets(edict);
-          const orders = api.detectOrders(edict);
-          const promises = api.detectPromises(edict);
-          const path = api.findRoutePath('xiangyang', 'xudu');
-
-          for (const city of ['xiangyang', 'wan', 'xudu']) {
-            if (!cities.includes(city)) throw new Error(`Missing city target: ${city}`);
+          for (const file of [
+            'src/strategy-network-data.js',
+            'src/strategy-network.js',
+            'src/strategy-order-hotfix.js',
+            'src/decree-confirmation.js',
+            'src/army-data.js',
+            'src/army-system.js',
+          ]) {
+            vm.runInNewContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
           }
-          if (!lords.includes('liu_biao')) throw new Error('Missing Liu Biao target.');
-          if (!orders.includes('support') || !orders.includes('supply')) throw new Error(`Missing strategic orders: ${JSON.stringify(orders)}`);
-          if (!promises.includes('tribute')) throw new Error(`Missing diplomatic promise: ${JSON.stringify(promises)}`);
-          if (!path.includes('wan_xiangyang') || !path.includes('xudu_wan')) throw new Error(`Unexpected route path: ${JSON.stringify(path)}`);
 
-          console.log('City, route and diplomacy matching passed.');
+          const edict = '命荆州牧刘表自襄阳出兵，经宛城驰援许都；三月内奉表并输粮三千石。';
+          const strategy = context.window.XianStrategyNetwork;
+          const cities = strategy.detectCityTargets(edict);
+          if (JSON.stringify(cities) !== JSON.stringify(['xiangyang', 'wan', 'xudu'])) {
+            throw new Error(`City order was not preserved: ${JSON.stringify(cities)}`);
+          }
+          const path = strategy.resolveOrderedPath(cities, ['liu_biao']);
+          if (JSON.stringify(path) !== JSON.stringify(['wan_xiangyang', 'xudu_wan'])) {
+            throw new Error(`Unexpected ordered path: ${JSON.stringify(path)}`);
+          }
+
+          const preview = context.window.XianDecreeConfirmation.analyzeEdict(edict);
+          if (preview.routeIds.length !== 2 || !preview.promises.includes('tribute')) {
+            throw new Error(`Invalid decree preview: ${JSON.stringify(preview)}`);
+          }
+
+          if (context.window.XIAN_ARMY_DATA.armies.length !== 14) {
+            throw new Error('Expected 14 initial armies.');
+          }
+          const armyApi = context.window.XianArmySystem;
+          if (armyApi.choosePrimaryOrder(['supply', 'support']) !== 'support') {
+            throw new Error('Army order priority is incorrect.');
+          }
+          const commander = { command: 80 };
+          const healthy = armyApi.calculateCombatPower({ troops: 10000, training: 75, morale: 75, supply: 80, fatigue: 10 }, commander, 60, true, 1);
+          const starved = armyApi.calculateCombatPower({ troops: 10000, training: 75, morale: 40, supply: 10, fatigue: 80 }, commander, 0, false, 1);
+          if (!(healthy > starved * 1.8)) {
+            throw new Error(`Supply, morale and fatigue do not affect combat enough: ${healthy} vs ${starved}`);
+          }
+
+          console.log('Ordered route, confirmation and army calculations passed.');
           NODE
 
       - name: Validate page references and version
         run: |
-          grep -q 'v0.4.0' index.html
+          grep -q 'v0.5.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio.js' index.html
@@ -185,6 +228,12 @@ jobs:
           grep -q 'src/strategy-network.css' index.html
           grep -q 'src/strategy-network-data.js' index.html
           grep -q 'src/strategy-network.js' index.html
+          grep -q 'src/strategy-order-hotfix.js' index.html
+          grep -q 'src/decree-confirmation.css' index.html
+          grep -q 'src/decree-confirmation.js' index.html
+          grep -q 'src/army-system.css' index.html
+          grep -q 'src/army-data.js' index.html
+          grep -q 'src/army-system.js' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio.js
@@ -194,3 +243,9 @@ jobs:
           test -f src/strategy-network.css
           test -f src/strategy-network-data.js
           test -f src/strategy-network.js
+          test -f src/strategy-order-hotfix.js
+          test -f src/decree-confirmation.css
+          test -f src/decree-confirmation.js
+          test -f src/army-system.css
+          test -f src/army-data.js
+          test -f src/army-system.js
