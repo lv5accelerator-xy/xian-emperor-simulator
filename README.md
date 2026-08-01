@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17110e">
+  <meta name="description" content="一款以建安元年许都朝廷为舞台的汉末政治策略模拟游戏。">
+  <title>天子蒙尘：献帝模拟器 v0.1</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <noscript>
+    <div class="noscript">本游戏需要启用 JavaScript。</div>
+  </noscript>
+
+  <section id="start-screen" class="start-screen" aria-label="开始游戏">
+    <div class="start-emblem" aria-hidden="true"><span>汉</span></div>
+    <div class="start-copy">
+      <p class="eyebrow">汉末政治策略模拟 · 可玩原型 v0.1</p>
+      <h1>天子蒙尘</h1>
+      <h2>献帝模拟器</h2>
+      <p class="start-intro">
+        建安元年，天子迁许。你拥有天下最高的法统，却缺少直属军队、财政与可信赖的执行者。
+        用诏书、官爵、礼制和秘密关系，在曹氏控制下维持汉祚。
+      </p>
+
+      <div class="scenario-card">
+        <div>
+          <span>首发剧本</span>
+          <strong>建安元年·许都</strong>
+        </div>
+        <p>24个月 · 10名关键人物 · 6项国家指标 · 多种政治结局</p>
+      </div>
+
+      <label class="difficulty-label" for="difficulty-select">开局难度</label>
+      <select id="difficulty-select" class="difficulty-select">
+        <option value="lenient">宽政｜资源较多，适合第一次游玩</option>
+        <option value="standard" selected>史实压力｜推荐</option>
+        <option value="crisis">危局｜国库与宫禁更加脆弱</option>
+      </select>
+
+      <div class="start-actions">
+        <button id="new-game-btn" class="primary-button" type="button">开启新局</button>
+        <button id="continue-game-btn" class="secondary-button" type="button">暂无存档</button>
+      </div>
+
+      <p class="disclaimer">本作是历史题材架空模拟。人物关系、事件结果与数值均为游戏化表达。</p>
+    </div>
+  </section>
+
+  <div id="game-shell" class="game-shell hidden">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <span class="mini-seal">汉</span>
+        <div>
+          <p id="scenario-name">建安元年·许都</p>
+          <h1>天子蒙尘：献帝模拟器</h1>
+        </div>
+      </div>
+
+      <div class="turn-summary" aria-label="当前回合">
+        <strong id="date-label">建安元年十月</strong>
+        <span id="turn-label">第 1 / 24 月</span>
+        <span id="ap-label" class="ap-badge">可行动 2</span>
+      </div>
+
+      <nav class="utility-nav" aria-label="游戏工具">
+        <button id="save-btn" type="button">保存</button>
+        <button id="load-btn" type="button">读取</button>
+        <button id="export-btn" type="button">导出</button>
+        <button id="import-btn" type="button">导入</button>
+        <button id="help-btn" type="button">说明</button>
+        <button id="reset-btn" class="danger-link" type="button">重开</button>
+      </nav>
+    </header>
+
+    <input id="import-file" type="file" accept="application/json,.json" hidden>
+
+    <div id="danger-banner" class="danger-banner hidden" role="alert"></div>
+
+    <main class="game-main">
+      <section id="stats-grid" class="stats-grid" aria-label="国家状态"></section>
+
+      <div class="dashboard-grid">
+        <aside class="left-column">
+          <section class="panel faction-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="section-kicker">天下结构</span>
+                <h2>六方势力</h2>
+              </div>
+            </div>
+            <div id="faction-list" class="faction-list"></div>
+          </section>
+
+          <section class="panel people-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="section-kicker">人物关系</span>
+                <h2>朝野关键人物</h2>
+              </div>
+              <small>点击查看立场</small>
+            </div>
+            <div id="character-list" class="character-list"></div>
+          </section>
+        </aside>
+
+        <section class="center-column">
+          <article class="panel event-panel">
+            <div class="event-ornament" aria-hidden="true"></div>
+            <div class="event-head">
+              <span id="event-category" class="category-chip">朝政</span>
+              <span class="memorial-label">本月奏报</span>
+            </div>
+            <h2 id="event-title">许都新廷</h2>
+            <p id="event-text" class="event-text"></p>
+            <div id="event-choices" class="event-choices"></div>
+            <div id="event-resolved" class="event-resolved hidden">此奏报已经裁决，可继续施行政令。</div>
+          </article>
+
+          <section class="panel reports-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="section-kicker">执行反馈</span>
+                <h2>御前记录</h2>
+              </div>
+              <span class="live-mark">即时</span>
+            </div>
+            <div id="report-list" class="report-list"></div>
+          </section>
+
+          <section class="panel chronicle-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="section-kicker">本局史书</span>
+                <h2>《建安实录·御前本》</h2>
+              </div>
+              <button id="chronicle-btn" class="text-button" type="button">展开全文</button>
+            </div>
+            <div id="chronicle-preview" class="chronicle-preview"></div>
+          </section>
+        </section>
+
+        <aside class="right-column">
+          <section class="panel decree-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="section-kicker">自由政令</span>
+                <h2>拟写圣旨</h2>
+              </div>
+              <span class="local-ai-badge">本地规则解析</span>
+            </div>
+            <label class="sr-only" for="decree-input">输入圣旨</label>
+            <textarea id="decree-input" maxlength="600" placeholder="例如：命户部在颍川减赋半年，开仓赈济流民，并令御史查办侵吞赈粮者。"></textarea>
+            <div class="decree-footer">
+              <small>会识别赈济、减赋、察吏、整军、礼制、密令、任官和外交等关键词。</small>
+              <button id="issue-decree-btn" class="primary-button compact" type="button">用玺颁诏</button>
+            </div>
+          </section>
+
+          <section class="panel action-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="section-kicker">御前处分</span>
+                <h2>常用行动</h2>
+              </div>
+            </div>
+            <div id="action-grid" class="action-grid"></div>
+          </section>
+
+          <section class="panel assessment-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="section-kicker">隐藏局势</span>
+                <h2>御前判断</h2>
+              </div>
+            </div>
+            <div id="court-assessment"></div>
+          </section>
+
+          <button id="end-turn-btn" class="end-turn-button" type="button">结束本月</button>
+        </aside>
+      </div>
+    </main>
+
+    <footer class="game-footer">
+      <span>v0.1 · 纯前端原型 · 自动保存在当前浏览器</span>
+      <span>Ctrl + S 手动保存</span>
+    </footer>
+  </div>
+
+  <div id="modal-backdrop" class="modal-backdrop hidden" role="presentation">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <header>
+        <span class="modal-seal" aria-hidden="true">诏</span>
+        <h2 id="modal-title">御前处分</h2>
+      </header>
+      <div id="modal-body" class="modal-body"></div>
+      <footer>
+        <button id="modal-cancel" class="secondary-button" type="button">取消</button>
+        <button id="modal-confirm" class="primary-button" type="button">确定</button>
+      </footer>
+    </section>
+  </div>
+
+  <section id="end-screen" class="end-screen hidden" aria-label="终局">
+    <div class="ending-scroll">
+      <p class="eyebrow">建安实录 · 本局终卷</p>
+      <h1 id="ending-title">风雨续祚</h1>
+      <p id="ending-text" class="ending-text"></p>
+      <div id="ending-stats" class="ending-stats"></div>
+      <div id="ending-chronicle" class="ending-chronicle"></div>
+      <div class="ending-actions">
+        <button id="ending-export" class="secondary-button" type="button">导出本局实录</button>
+        <button id="ending-restart" class="primary-button" type="button">返回开局</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <script src="src/data.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>
