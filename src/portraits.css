@@ -1,0 +1,16 @@
+/* 《天子蒙尘》原创立绘显示样式 v0.2.1 */
+.xian-portrait{display:block;width:100%;height:100%;object-fit:cover;user-select:none;-webkit-user-drag:none}
+.portrait-mark.has-character-portrait{padding:0;overflow:hidden;background:#17100d;border:1px solid rgba(222,185,105,.36);box-shadow:0 0 0 1px rgba(0,0,0,.45) inset}
+.portrait-mark.has-character-portrait .xian-portrait{border-radius:inherit;transition:transform .22s ease,filter .22s ease}
+.character-card:hover .portrait-mark .xian-portrait{transform:scale(1.06);filter:brightness(1.08)}
+.detail-portrait.has-character-portrait{width:150px;min-width:150px;height:218px;padding:0;overflow:hidden;border-radius:10px;background:#15100d;border:1px solid rgba(222,185,105,.35);box-shadow:0 12px 32px rgba(0,0,0,.34)}
+.detail-portrait.has-character-portrait .xian-portrait{border-radius:inherit}
+.political-character-head>span.has-character-portrait{padding:0;overflow:hidden;background:#17100d}
+.political-character-head>span.has-character-portrait .xian-portrait{border-radius:50%}
+.world-character-detail header>span.has-character-portrait{width:86px;height:116px;padding:0;overflow:hidden;border-radius:9px;background:#17100d}
+.world-character-detail header>span.has-character-portrait .xian-portrait{border-radius:inherit}
+.start-emblem.has-character-portrait{overflow:hidden;padding:0;background:#130d0a;border:2px solid rgba(226,190,102,.42);box-shadow:0 22px 55px rgba(0,0,0,.4),0 0 32px rgba(190,129,47,.13)}
+.start-emblem.has-character-portrait .xian-portrait{border-radius:inherit;filter:saturate(.9) contrast(1.02)}
+.mini-seal.has-character-portrait{overflow:hidden;padding:0;background:#130d0a;border-color:rgba(226,190,102,.45)}
+.mini-seal.has-character-portrait .xian-portrait{border-radius:inherit}
+@media(max-width:720px){.detail-portrait.has-character-portrait{width:112px;min-width:112px;height:164px}.world-character-detail header>span.has-character-portrait{width:68px;height:92px}}
