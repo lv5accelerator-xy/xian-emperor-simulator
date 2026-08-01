@@ -18,6 +18,8 @@ jobs:
         run: |
           node --check src/audio.js
           node --check src/audio-data.js
+          node --check src/world-hotfix.js
+          node --check src/world-system.js
 
       - name: Validate embedded audio
         run: |
@@ -41,12 +43,27 @@ jobs:
           console.log('Embedded audio payloads are valid.');
           NODE
 
+      - name: Guard against observer and preload regressions
+        run: |
+          if grep -Eq 'observe\(document\.(body|documentElement)' src/audio.js; then
+            echo 'Audio must not observe the entire document tree.'
+            exit 1
+          fi
+          if grep -Eq 'preload\s*=\s*["'"']auto["'"']' src/audio.js; then
+            echo 'Audio effects must remain lazy-loaded.'
+            exit 1
+          fi
+          grep -q 'observeStableTargets' src/audio.js
+          grep -q 'preload = "none"' src/audio.js
+
       - name: Validate page references and version
         run: |
-          grep -q 'v0.2.3' index.html
+          grep -q 'v0.2.3.3' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio.js' index.html
+          grep -q 'src/world-hotfix.js' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio.js
+          test -f src/world-hotfix.js
