@@ -20,6 +20,7 @@ jobs:
           node --check src/audio-data.js
           node --check src/world-hotfix.js
           node --check src/world-system.js
+          node --check src/decree-world.js
 
       - name: Validate embedded audio
         run: |
@@ -63,14 +64,74 @@ jobs:
           console.log('Audio runtime regression guards passed.');
           NODE
 
+      - name: Validate targeted edict matching
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+
+          class StorageMock {
+            constructor() { this.values = new Map(); }
+            getItem(key) { return this.values.has(key) ? this.values.get(key) : null; }
+            setItem(key, value) { this.values.set(key, String(value)); }
+            removeItem(key) { this.values.delete(key); }
+          }
+
+          const localStorage = new StorageMock();
+          const document = {
+            readyState: 'loading',
+            addEventListener() {},
+            getElementById() { return null; },
+            dispatchEvent() {},
+          };
+          const windowObject = {
+            setTimeout,
+            clearTimeout,
+          };
+          const context = {
+            window: windowObject,
+            document,
+            Storage: StorageMock,
+            localStorage,
+            console,
+            CustomEvent: class CustomEvent {},
+            setTimeout,
+            clearTimeout,
+          };
+
+          vm.runInNewContext(fs.readFileSync('src/world-data.js', 'utf8'), context);
+          vm.runInNewContext(fs.readFileSync('src/decree-world.js', 'utf8'), context);
+
+          const jing = context.window.XianDecreeWorld.detectTargets('命荆州牧刘表在襄阳减赋半年并开仓赈济');
+          if (!jing.regions.includes('jingzhou') || !jing.lords.includes('liu_biao')) {
+            throw new Error(`Failed Jingzhou/Liu Biao matching: ${JSON.stringify(jing)}`);
+          }
+
+          const north = context.window.XianDecreeWorld.detectTargets('命袁绍整军冀州并守邺城');
+          if (!north.regions.includes('jizhou') || !north.lords.includes('yuan_shao')) {
+            throw new Error(`Failed Jizhou/Yuan Shao matching: ${JSON.stringify(north)}`);
+          }
+
+          const south = context.window.XianDecreeWorld.detectTargets('遣使江东吴郡，授孙策官爵');
+          if (!south.regions.includes('jiangdong') || !south.lords.includes('sun_ce')) {
+            throw new Error(`Failed Jiangdong/Sun Ce matching: ${JSON.stringify(south)}`);
+          }
+
+          console.log('Targeted edict matching passed.');
+          NODE
+
       - name: Validate page references and version
         run: |
-          grep -q 'v0.2.3.3' index.html
+          grep -q 'v0.3.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio.js' index.html
           grep -q 'src/world-hotfix.js' index.html
+          grep -q 'src/decree-world.css' index.html
+          grep -q 'src/decree-world.js' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio.js
           test -f src/world-hotfix.js
+          test -f src/decree-world.css
+          test -f src/decree-world.js
