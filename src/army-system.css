@@ -1,0 +1,93 @@
+/* 天子蒙尘：献帝模拟器 v0.5.0 军团系统 */
+.army-system-brief{margin-top:1rem;padding:1rem 1.1rem}
+.army-brief-head,.army-section-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.85rem}
+.army-brief-head h2,.army-section-head h3{margin:.1rem 0 0}
+.army-brief-content{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem}
+.army-brief-content button{display:grid;gap:.18rem;text-align:left;padding:.75rem .85rem;border:1px solid rgba(222,185,105,.15);border-radius:10px;background:rgba(255,255,255,.018);color:inherit}
+.army-brief-content button:hover{border-color:rgba(222,185,105,.42);transform:translateY(-1px)}
+.army-brief-content span{font-size:.67rem;color:#8f7e65;letter-spacing:.08em}
+.army-brief-content strong{font-size:.9rem;color:#e5cf9c}
+.army-brief-content small{color:#8f8373}
+
+body.army-system-open{overflow:hidden}
+.army-system-overlay{position:fixed;inset:0;z-index:1350;background:rgba(8,6,5,.84);backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:1.5rem}
+.army-system-overlay.hidden{display:none}
+.army-system-window{width:min(1180px,97vw);height:min(880px,94vh);display:grid;grid-template-rows:auto auto minmax(0,1fr);border:1px solid rgba(224,183,92,.31);border-radius:16px;background:linear-gradient(180deg,#1f1712,#110d0a);box-shadow:0 28px 90px rgba(0,0,0,.54);overflow:hidden}
+.army-system-window>header{display:flex;align-items:flex-start;justify-content:space-between;padding:1.05rem 1.25rem;border-bottom:1px solid rgba(222,185,105,.12)}
+.army-system-window>header h2{margin:.12rem 0 .22rem;color:#ead7a5}
+.army-system-window>header p{margin:0;color:#8f8373;font-size:.75rem}
+#army-system-close{font-size:1.45rem;line-height:1;width:2.2rem;height:2.2rem;border-radius:50%}
+.army-system-tabs{display:flex;gap:.35rem;padding:.65rem 1.1rem;border-bottom:1px solid rgba(222,185,105,.1);overflow:auto}
+.army-system-tabs button{white-space:nowrap}
+.army-system-tabs button.active{color:#f1d993;border-color:rgba(222,185,105,.4);background:rgba(222,185,105,.08)}
+#army-system-content{overflow:auto;padding:1.05rem 1.2rem 1.6rem}
+.army-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7rem;margin-bottom:1rem}
+.army-summary article{padding:.8rem .9rem;border:1px solid rgba(222,185,105,.14);border-radius:10px;background:rgba(255,255,255,.018)}
+.army-summary span{display:block;color:#8f7e65;font-size:.65rem;letter-spacing:.08em}
+.army-summary strong{display:block;margin:.25rem 0;color:#ead7a5;font-size:1rem}
+.army-summary small{color:#7f7467}
+
+.army-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.72rem}
+.army-card{padding:.82rem;border:1px solid rgba(222,185,105,.14);border-radius:11px;background:rgba(255,255,255,.018)}
+.army-card.marching{border-color:rgba(95,137,172,.42)}
+.army-card.engaged{border-color:rgba(187,77,64,.58);box-shadow:inset 0 0 0 1px rgba(187,77,64,.1)}
+.army-card.routing,.army-card.low-supply{border-color:rgba(190,116,67,.5)}
+.army-card.destroyed{opacity:.58;filter:grayscale(.45)}
+.army-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.65rem}
+.army-card-head span{display:block;font-size:.58rem;color:#7f7262}
+.army-card-head strong{display:block;color:#e4ce99;font-size:.96rem}
+.army-card-head small{color:#8c7f6c}
+.army-card-head b{font-size:.62rem;color:#c4a567;border:1px solid rgba(222,185,105,.18);border-radius:999px;padding:.22rem .45rem;white-space:nowrap}
+.army-position{display:grid;grid-template-columns:1fr auto 1fr;gap:.35rem;align-items:center;margin:.58rem 0;padding:.42rem .5rem;border-radius:8px;background:rgba(255,255,255,.025);font-size:.69rem;color:#b8a98c}
+.army-position span:last-child{text-align:right}
+.army-position i{font-style:normal;color:#9f8759}
+.army-troops{display:grid;grid-template-columns:auto 1fr auto;gap:.45rem;align-items:baseline;margin:.38rem 0 .45rem}
+.army-troops span{font-size:.65rem;color:#897b69}
+.army-troops strong{color:#e5cf9d;font-size:1.05rem}
+.army-troops small{color:#776d61}
+.army-metric{display:grid;grid-template-columns:2.4rem minmax(0,1fr) 2rem;align-items:center;gap:.35rem;margin:.31rem 0;font-size:.65rem}
+.army-metric span{color:#8f8373}
+.army-metric i{height:5px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.army-metric i b{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#765e37,#d7ad62)}
+.army-metric.inverse i b{background:linear-gradient(90deg,#6f513d,#b55c4c)}
+.army-metric em{font-style:normal;text-align:right;color:#c6b38b}
+.army-card>p{margin:.58rem 0 .28rem;color:#9f917b;font-size:.68rem;line-height:1.45}
+.army-card>p strong{color:#c9b079}
+.army-card>small{display:block;color:#776e64;font-size:.64rem;line-height:1.4}
+
+.movement-list,.army-order-list,.battle-report-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.72rem}
+.movement-card,.army-order-list article,.battle-report-card{padding:.82rem;border:1px solid rgba(222,185,105,.14);border-radius:11px;background:rgba(255,255,255,.018)}
+.movement-card>div:first-child,.army-order-list article>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:.7rem}
+.movement-card strong,.army-order-list strong{color:#e0c992}
+.movement-card b,.army-order-list b{font-size:.61rem;color:#bfa46e}
+.movement-card>p,.army-order-list p{margin:.45rem 0;color:#b7aa91;font-size:.72rem}
+.movement-card>small,.army-order-list small{color:#807466;font-size:.65rem;line-height:1.45}
+.movement-route{display:flex;flex-wrap:wrap;gap:.35rem;margin:.55rem 0}
+.movement-route span{position:relative;padding:.3rem .46rem;border:1px solid rgba(222,185,105,.12);border-radius:6px;color:#857969;font-size:.61rem}
+.movement-route span.passed{opacity:.48;text-decoration:line-through}
+.movement-route span.current{border-color:rgba(209,161,77,.5);color:#ddc591;background:rgba(209,161,77,.07)}
+.order-history-head{margin-top:1rem;padding-top:.9rem;border-top:1px solid rgba(222,185,105,.11)}
+
+.battle-report-card{grid-column:span 2;border-color:rgba(184,87,65,.34)}
+.battle-report-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.7rem}
+.battle-report-head span{display:block;font-size:.61rem;color:#7f7263}
+.battle-report-head strong{display:block;color:#e6cf99;font-size:1rem}
+.battle-report-head b{color:#d49a76;font-size:.68rem}
+.battle-sides{display:grid;grid-template-columns:1fr auto 1fr;gap:.8rem;align-items:stretch;margin:.72rem 0}
+.battle-sides section{padding:.62rem .7rem;border-radius:8px;background:rgba(255,255,255,.025)}
+.battle-sides section:last-child{text-align:right}
+.battle-sides span{display:block;color:#7f7364;font-size:.6rem}
+.battle-sides strong{display:block;color:#d8c293}
+.battle-sides small{color:#887d6e}
+.battle-sides p{margin:.35rem 0 0;color:#a99b83;font-size:.68rem}
+.battle-sides>i{align-self:center;display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;font-style:normal;background:rgba(171,75,59,.13);color:#d28c72}
+.battle-report-card>p{margin:.35rem 0 0;color:#9b8f7d;font-size:.7rem;line-height:1.5}
+.army-log{margin-top:1rem;padding-top:.9rem;border-top:1px solid rgba(222,185,105,.11)}
+.army-log>article{display:grid;grid-template-columns:2rem 1fr;gap:.65rem;padding:.55rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.army-log>article>span{display:grid;place-items:center;width:1.75rem;height:1.75rem;border-radius:50%;background:rgba(222,185,105,.08);color:#d1ab64;font-size:.72rem}
+.army-log strong{font-size:.65rem;color:#8f806b}
+.army-log p{margin:.15rem 0 0;color:#b7aa91;font-size:.72rem}
+
+@media(max-width:980px){.army-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.army-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.army-system-overlay{padding:.45rem}.army-system-window{width:100%;height:96vh;border-radius:12px}.army-system-window>header{padding:.9rem}#army-system-content{padding:.8rem}.army-brief-content,.army-card-grid,.movement-list,.army-order-list{grid-template-columns:1fr}.battle-report-card{grid-column:auto}}
+@media(max-width:480px){.army-summary{grid-template-columns:1fr}.battle-sides{grid-template-columns:1fr}.battle-sides section:last-child{text-align:left}.battle-sides>i{margin:auto}}
