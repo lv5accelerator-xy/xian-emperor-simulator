@@ -1,0 +1,52 @@
+name: Release check
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check src/audio.js
+          node --check src/audio-data.js
+
+      - name: Validate embedded audio
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const code = fs.readFileSync('src/audio-data.js', 'utf8');
+          const context = { window: {} };
+          vm.runInNewContext(code, context);
+          const audio = context.window.XIAN_AUDIO_DATA;
+          const required = ['button', 'scroll', 'seal', 'report', 'monthEnd', 'warning', 'bgm'];
+          for (const key of required) {
+            if (typeof audio?.[key] !== 'string' || !audio[key].startsWith('data:audio/ogg;base64,')) {
+              throw new Error(`Invalid audio source: ${key}`);
+            }
+            const bytes = Buffer.from(audio[key].split(',')[1], 'base64');
+            if (bytes.length < 500 || bytes.subarray(0, 4).toString('ascii') !== 'OggS') {
+              throw new Error(`Invalid OGG payload: ${key}`);
+            }
+          }
+          console.log('Embedded audio payloads are valid.');
+          NODE
+
+      - name: Validate page references and version
+        run: |
+          grep -q 'v0.2.3' index.html
+          grep -q 'src/audio.css' index.html
+          grep -q 'src/audio-data.js' index.html
+          grep -q 'src/audio.js' index.html
+          test -f src/audio.css
+          test -f src/audio-data.js
+          test -f src/audio.js
