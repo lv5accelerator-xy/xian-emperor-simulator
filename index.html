@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17110e">
   <meta name="description" content="一款以建安元年许都朝廷为舞台的汉末政治策略模拟游戏。">
-  <title>天子蒙尘：献帝模拟器 v0.1.1</title>
+  <title>天子蒙尘：献帝模拟器 v0.2.0</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="src/world.css">
 </head>
 <body>
   <noscript>
@@ -16,7 +17,7 @@
   <section id="start-screen" class="start-screen" aria-label="开始游戏">
     <div class="start-emblem" aria-hidden="true"><span>汉</span></div>
     <div class="start-copy">
-      <p class="eyebrow">汉末政治策略模拟 · 可玩原型 v0.1.1</p>
+      <p class="eyebrow">汉末政治策略模拟 · 可玩原型 v0.2.0</p>
       <h1>天子蒙尘</h1>
       <h2>献帝模拟器</h2>
       <p class="start-intro">
@@ -29,7 +30,7 @@
           <span>首发剧本</span>
           <strong>建安元年·许都</strong>
         </div>
-        <p>24个月 · 10名关键人物 · 6项国家指标 · 多种政治结局</p>
+        <p>24个月 · 全国态势 · 人物四维 · 历史时间线 · 多种政治结局</p>
       </div>
 
       <label class="difficulty-label" for="difficulty-select">开局难度</label>
@@ -184,7 +185,7 @@
     </main>
 
     <footer class="game-footer">
-      <span>v0.1.1 · 纯前端原型 · 自动保存在当前浏览器</span>
+      <span>v0.2.0 · 全国态势与史料版 · 自动保存在当前浏览器</span>
       <span>Ctrl + S 手动保存</span>
     </footer>
   </div>
@@ -220,7 +221,9 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <script src="src/data.js"></script>
+  <script src="src/world-data.js"></script>
   <script src="src/game.js"></script>
   <script src="src/monthly-report.js"></script>
+  <script src="src/world-system.js"></script>
 </body>
 </html>
