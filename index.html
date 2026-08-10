@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17110e">
   <meta name="description" content="一款以建安元年许都朝廷为舞台的汉末政治策略模拟游戏。">
-  <title>天子蒙尘：献帝模拟器 v0.6.0</title>
+  <title>天子蒙尘：献帝模拟器 v0.7.0</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="src/world.css">
   <link rel="stylesheet" href="src/decree-world.css">
@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="src/decree-confirmation.css">
   <link rel="stylesheet" href="src/army-system.css">
   <link rel="stylesheet" href="src/court-politics.css">
+  <link rel="stylesheet" href="src/scenario-system.css">
   <link rel="stylesheet" href="src/portraits.css">
   <link rel="stylesheet" href="src/audio.css">
 </head>
@@ -22,11 +23,20 @@
   <section id="start-screen" class="start-screen" aria-label="开始游戏">
     <div class="start-emblem" aria-hidden="true"><span>汉</span></div>
     <div class="start-copy">
-      <p class="eyebrow">汉末政治策略模拟 · 可玩原型 v0.6.0</p>
+      <p class="eyebrow">汉末政治策略模拟 · 可玩原型 v0.7.0</p>
       <h1>天子蒙尘</h1>
       <h2>献帝模拟器</h2>
-      <p class="start-intro">建安元年，天子迁许。你拥有天下最高的法统，却缺少直属军队、财政与可信赖的执行者。用诏书、官爵、礼制和秘密关系，在曹氏控制下维持汉祚。</p>
-      <div class="scenario-card"><div><span>首发剧本</span><strong>建安元年·许都</strong></div><p>24个月 · 人物奏请 · 政治派系 · 动态谈判 · 16座城池 · 14支军团 · 野战围城 · 战后裁决 · 原创立绘 · 宫廷音画</p></div>
+      <p class="start-intro">从中平六年的洛阳孤灯，到延康元年的禅代前夜。选择一段汉末危局，以诏书、官爵、军团与政治交易，为天子争取一条不由他人书写的道路。</p>
+      <label class="difficulty-label" for="scenario-select">历史剧本</label>
+      <select id="scenario-select" class="difficulty-select">
+        <option value="zhongping_189">189 中平六年｜洛阳孤灯</option>
+        <option value="xingping_195">195 兴平二年｜天子东归</option>
+        <option value="jianan_196" selected>196 建安元年｜许都</option>
+        <option value="jianan_200">200 建安五年｜官渡风云</option>
+        <option value="yankang_220">220 延康元年｜禅代前夜</option>
+      </select>
+      <div id="scenario-preview" class="scenario-card"><div><span>当前剧本</span><strong>建安元年·许都</strong></div><p>24个月 · 天子迁许，在曹氏军政保护下恢复朝廷。</p></div>
+      <div id="scenario-records" class="scenario-records" aria-live="polite"></div>
       <label class="difficulty-label" for="difficulty-select">开局难度</label>
       <select id="difficulty-select" class="difficulty-select">
         <option value="lenient">宽政｜资源较多，适合第一次游玩</option>
@@ -63,7 +73,7 @@
             <h2 id="event-title">许都新廷</h2><p id="event-text" class="event-text"></p><div id="event-choices" class="event-choices"></div><div id="event-resolved" class="event-resolved hidden">此奏报已经裁决，可继续施行政令。</div>
           </article>
           <section class="panel reports-panel"><div class="panel-heading"><div><span class="section-kicker">执行反馈</span><h2>御前记录</h2></div><span class="live-mark">即时</span></div><div id="report-list" class="report-list"></div></section>
-          <section class="panel chronicle-panel"><div class="panel-heading"><div><span class="section-kicker">本局史书</span><h2>《建安实录·御前本》</h2></div><button id="chronicle-btn" class="text-button" type="button">展开全文</button></div><div id="chronicle-preview" class="chronicle-preview"></div></section>
+          <section class="panel chronicle-panel"><div class="panel-heading"><div><span class="section-kicker">本局史书</span><h2 id="chronicle-title">《建安实录·御前本》</h2></div><button id="chronicle-btn" class="text-button" type="button">展开全文</button></div><div id="chronicle-preview" class="chronicle-preview"></div></section>
         </section>
 
         <aside class="right-column">
@@ -75,7 +85,7 @@
       </div>
     </main>
 
-    <footer class="game-footer"><span>v0.6.0 · 人物奏请、政治派系与动态外交谈判 · 自动保存在当前浏览器</span><span>Ctrl + S 手动保存</span></footer>
+    <footer class="game-footer"><span>v0.7.0 · 五个历史剧本与独立挑战史册 · 自动保存在当前浏览器</span><span>Ctrl + S 手动保存</span></footer>
   </div>
 
   <div id="modal-backdrop" class="modal-backdrop hidden" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><span class="modal-seal" aria-hidden="true">诏</span><h2 id="modal-title">御前处分</h2></header><div id="modal-body" class="modal-body"></div><footer><button id="modal-cancel" class="secondary-button" type="button">取消</button><button id="modal-confirm" class="primary-button" type="button">确定</button></footer></section></div>

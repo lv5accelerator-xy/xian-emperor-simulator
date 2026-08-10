@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.2.0
+ * 天子蒙尘：献帝模拟器 v0.7.0
  * 全国局势、诸侯动态、人物四维关系、历史时间线与史料引用模块。
  *
  * 本模块采用独立 localStorage，不改写核心存档结构，可兼容 v0.1.x 存档。
@@ -139,6 +139,7 @@
   }
 
   function createWorldState(core) {
+    const scenario = getScenario(core.scenarioId);
     const regions = {};
     DATA.regions.forEach((region) => {
       regions[region.id] = {
@@ -191,8 +192,8 @@
           regionId: "sili_yuzhou",
           type: "court",
           mode: "historical-anchor",
-          text: "天子迁驻许都，全国诏令体系重新运转；各地诸侯开始评估汉廷与曹氏的真实关系。",
-          sourceIds: ["hhs_9", "sgz_1", "zz_62"],
+          text: scenario.opening || "汉廷在乱世中重新整理诏令与天下档案。",
+          sourceIds: scenario.id === "jianan_196" ? ["hhs_9", "sgz_1", "zz_62"] : [],
         },
       ],
       monthlyHistory: [],
@@ -550,7 +551,7 @@
     const overlay = document.createElement("div");
     overlay.id = "xian-world-overlay";
     overlay.className = "xian-world-overlay hidden";
-    overlay.innerHTML = `<section class="xian-world-window" role="dialog" aria-modal="true" aria-labelledby="xian-world-title"><header class="xian-world-header"><div><span class="section-kicker">建安天下档案</span><h2 id="xian-world-title">全国局势与诸侯动态</h2><p id="xian-world-date">尚未载入本局</p></div><button id="xian-world-close" class="xian-world-close" type="button" aria-label="关闭">×</button></header><nav class="xian-world-tabs" aria-label="天下档案栏目"><button type="button" data-world-panel="world">天下舆图</button><button type="button" data-world-panel="people">人物四维</button><button type="button" data-world-panel="timeline">历史时间线</button><button type="button" data-world-panel="sources">史料库</button></nav><div id="xian-world-content" class="xian-world-content"></div></section>`;
+    overlay.innerHTML = `<section class="xian-world-window" role="dialog" aria-modal="true" aria-labelledby="xian-world-title"><header class="xian-world-header"><div><span class="section-kicker">汉末天下档案</span><h2 id="xian-world-title">全国局势与诸侯动态</h2><p id="xian-world-date">尚未载入本局</p></div><button id="xian-world-close" class="xian-world-close" type="button" aria-label="关闭">×</button></header><nav class="xian-world-tabs" aria-label="天下档案栏目"><button type="button" data-world-panel="world">天下舆图</button><button type="button" data-world-panel="people">人物四维</button><button type="button" data-world-panel="timeline">历史时间线</button><button type="button" data-world-panel="sources">史料库</button></nav><div id="xian-world-content" class="xian-world-content"></div></section>`;
     document.body.appendChild(overlay);
     overlay.querySelector("#xian-world-close")?.addEventListener("click", closeOverlay);
     overlay.addEventListener("click", (event) => { if (event.target === overlay) closeOverlay(); });
@@ -687,7 +688,7 @@
     const date = document.getElementById("xian-world-date");
     if (!content || !title || !date) return;
     document.querySelectorAll("[data-world-panel]").forEach((button) => button.classList.toggle("active", button.dataset.worldPanel === overlayState.tab));
-    date.textContent = lastCoreState ? `${formatTurnDate(lastCoreState.turn)} · 第 ${lastCoreState.turn}/${lastCoreState.maxTurns || 24} 月` : "尚未载入本局；以下为建安初年的历史基础态势";
+    date.textContent = lastCoreState ? `${formatTurnDate(lastCoreState.turn)} · 第 ${lastCoreState.turn}/${lastCoreState.maxTurns || 24} 月` : "尚未载入本局；以下为汉末历史基础态势";
     const renderers = { world: renderWorldPanel, people: renderPeoplePanel, timeline: renderTimelinePanel, sources: renderSourcesPanel };
     const titles = { world: "全国局势与诸侯动态", people: "人物政治人格四维模型", timeline: "汉末历史与本局时间线", sources: "史料库与事件依据" };
     title.textContent = titles[overlayState.tab] || titles.world;
@@ -742,7 +743,7 @@
   function renderSourcesPanel() {
     let sources = DATA.sources;
     if (Array.isArray(overlayState.sourceFilter) && overlayState.sourceFilter.length > 0) { const filter = new Set(overlayState.sourceFilter); sources = DATA.sources.filter((source) => filter.has(source.id)); }
-    const event = [...(window.GAME_DATA?.fixedEvents || []), ...(window.GAME_DATA?.randomEvents || [])].find((item) => item.id === lastCoreState?.currentEventId);
+    const event = [...(window.GAME_DATA?.fixedEvents || []), ...(window.GAME_DATA?.randomEvents || []), ...Object.values(window.GAME_DATA?.scenarioEvents || {})].find((item) => item.id === lastCoreState?.currentEventId);
     return `${overlayState.sourceFilter ? `<div class="source-context"><strong>${event ? `当前事件：${escapeHtml(event.title)}` : "筛选史料"}</strong><p>以下资料用于提供历史背景；游戏的数值、对话与具体因果属于设计性推演。</p><button type="button" data-clear-source-filter>查看全部史料</button></div>` : `<div class="source-context"><strong>引用原则</strong><p>正史与编年史用于确定人物、时间与大势；存在分歧或细节不足之处，游戏会明确标注“游戏化综合”。</p></div>`}<div class="source-grid">${sources.map((source) => `<article class="source-card"><div><span>${escapeHtml(source.reliability)}</span><h3>${escapeHtml(source.work)}</h3><h4>${escapeHtml(source.chapter)}</h4></div><p>${escapeHtml(source.scope)}</p><footer><small>${escapeHtml(source.author)}</small><a href="${source.url}" target="_blank" rel="noopener noreferrer">打开原文 ↗</a></footer></article>`).join("")}</div>`;
   }
 
@@ -800,8 +801,9 @@
     return () => { seed += 0x6d2b79f5; let value = seed; value = Math.imul(value ^ (value >>> 15), value | 1); value ^= value + Math.imul(value ^ (value >>> 7), value | 61); return ((value ^ (value >>> 14)) >>> 0) / 4294967296; };
   }
 
-  function dateFromTurn(turn) { const total = 196 * 12 + 9 + Math.max(0, turn - 1); return { year: Math.floor(total / 12), month: (total % 12) + 1 }; }
-  function formatTurnDate(turn) { const { year, month } = dateFromTurn(turn); return `建安${toChineseNumber(year - 195)}年${toChineseMonth(month)}`; }
+  function getScenario(id) { return (window.GAME_DATA?.scenarios || []).find(item => item.id === id) || window.GAME_DATA?.scenario || {}; }
+  function dateFromTurn(turn) { const scenario = getScenario(lastCoreState?.scenarioId || "jianan_196"); const total = Number(scenario.startYear || 196) * 12 + Number(scenario.startMonth || 10) - 1 + Math.max(0, turn - 1); return { year: Math.floor(total / 12), month: (total % 12) + 1 }; }
+  function formatTurnDate(turn) { const { year, month } = dateFromTurn(turn); let era; let eraYear; if(year===189){era="中平";eraYear=6;}else if(year>=190&&year<=193){era="初平";eraYear=year-189;}else if(year>=194&&year<=195){era="兴平";eraYear=year-193;}else if(year>=196&&year<=219){era="建安";eraYear=year-195;}else if(year===220){era="延康";eraYear=1;}else{return `公元${year}年${toChineseMonth(month)}`;} return `${era}${eraYear===1?"元":toChineseNumber(eraYear)}年${toChineseMonth(month)}`; }
   function toChineseNumber(value) { const map = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"]; if (value <= 10) return value === 10 ? "十" : map[value]; if (value < 20) return `十${map[value - 10]}`; return String(value); }
   function toChineseMonth(month) { return ["正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"][month - 1] || `${month}月`; }
   function formatSigned(value) { return value > 0 ? `+${Math.round(value)}` : String(Math.round(value)); }

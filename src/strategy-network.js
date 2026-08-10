@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.4.0
+ * 天子蒙尘：献帝模拟器 v0.7.0
  * 城池节点、战争路线、诸侯方略与外交承诺系统。
  */
 (() => {
@@ -14,7 +14,7 @@
   const GAME_SAVE_KEY = "xian_emperor_simulator_v01";
   const WORLD_SAVE_KEY = "xian_emperor_world_v020";
   const STORAGE_KEY = "xian_emperor_strategy_network_v040";
-  const VERSION = "0.4.0";
+  const VERSION = "0.7.0";
   const MAX_LOG = 60;
   const MAX_PROMISES = 40;
 
@@ -102,16 +102,18 @@
   }
 
   function createState(core) {
+    const scenario = (window.GAME_DATA?.scenarios || []).find(item => item.id === core.scenarioId) || {};
     const cities = {};
     DATA.cities.forEach(city => {
+      const override = scenario.cityOverrides?.[city.id] || {};
       cities[city.id] = {
-        controller: city.controller,
-        controllerName: city.controllerName,
-        defense: city.defense,
-        supply: city.supply,
-        courtLoyalty: city.courtLoyalty,
-        pressure: 20,
-        lastChange: "开局态势",
+        controller: override.controller || city.controller,
+        controllerName: override.controllerName || city.controllerName,
+        defense: clamp(override.defense ?? city.defense, 0, 100),
+        supply: clamp(override.supply ?? city.supply, 0, 100),
+        courtLoyalty: clamp(override.courtLoyalty ?? city.courtLoyalty, 0, 100),
+        pressure: clamp(override.pressure ?? 20, 0, 100),
+        lastChange: scenario.id ? `${scenario.name}开局态势` : "开局态势",
       };
     });
 

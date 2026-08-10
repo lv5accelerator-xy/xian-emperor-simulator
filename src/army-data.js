@@ -1,9 +1,9 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.5.2
+ * 天子蒙尘：献帝模拟器 v0.7.0
  * 军团、将领与战役推演基础数据。
  */
 window.XIAN_ARMY_DATA = Object.freeze({
-  version: "0.5.2",
+  version: "0.7.0",
 
   taskLabels: {
     idle: "驻军整顿",

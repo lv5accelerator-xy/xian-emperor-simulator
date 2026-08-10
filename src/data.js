@@ -1,12 +1,71 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.1
+ * 天子蒙尘：献帝模拟器 v0.7.0
  * 游戏数据：人物、势力、事件与行动说明
  * 本作是历史题材架空模拟，数值与事件均经过游戏化处理。
  */
 
 window.GAME_DATA = {
-  version: "0.1.0",
+  version: "0.7.0",
   title: "天子蒙尘：献帝模拟器",
+  scenarios: [
+    {
+      id: "zhongping_189", name: "中平六年·洛阳孤灯", era: "中平", startYear: 189, startMonth: 9, maxTurns: 18,
+      difficulty: "危局", recordTitle: "中平实录",
+      summary: "董卓入京前后的权力真空。先保住天子与百官，再设法离开洛阳。",
+      intro: "中平六年，洛阳宫阙仍在，朝局却已失去支点。外兵将入京，宗室与百官各怀忧惧。你必须在少年天子的有限名分下，先保存宫禁与朝廷骨架。",
+      opening: "中平六年九月，京师兵变传闻四起。天子临朝，命百官暂守宫门与尚书台。",
+      statModifiers: { authority: -8, prestige: 8, security: -12, treasury: 6, officials: -4, caoAlert: -18 },
+      hiddenModifiers: { loyalNetwork: -5, leakRisk: 8, peopleStability: -7, externalBalance: 5, escapeRoute: 8 },
+      cityOverrides: { luoyang: { controller: "court", controllerName: "汉廷", defense: 48, supply: 52, courtLoyalty: 90 }, xudu: { controller: "fragmented", controllerName: "颍川郡县", courtLoyalty: 58 } },
+      armyModifiers: { courtMultiplier: 1.35, generalMultiplier: .72, supplyDelta: -8 },
+      challenge: { title: "洛阳孤灯", description: "坚持至剧本结束，并使宫廷安全与皇权都不低于 40。", statMin: { security: 40, authority: 40 } },
+    },
+    {
+      id: "xingping_195", name: "兴平二年·天子东归", era: "兴平", startYear: 195, startMonth: 8, maxTurns: 18,
+      difficulty: "艰难", recordTitle: "兴平实录",
+      summary: "长安失序，车驾东归。以残破朝廷穿过关中与河洛，寻找新的立足点。",
+      intro: "兴平二年，长安饥乱，护驾诸将争权。车驾东归的每一步都需要粮秣、名分与临时盟友。你要把流亡朝廷带回关东，而不是让百官在途中离散。",
+      opening: "兴平二年八月，车驾议定东归。百官扶老携幼，沿途关隘与粮道皆未可知。",
+      statModifiers: { authority: -5, prestige: 4, security: -8, treasury: -15, officials: -8, caoAlert: -10 },
+      hiddenModifiers: { loyalNetwork: 4, leakRisk: 4, peopleStability: -5, externalBalance: 4, escapeRoute: 16 },
+      cityOverrides: { changan: { controller: "fragmented", controllerName: "护驾诸将", defense: 45, supply: 18, courtLoyalty: 72 }, luoyang: { defense: 25, supply: 12, courtLoyalty: 80 } },
+      armyModifiers: { courtMultiplier: .72, generalMultiplier: .82, supplyDelta: -12 },
+      challenge: { title: "衣冠东归", description: "坚持至剧本结束，汉室威望不低于 58、国库不低于 20。", statMin: { prestige: 58, treasury: 20 } },
+    },
+    {
+      id: "jianan_196", name: "建安元年·许都", era: "建安", startYear: 196, startMonth: 10, maxTurns: 24,
+      difficulty: "标准", recordTitle: "建安实录",
+      summary: "天子迁许。依靠诏书、官爵与制衡，在曹氏军政保护下恢复朝廷。",
+      intro: "你是大汉天子刘协。洛阳残破，百官饥困，曹操迎驾迁许。你仍握有诏书、官爵与汉室名分，却缺少军队、财赋和可信赖的执行者。未来二十四个月，你必须在依附与自救之间维持汉祚。",
+      opening: "建安元年十月，天子迁驻许都。宫室未备，百官饥困，汉廷在曹氏军政保护下重新开朝。",
+      statModifiers: {}, hiddenModifiers: {}, cityOverrides: {}, armyModifiers: { courtMultiplier: 1, generalMultiplier: 1, supplyDelta: 0 },
+      challenge: { title: "许都自立", description: "坚持至剧本结束，皇权不低于 55且曹氏警戒低于 82。", statMin: { authority: 55 }, statMax: { caoAlert: 81 } },
+    },
+    {
+      id: "jianan_200", name: "建安五年·官渡风云", era: "建安", startYear: 200, startMonth: 1, maxTurns: 18,
+      difficulty: "权衡", recordTitle: "官渡实录",
+      summary: "曹袁决战在即。朝廷名义成为双方都想争取的战略资源。",
+      intro: "建安五年，曹操与袁绍隔河对峙。许都朝廷既是曹氏后方，也是河北争夺的名分。你可以借大战扩大政治空间，但任何误判都会使宫廷先于战线崩溃。",
+      opening: "建安五年正月，河北军书与许都急报同时入朝。天子命尚书台分别答复，不许一方独占汉廷名义。",
+      statModifiers: { authority: 4, prestige: 2, security: 2, treasury: 3, officials: 3, caoAlert: 14 },
+      hiddenModifiers: { loyalNetwork: 3, leakRisk: 5, peopleStability: 2, externalBalance: 18, escapeRoute: -2 },
+      cityOverrides: { ye: { defense: 90, supply: 92 }, xudu: { defense: 85, supply: 86 }, linzi: { controller: "yuan_shao", controllerName: "袁绍", defense: 70 } },
+      armyModifiers: { courtMultiplier: 1.08, generalMultiplier: 1.18, supplyDelta: 5 },
+      challenge: { title: "两雄之间", description: "坚持至剧本结束，外部制衡不低于 52且曹氏警戒低于 88。", hiddenMin: { externalBalance: 52 }, statMax: { caoAlert: 87 } },
+    },
+    {
+      id: "yankang_220", name: "延康元年·禅代前夜", era: "延康", startYear: 220, startMonth: 1, maxTurns: 12,
+      difficulty: "绝境", recordTitle: "延康实录",
+      summary: "旧秩序只剩最后一年。用十二个月争取一条不由他人书写的终局。",
+      intro: "延康元年，曹操已逝，魏王府要求重新确认朝廷与藩国的关系。百官多已接受改朝换代不可避免。你只有十二个月，把汉室最后的名分变成谈判筹码。",
+      opening: "延康元年正月，魏王府使者入朝。禅代之议尚未公开，百官的沉默却比奏疏更响。",
+      statModifiers: { authority: -10, prestige: -8, security: 3, treasury: 8, officials: -12, caoAlert: 22 },
+      hiddenModifiers: { loyalNetwork: -8, leakRisk: 10, peopleStability: 8, externalBalance: -6, escapeRoute: 10 },
+      cityOverrides: { xudu: { controller: "cao_cao", controllerName: "魏王府", defense: 92, supply: 94, courtLoyalty: 48 }, ye: { controller: "cao_cao", controllerName: "魏王府", defense: 92, supply: 95, courtLoyalty: 20 }, xiapi: { controller: "cao_cao", controllerName: "魏王府" }, shouchun: { controller: "cao_cao", controllerName: "魏王府" } },
+      armyModifiers: { courtMultiplier: .62, generalMultiplier: 1.32, supplyDelta: 10 },
+      challenge: { title: "不失天子体面", description: "坚持至剧本结束，汉室威望不低于 55、皇权不低于 38。", statMin: { prestige: 55, authority: 38 } },
+    },
+  ],
   scenario: {
     name: "建安元年·许都",
     startYear: 196,
@@ -14,6 +73,45 @@ window.GAME_DATA = {
     maxTurns: 24,
     intro:
       "你是大汉天子刘协。洛阳残破，百官饥困，曹操迎驾迁许。你仍握有诏书、官爵与汉室名分，却缺少军队、财赋和可信赖的执行者。未来二十四个月，你必须在依附与自救之间维持汉祚。",
+  },
+
+  scenarioEvents: {
+    zhongping_189: {
+      id: "scenario_189_opening", title: "京师兵权", category: "危局",
+      text: "外军将至，宫门守备各奉不同号令。百官请天子立即确定京师兵权归属，以免宫禁先乱。",
+      choices: [
+        { label: "宿卫归尚书台节制", hint: "提高皇权，但执行困难。", effects: { authority: 7, security: 2, officials: 3 }, hidden: { loyalNetwork: 3, leakRisk: 2 }, chronicle: "天子诏宿卫归尚书台节制，力图以朝命约束京师兵权。" },
+        { label: "分守宫门，各不相扰", hint: "换取短暂安全。", effects: { security: 7, authority: -2, officials: 1 }, chronicle: "宫门分区守备，京师暂未因号令冲突而生乱。" },
+        { label: "预备东出洛阳", hint: "增加退路，宫中流言上升。", effects: { security: -2, prestige: 3 }, hidden: { escapeRoute: 9, leakRisk: 5 }, chronicle: "天子暗命近臣勘察东出道路，为最坏局面预留退路。" },
+      ],
+    },
+    xingping_195: {
+      id: "scenario_195_opening", title: "东归第一程", category: "行在",
+      text: "车驾将离长安，现有粮车不足以同时供给百官与护驾军。沿途关隘又要求出示不同将领的通行文书。",
+      choices: [
+        { label: "先保百官家属", hint: "官心与名望上升，行军更险。", effects: { officials: 7, prestige: 5, security: -4, treasury: -3 }, chronicle: "东归首程先载百官家属，行在虽慢，衣冠未散。" },
+        { label: "粮车尽归护驾军", hint: "安全上升，百官失望。", effects: { security: 8, officials: -5, treasury: 2 }, chronicle: "粮车优先供给护驾诸军，车驾得行，随从多有饥色。" },
+        { label: "沿途以官爵换粮", hint: "补充国库，透支朝廷名分。", effects: { treasury: 9, prestige: -5, authority: -2 }, hidden: { externalBalance: 4 }, chronicle: "行在以官爵换取沿途粮秣，暂渡危局，也留下日后追认之债。" },
+      ],
+    },
+    jianan_200: {
+      id: "scenario_200_opening", title: "官渡两表", category: "军国",
+      text: "曹袁两方奏表同日抵达：一方请诏河北为逆，一方请罢曹操权柄。任何明确表态都会把朝廷押上战线。",
+      choices: [
+        { label: "两表并留，不判逆顺", hint: "强化制衡，双方都不满意。", effects: { authority: 3, caoAlert: 4, security: -2 }, hidden: { externalBalance: 9 }, chronicle: "天子将曹袁两表并留尚书台，暂不以朝命判定逆顺。" },
+        { label: "诏诸军以安民为先", hint: "提升名望，实际约束有限。", effects: { prestige: 7, officials: 3, treasury: -2 }, hidden: { peopleStability: 4 }, chronicle: "朝廷不论曹袁名位，先诏两军保全沿线百姓与漕运。" },
+        { label: "支持许都军令", hint: "短期更安全，外部制衡下降。", effects: { security: 8, caoAlert: -7, authority: -4 }, hidden: { externalBalance: -7 }, chronicle: "朝廷支持许都军令，官渡战事遂以曹氏名义统一调度。" },
+      ],
+    },
+    yankang_220: {
+      id: "scenario_220_opening", title: "禅代试表", category: "终局",
+      text: "魏王府送来一份未署名的禅代试表，请尚书台先议礼仪与百官次序。它不是正式逼迫，却在等待天子的态度。",
+      choices: [
+        { label: "封还试表，不议禅代", hint: "维护皇权，警戒大幅上升。", effects: { authority: 8, prestige: 6, security: -7, caoAlert: 10 }, chronicle: "天子封还禅代试表，命尚书台不得先议改朝礼仪。" },
+        { label: "只议宗庙与百官保全", hint: "为退路争取条件。", effects: { authority: 2, prestige: 3, security: 3, caoAlert: 3 }, hidden: { escapeRoute: 7 }, chronicle: "朝廷未应禅代，只命使者先明示宗庙与百官如何保全。" },
+        { label: "允尚书台预备礼仪", hint: "宫廷安全上升，汉廷威望受损。", effects: { security: 9, caoAlert: -8, authority: -8, prestige: -7, treasury: 5 }, chronicle: "尚书台奉命预备改朝礼仪，宫门平静，朝臣却知终局已近。" },
+      ],
+    },
   },
 
   statMeta: {

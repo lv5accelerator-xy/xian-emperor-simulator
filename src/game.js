@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.1
+ * 天子蒙尘：献帝模拟器 v0.7.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -8,6 +8,7 @@
 
   const DATA = window.GAME_DATA;
   const SAVE_KEY = "xian_emperor_simulator_v01";
+  const SCENARIO_RECORDS_KEY = "xian_emperor_scenario_records_v070";
   const MAX_REPORTS = 10;
 
   const STARTING_STATS = {
@@ -46,6 +47,9 @@
       "start-screen",
       "continue-game-btn",
       "new-game-btn",
+      "scenario-select",
+      "scenario-preview",
+      "scenario-records",
       "difficulty-select",
       "game-shell",
       "scenario-name",
@@ -67,6 +71,7 @@
       "end-turn-btn",
       "court-assessment",
       "chronicle-preview",
+      "chronicle-title",
       "save-btn",
       "load-btn",
       "export-btn",
@@ -98,8 +103,10 @@
 
   function bindGlobalEvents() {
     el["new-game-btn"].addEventListener("click", () => {
-      startNewGame(el["difficulty-select"].value);
+      startNewGame(el["difficulty-select"].value, el["scenario-select"]?.value || "jianan_196");
     });
+
+    el["scenario-select"]?.addEventListener("change", renderScenarioPreview);
 
     el["continue-game-btn"].addEventListener("click", () => {
       if (!loadGame(true)) {
@@ -133,6 +140,7 @@
       el["start-screen"].classList.remove("hidden");
       el["game-shell"].classList.add("hidden");
       updateContinueButton();
+      renderScenarioPreview();
     });
     el["ending-export"].addEventListener("click", exportChronicleText);
 
@@ -146,7 +154,8 @@
   }
 
   function renderStaticContent() {
-    el["scenario-name"].textContent = DATA.scenario.name;
+    el["scenario-name"].textContent = getScenarioById("jianan_196").name;
+    renderScenarioPreview();
 
     el["faction-list"].innerHTML = DATA.factions
       .map(
@@ -186,9 +195,13 @@
     });
   }
 
-  function createInitialState(difficulty) {
+  function createInitialState(difficulty, scenarioId = "jianan_196") {
+    const scenario = getScenarioById(scenarioId);
     const stats = { ...STARTING_STATS };
     const hidden = { ...STARTING_HIDDEN };
+
+    applyNumericModifiers(stats, scenario.statModifiers);
+    applyNumericModifiers(hidden, scenario.hiddenModifiers);
 
     if (difficulty === "lenient") {
       stats.authority += 5;
@@ -207,11 +220,12 @@
 
     return {
       version: DATA.version,
+      scenarioId: scenario.id,
       difficulty,
       turn: 1,
-      year: DATA.scenario.startYear,
-      month: DATA.scenario.startMonth,
-      maxTurns: DATA.scenario.maxTurns,
+      year: scenario.startYear,
+      month: scenario.startMonth,
+      maxTurns: scenario.maxTurns,
       actionPoints: 2,
       stats,
       hidden,
@@ -226,18 +240,20 @@
       edictsIssued: 0,
       ended: false,
       ending: null,
+      challengeRecorded: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
   }
 
-  function startNewGame(difficulty = "standard") {
-    state = createInitialState(difficulty);
+  function startNewGame(difficulty = "standard", scenarioId = "jianan_196") {
+    const scenario = getScenarioById(scenarioId);
+    state = createInitialState(difficulty, scenario.id);
     addChronicle(
-      "建安元年十月",
-      "天子迁驻许都。宫室未备，百官饥困，汉廷在曹氏军政保护下重新开朝。"
+      formatReignDate(scenario.startYear, scenario.startMonth),
+      scenario.opening
     );
-    addReport("御前记事", DATA.scenario.intro, "important");
+    addReport("御前记事", scenario.intro, "important");
     prepareTurn();
     enterGame();
     saveGame(true);
@@ -257,23 +273,35 @@
     state.currentEventId = selectEventForTurn().id;
     addReport(
       "本月奏报",
-      `建安${toChineseYear(state.year - 195)}年${toChineseMonth(state.month)}，新的奏报已送入御前。`,
+      `${formatReignDate(state.year, state.month)}，新的奏报已送入御前。`,
       "neutral"
     );
   }
 
   function selectEventForTurn() {
-    const fixed = DATA.fixedEvents.find((event) => event.fixedTurn === state.turn);
+    const scenarioId = state.scenarioId || "jianan_196";
+    const scenarioOpening = state.turn === 1 ? DATA.scenarioEvents?.[scenarioId] : null;
+    if (scenarioOpening) return scenarioOpening;
+    const fixed = scenarioId === "jianan_196" ? DATA.fixedEvents.find((event) => event.fixedTurn === state.turn) : null;
     if (fixed) return fixed;
 
-    let pool = DATA.randomEvents.filter(
+    const scenarioPools = {
+      zhongping_189: ["forged_edict", "old_official_petition", "palace_rumor", "seal_ceremony", "court_banquet", "secret_letter", "imperial_clothing"],
+      xingping_195: ["forged_edict", "old_official_petition", "palace_rumor", "seal_ceremony", "border_bandits", "court_banquet", "secret_letter", "imperial_clothing"],
+      jianan_200: ["grain_price", "forged_edict", "tax_petition", "scholar_recommendation", "seal_ceremony", "border_bandits", "envoy_jiangdong", "frontier_victory"],
+      yankang_220: ["forged_edict", "old_official_petition", "palace_rumor", "seal_ceremony", "court_banquet", "secret_letter", "imperial_clothing"],
+    };
+    const allowedIds = scenarioPools[scenarioId];
+    const availableRandomEvents = allowedIds ? DATA.randomEvents.filter(event => allowedIds.includes(event.id)) : DATA.randomEvents;
+
+    let pool = availableRandomEvents.filter(
       (event) => !state.usedRandomEvents.includes(event.id) && !state.recentEventIds.includes(event.id)
     );
 
     if (pool.length === 0) {
-      pool = DATA.randomEvents.filter((event) => !state.recentEventIds.includes(event.id));
+      pool = availableRandomEvents.filter((event) => !state.recentEventIds.includes(event.id));
     }
-    if (pool.length === 0) pool = [...DATA.randomEvents];
+    if (pool.length === 0) pool = [...availableRandomEvents];
 
     const selected = pool[Math.floor(Math.random() * pool.length)];
     state.usedRandomEvents.push(selected.id);
@@ -284,7 +312,7 @@
   }
 
   function getCurrentEvent() {
-    return [...DATA.fixedEvents, ...DATA.randomEvents].find((event) => event.id === state.currentEventId);
+    return [...DATA.fixedEvents, ...DATA.randomEvents, ...Object.values(DATA.scenarioEvents || {})].find((event) => event.id === state.currentEventId);
   }
 
   function renderAll() {
@@ -301,6 +329,9 @@
   }
 
   function renderHeader() {
+    const scenario = getActiveScenario();
+    el["scenario-name"].textContent = scenario.name;
+    if (el["chronicle-title"]) el["chronicle-title"].textContent = `《${scenario.recordTitle}·御前本》`;
     el["date-label"].textContent = `${formatReignDate(state.year, state.month)}`;
     el["turn-label"].textContent = `第 ${state.turn} / ${state.maxTurns} 月`;
     el["ap-label"].textContent = `可行动 ${state.actionPoints}`;
@@ -1314,6 +1345,7 @@
     state.ending = ending;
     state.updatedAt = new Date().toISOString();
     addChronicle(formatReignDate(state.year, state.month), `终局：${ending.title}。${ending.text}`);
+    recordScenarioResult();
     saveGame(true);
     displayEnding(ending);
   }
@@ -1321,9 +1353,10 @@
   function displayEnding(ending) {
     el["ending-title"].textContent = ending.title;
     el["ending-text"].textContent = ending.text;
+    const challenge = calculateScenarioChallenge(getActiveScenario(), state);
     el["ending-stats"].innerHTML = Object.entries(DATA.statMeta)
       .map(([key, meta]) => `<div><span>${meta.name}</span><strong>${Math.round(state.stats[key])}</strong></div>`)
-      .join("");
+      .join("") + `<div class="scenario-result ${challenge.completed ? "complete" : "incomplete"}"><span>${escapeHtml(challenge.title)}</span><strong>${challenge.completed ? "挑战完成" : "尚未完成"}</strong></div>`;
     el["ending-chronicle"].innerHTML = state.chronicle
       .slice(-8)
       .map((entry) => `<p><strong>${escapeHtml(entry.date)}</strong>　${escapeHtml(entry.text)}</p>`)
@@ -1544,8 +1577,9 @@
 
   function migrateSave(save) {
     const migrated = {
-      ...createInitialState(save.difficulty || "standard"),
+      ...createInitialState(save.difficulty || "standard", save.scenarioId || "jianan_196"),
       ...save,
+      scenarioId: save.scenarioId || "jianan_196",
       stats: { ...STARTING_STATS, ...(save.stats || {}) },
       hidden: { ...STARTING_HIDDEN, ...(save.hidden || {}) },
       relations: {
@@ -1591,9 +1625,10 @@
 
   function exportChronicleText() {
     if (!state) return;
+    const scenario = getActiveScenario();
     const lines = [
       DATA.title,
-      `剧本：${DATA.scenario.name}`,
+      `剧本：${scenario.name}`,
       `结局：${state.ending?.title || "未结算"}`,
       "",
       ...state.chronicle.map((entry) => `${entry.date}　${entry.text}`),
@@ -1602,7 +1637,7 @@
       ...Object.entries(DATA.statMeta).map(([key, meta]) => `${meta.name}：${Math.round(state.stats[key])}`),
     ];
     const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
-    downloadBlob(blob, "jianan-chronicle.txt");
+    downloadBlob(blob, `${scenario.id}-chronicle.txt`);
   }
 
   function confirmReset() {
@@ -1618,6 +1653,7 @@
         el["end-screen"].classList.add("hidden");
         el["start-screen"].classList.remove("hidden");
         updateContinueButton();
+        renderScenarioPreview();
         showToast("旧存档已删除。", "success");
       },
     });
@@ -1652,8 +1688,89 @@
     return labels[3];
   }
 
+  function getScenarioById(id) {
+    return (DATA.scenarios || []).find((scenario) => scenario.id === id) || DATA.scenario || {};
+  }
+
+  function getActiveScenario() {
+    return getScenarioById(state?.scenarioId || "jianan_196");
+  }
+
+  function applyNumericModifiers(target, modifiers = {}) {
+    Object.entries(modifiers || {}).forEach(([key, value]) => {
+      target[key] = clamp(Number(target[key] || 0) + Number(value || 0), 0, 100);
+    });
+  }
+
+  function renderScenarioPreview() {
+    if (!el["scenario-preview"] || !el["scenario-records"]) return;
+    const scenario = getScenarioById(el["scenario-select"]?.value || "jianan_196");
+    const records = loadScenarioRecords();
+    const record = records[scenario.id];
+    el["scenario-preview"].innerHTML = `
+      <div><span>当前剧本 · ${escapeHtml(scenario.difficulty)}</span><strong>${escapeHtml(scenario.name)}</strong></div>
+      <div><p>${escapeHtml(scenario.summary)}</p><div class="scenario-preview-meta"><span>${scenario.maxTurns} 个月</span><span>${scenario.startYear} 年开局</span><span>${record?.attempts || 0} 次记录</span></div></div>
+      <div class="scenario-challenge"><b>历史挑战｜${escapeHtml(scenario.challenge?.title || "存续")}</b>　${escapeHtml(scenario.challenge?.description || "坚持至剧本结束。")}</div>`;
+    el["scenario-records"].innerHTML = (DATA.scenarios || []).map(item => {
+      const itemRecord = records[item.id];
+      const classes = ["scenario-record-badge", itemRecord?.completed ? "complete" : "", item.id === scenario.id ? "current" : ""].filter(Boolean).join(" ");
+      return `<span class="${classes}">${item.startYear} ${itemRecord?.completed ? "✓" : "·"} ${itemRecord?.bestScore ? `最高 ${itemRecord.bestScore}` : "未完成"}</span>`;
+    }).join("");
+  }
+
+  function loadScenarioRecords() {
+    try {
+      const records = JSON.parse(localStorage.getItem(SCENARIO_RECORDS_KEY) || "{}");
+      return records && typeof records === "object" ? records : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function calculateScenarioChallenge(scenario, gameState) {
+    const challenge = scenario?.challenge || {};
+    const survived = Boolean(gameState && gameState.turn >= gameState.maxTurns);
+    const statMin = Object.entries(challenge.statMin || {}).every(([key, value]) => Number(gameState?.stats?.[key] || 0) >= value);
+    const statMax = Object.entries(challenge.statMax || {}).every(([key, value]) => Number(gameState?.stats?.[key] || 0) <= value);
+    const hiddenMin = Object.entries(challenge.hiddenMin || {}).every(([key, value]) => Number(gameState?.hidden?.[key] || 0) >= value);
+    return { title: challenge.title || "剧本挑战", completed: survived && statMin && statMax && hiddenMin, survived };
+  }
+
+  function calculateScenarioScore(gameState) {
+    const positive = ["authority", "prestige", "security", "treasury", "officials"].reduce((sum, key) => sum + Number(gameState?.stats?.[key] || 0), 0);
+    const alertControl = Math.max(0, 100 - Number(gameState?.stats?.caoAlert || 0));
+    const progress = Math.min(1, Number(gameState?.turn || 0) / Math.max(1, Number(gameState?.maxTurns || 1)));
+    return Math.round((positive + alertControl) * progress);
+  }
+
+  function recordScenarioResult() {
+    if (!state || state.challengeRecorded) return null;
+    const scenario = getActiveScenario();
+    const challenge = calculateScenarioChallenge(scenario, state);
+    const records = loadScenarioRecords();
+    const previous = records[scenario.id] || { attempts: 0, completed: false, bestScore: 0 };
+    records[scenario.id] = {
+      attempts: previous.attempts + 1,
+      completed: Boolean(previous.completed || challenge.completed),
+      bestScore: Math.max(Number(previous.bestScore || 0), calculateScenarioScore(state)),
+      lastEnding: state.ending?.title || "未结算",
+      updatedAt: new Date().toISOString(),
+    };
+    try { localStorage.setItem(SCENARIO_RECORDS_KEY, JSON.stringify(records)); } catch (error) { console.warn("剧本史册保存失败", error); }
+    state.challengeRecorded = true;
+    return records[scenario.id];
+  }
+
   function formatReignDate(year, month) {
-    return `建安${toChineseYear(year - 195)}年${toChineseMonth(month)}`;
+    let era;
+    let eraYear;
+    if (year === 189) { era = "中平"; eraYear = 6; }
+    else if (year >= 190 && year <= 193) { era = "初平"; eraYear = year - 189; }
+    else if (year >= 194 && year <= 195) { era = "兴平"; eraYear = year - 193; }
+    else if (year >= 196 && year <= 219) { era = "建安"; eraYear = year - 195; }
+    else if (year === 220) { era = "延康"; eraYear = 1; }
+    else return `公元${year}年${toChineseMonth(month)}`;
+    return `${era}${eraYear === 1 ? "元" : toChineseYear(eraYear)}年${toChineseMonth(month)}`;
   }
 
   function toChineseYear(yearNumber) {
@@ -1711,6 +1828,8 @@
 
   window.XianEmperorGame = Object.freeze({
     applyExternalPackage,
+    getScenarioById: (id) => JSON.parse(JSON.stringify(getScenarioById(id))),
+    calculateScenarioChallenge: (scenario, gameState) => calculateScenarioChallenge(scenario, gameState),
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
   });
 })();

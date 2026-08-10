@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.5.2
+ * 天子蒙尘：献帝模拟器 v0.7.0
  * 军团、行军、野战、围城、城池易手与战后裁决。
  */
 (() => {
@@ -16,7 +16,7 @@
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STRATEGY_KEY = "xian_emperor_strategy_network_v040";
   const STORAGE_KEY = "xian_emperor_armies_v050";
-  const VERSION = "0.5.2";
+  const VERSION = "0.7.0";
   const MAX_REPORTS = 40;
   const MAX_ORDERS = 50;
   const MAX_LOG = 80;
@@ -105,17 +105,21 @@
   }
 
   function createState(core) {
+    const scenario = (window.GAME_DATA?.scenarios || []).find(item => item.id === core.scenarioId) || {};
+    const armyModifiers = scenario.armyModifiers || {};
     const armies = {};
     DATA.armies.forEach(def => {
+      const multiplier = def.owner === "court" ? Number(armyModifiers.courtMultiplier || 1) : Number(armyModifiers.generalMultiplier || 1);
+      const troops = Math.max(500, Math.round(def.troops * multiplier));
       armies[def.id] = {
         id: def.id,
         owner: def.owner,
         ownerName: def.ownerName,
         commander: def.commander,
-        troops: def.troops,
-        maxTroops: def.troops,
+        troops,
+        maxTroops: troops,
         morale: def.morale,
-        supply: def.supply,
+        supply: clamp(def.supply + Number(armyModifiers.supplyDelta || 0), 5, 100),
         training: def.training,
         loyalty: def.loyalty,
         fatigue: 8,
@@ -130,7 +134,7 @@
         orderedTurn: core.turn,
         eta: 0,
         orderAuthority: 50,
-        lastChange: "开局驻军",
+        lastChange: scenario.id ? `${scenario.name}开局驻军` : "开局驻军",
       };
     });
 

@@ -1,0 +1,16 @@
+/* 天子蒙尘：献帝模拟器 v0.7.0 · 多剧本选择与挑战史册 */
+#scenario-select{margin-bottom:.2rem}
+#scenario-preview{margin-top:.55rem;transition:border-color .2s,background .2s}
+#scenario-preview strong{font-size:1.03rem}
+#scenario-preview p{line-height:1.55}
+.scenario-preview-meta{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.4rem}
+.scenario-preview-meta span{padding:.18rem .4rem;border:1px solid rgba(222,185,105,.16);border-radius:999px;color:#a9906c;font-size:.61rem}
+.scenario-challenge{grid-column:1/-1;padding-top:.65rem;border-top:1px dashed rgba(222,185,105,.17);color:#a69174;font-size:.68rem}
+.scenario-challenge b{color:#d7b874}
+.scenario-records{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem;min-height:1.5rem}
+.scenario-record-badge{display:inline-flex;align-items:center;gap:.28rem;padding:.22rem .45rem;border:1px solid rgba(222,185,105,.13);border-radius:999px;color:#756956;font-size:.61rem;background:rgba(255,255,255,.018)}
+.scenario-record-badge.complete{border-color:rgba(113,141,101,.4);color:#aebd9b;background:rgba(113,141,101,.08)}
+.scenario-record-badge.current{border-color:rgba(212,173,93,.38);color:#d4ba81}
+.scenario-result.complete{border-color:rgba(113,141,101,.55)!important;color:#b7c9a3}
+.scenario-result.incomplete{border-color:rgba(197,127,75,.42)!important;color:#d0a477}
+@media(max-width:580px){#scenario-preview{grid-template-columns:1fr;gap:.45rem}.scenario-records{margin-bottom:.2rem}}

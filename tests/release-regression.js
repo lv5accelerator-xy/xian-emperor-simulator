@@ -50,7 +50,20 @@ function loadCourtApi() {
   return context.window.XianCourtPolitics;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "0.6.0";
+function loadGameApi() {
+  const context = {
+    console,
+    setTimeout,
+    clearTimeout,
+    document: { addEventListener() {} },
+    window: {},
+  };
+  vm.runInNewContext(read("src/data.js"), context, { filename: "data.js" });
+  vm.runInNewContext(read("src/game.js"), context, { filename: "game.js" });
+  return { api: context.window.XianEmperorGame, data: context.window.GAME_DATA };
+}
+
+const expectedVersion = process.env.EXPECTED_VERSION || "0.7.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -90,5 +103,15 @@ const refuseGuard = courtApi.previewResponse("fu_guard", "refuse", courtState);
 assert.ok(acceptGuard.supportAfter > refuseGuard.supportAfter, "accepting a petition should improve its faction support");
 assert.ok(acceptGuard.effects.security > 0, "guard petition should improve court security");
 assert.ok(courtApi.petitions.some(item => item.type === "negotiation"), "dynamic negotiations should be included");
+
+const game = loadGameApi();
+assert.equal(game.data.scenarios.length, 5, "five historical scenarios should be available");
+assert.deepEqual(Array.from(game.data.scenarios, item => item.startYear), [189, 195, 196, 200, 220]);
+const lateScenario = game.api.getScenarioById("yankang_220");
+assert.equal(lateScenario.maxTurns, 12, "the 220 challenge should be a compact twelve-month campaign");
+const challengePass = game.api.calculateScenarioChallenge(lateScenario, { turn: 12, maxTurns: 12, stats: { prestige: 60, authority: 45 }, hidden: {} });
+const challengeFail = game.api.calculateScenarioChallenge(lateScenario, { turn: 12, maxTurns: 12, stats: { prestige: 40, authority: 45 }, hidden: {} });
+assert.equal(challengePass.completed, true, "meeting all late-scenario goals should complete its challenge");
+assert.equal(challengeFail.completed, false, "missing a late-scenario goal should fail its challenge");
 
 console.log(`release regression ok: v${expectedVersion}`);
