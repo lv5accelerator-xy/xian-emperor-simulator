@@ -1,9 +1,6 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.5.0
- * 军团、行军、粮秣、战役结算与战报。
- *
- * 本阶段不处理围城和城池易手；进攻胜利会形成“兵临城下”，
- * 城池控制权将在后续攻城版本中结算。
+ * 天子蒙尘：献帝模拟器 v0.5.1
+ * 军团、行军、粮秣、野战、围城与城池易手。
  */
 (() => {
   "use strict";
@@ -19,7 +16,7 @@
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STRATEGY_KEY = "xian_emperor_strategy_network_v040";
   const STORAGE_KEY = "xian_emperor_armies_v050";
-  const VERSION = "0.5.0";
+  const VERSION = "0.5.1";
   const MAX_REPORTS = 40;
   const MAX_ORDERS = 50;
   const MAX_LOG = 80;
@@ -145,6 +142,8 @@
       armies,
       orders: [],
       battleReports: [],
+      sieges: {},
+      conquests: [],
       log: [{ id: `army-opening-${Date.now()}`, turn: core.turn, type: "system", text: "大司马府建立军团、兵力、粮秣与行军档案。" }],
       updatedAt: new Date().toISOString(),
     };
@@ -158,6 +157,8 @@
       armies: { ...(current.armies || {}) },
       orders: Array.isArray(current.orders) ? current.orders : [],
       battleReports: Array.isArray(current.battleReports) ? current.battleReports : [],
+      sieges: current.sieges && typeof current.sieges === "object" ? current.sieges : {},
+      conquests: Array.isArray(current.conquests) ? current.conquests : [],
       log: Array.isArray(current.log) ? current.log : [],
       lastReportTimestamp: Number(current.lastReportTimestamp) || 0,
       lastProcessedTurn: Number.isFinite(current.lastProcessedTurn) ? current.lastProcessedTurn : core.turn,
@@ -321,6 +322,7 @@
       else recoverArmy(army);
     });
 
+    processSieges(turn, core, rng);
     resolveCityBattles(turn, core, rng);
     updateOrderStatuses();
     state.log = state.log.slice(0, MAX_LOG);
@@ -523,14 +525,189 @@
       result,
       victor,
       cityControlChanged: false,
-      note: victor === attacker.owner ? "进攻军兵临城下，但本阶段尚未进行围城与城池易手结算。" : victor === defender.owner ? "守军维持城池控制，败军沿原路撤退。" : "双方暂时脱离接触，等待下月整补。",
+      note: victor === attacker.owner ? "进攻军已经兵临城下，将进入围城结算。" : victor === defender.owner ? "守军维持城池控制，败军沿原路撤退。" : "双方暂时脱离接触，等待下月整补。",
     };
     state.battleReports.unshift(report);
     addLog(turn, "battle", `${report.title}：${result}；${report.attackerName}损失${attackerLosses}，${report.defenderName}损失${defenderLosses}。`);
     adjustStrategyCity(cityId, { defense: -Math.round((attackerLosses + defenderLosses) / 2200), supply: -5, pressure: 14 }, report.title);
     const battleRoute = attacker.routeIds[Math.max(0, attacker.routeIndex - 1)] || defender.routeIds[Math.max(0, defender.routeIndex - 1)];
     if (battleRoute) adjustStrategyRoute(battleRoute, { supply: -4, pressure: 10 }, report.title);
+    if (victor === attacker.owner && attacker.status !== "destroyed") beginSiege(attacker, defender, cityId, turn, report);
     document.dispatchEvent(new CustomEvent("xian:battle-report", { detail: report }));
+  }
+
+  function beginSiege(attacker, defender, cityId, turn, report) {
+    const strategy = readStrategyState();
+    const city = strategy?.cities?.[cityId];
+    if (!city || city.controller === attacker.owner) {
+      attacker.status = "defending";
+      attacker.task = "defend";
+      return null;
+    }
+    const existing = state.sieges[cityId];
+    if (existing?.status === "active") {
+      existing.attackerArmyId = attacker.id;
+      existing.attackerOwner = attacker.owner;
+      existing.lastChange = `${armyName(attacker)}接替围城阵地`;
+      return existing;
+    }
+    const siege = {
+      id: `siege-${cityId}-${turn}-${Date.now()}`,
+      cityId,
+      attackerArmyId: attacker.id,
+      attackerOwner: attacker.owner,
+      defenderOwner: city.controller,
+      defenderCommander: defender?.commander || null,
+      stance: "blockade",
+      progress: 6,
+      walls: clamp(city.defense, 10, 100),
+      citySupply: clamp(city.supply, 0, 100),
+      garrison: Math.max(900, Math.round((city.defense * 72) + (defender?.troops || 0) * 0.18)),
+      startedTurn: turn,
+      lastResolvedTurn: turn,
+      status: "active",
+      lastChange: "野战得胜，进攻军开始围城",
+    };
+    state.sieges[cityId] = siege;
+    attacker.status = "besieging";
+    attacker.task = "siege";
+    attacker.targetCityId = cityId;
+    report.siegeId = siege.id;
+    addLog(turn, "siege", `${armyName(attacker)}包围${cityName(cityId)}，城内尚有守军与粮秣。`);
+    return siege;
+  }
+
+  function processSieges(turn, core, rng) {
+    Object.values(state.sieges || {}).forEach(siege => {
+      if (!siege || siege.status !== "active" || siege.lastResolvedTurn >= turn) return;
+      const army = state.armies[siege.attackerArmyId];
+      const strategy = readStrategyState();
+      const city = strategy?.cities?.[siege.cityId];
+      if (!army || army.status === "destroyed" || army.cityId !== siege.cityId || !city) {
+        siege.status = "lifted";
+        siege.lastChange = "围城军已经撤离，城围解除";
+        addLog(turn, "retreat", `${cityName(siege.cityId)}之围已经解除。`);
+        return;
+      }
+      const outcome = calculateSiegeTurn(siege, army, city, core, rng());
+      siege.progress = clamp(siege.progress + outcome.progress, 0, 100);
+      siege.walls = clamp(siege.walls - outcome.wallLoss, 0, 100);
+      siege.citySupply = clamp(siege.citySupply - outcome.supplyLoss, 0, 100);
+      siege.garrison = Math.max(0, siege.garrison - outcome.garrisonLoss);
+      siege.lastResolvedTurn = turn;
+      siege.lastChange = outcome.summary;
+      army.troops = Math.max(0, army.troops - outcome.attackerLoss);
+      army.supply = clamp(army.supply - outcome.attackerSupply, 0, 100);
+      army.fatigue = clamp(army.fatigue + outcome.fatigue, 0, 100);
+      adjustStrategyCity(siege.cityId, {
+        defense: -outcome.wallLoss,
+        supply: -outcome.supplyLoss,
+        pressure: 3,
+      }, outcome.summary);
+      checkDestroyed(army, turn);
+      if (army.status === "destroyed") {
+        siege.status = "lifted";
+        siege.lastChange = "围城军伤亡过重，攻势瓦解";
+        return;
+      }
+      const surrendered = siege.citySupply <= 0 || siege.garrison < 500;
+      if (siege.progress >= 100 || siege.walls <= 0 || surrendered) {
+        captureCity(siege, army, turn, surrendered ? "守军粮尽请降" : siege.walls <= 0 ? "城防被突破" : "围城进度完成");
+      }
+    });
+  }
+
+  function calculateSiegeTurn(siege, army, city, core, roll = 0.5) {
+    const stance = ["assault", "blockade", "persuade"].includes(siege?.stance) ? siege.stance : "blockade";
+    const armyStrength = Math.max(0.6, (Number(army?.troops) || 0) / 6200)
+      * (0.65 + clamp(army?.morale, 0, 100) / 180)
+      * (0.62 + clamp(army?.supply, 0, 100) / 190);
+    const defense = clamp(siege?.walls ?? city?.defense, 0, 100);
+    const prestige = clamp(core?.stats?.prestige, 0, 100);
+    const loyalty = clamp(city?.courtLoyalty, 0, 100);
+    if (stance === "assault") {
+      return {
+        progress: Math.max(7, Math.round(14 + armyStrength * 8 + roll * 7 - defense * 0.07)),
+        wallLoss: Math.max(4, Math.round(5 + armyStrength * 3 + roll * 3)),
+        supplyLoss: Math.max(3, Math.round(4 + roll * 3)),
+        garrisonLoss: Math.max(120, Math.round(180 + armyStrength * 150 + roll * 120)),
+        attackerLoss: Math.max(90, Math.round((Number(army?.troops) || 0) * (0.012 + defense / 6200))),
+        attackerSupply: 8,
+        fatigue: 12,
+        summary: "强攻城垣，进展最快但攻城军伤亡明显",
+      };
+    }
+    if (stance === "persuade") {
+      const authority = clamp(army?.orderAuthority, 0, 100);
+      return {
+        progress: Math.max(5, Math.round(5 + prestige * 0.08 + loyalty * 0.07 + authority * 0.04 + roll * 4)),
+        wallLoss: 0,
+        supplyLoss: Math.max(2, Math.round(2 + roll * 2)),
+        garrisonLoss: Math.max(25, Math.round(30 + roll * 45)),
+        attackerLoss: Math.max(10, Math.round((Number(army?.troops) || 0) * 0.0015)),
+        attackerSupply: 3,
+        fatigue: 3,
+        summary: "宣示朝廷名分并劝降守军，伤亡较低",
+      };
+    }
+    return {
+      progress: Math.max(6, Math.round(9 + armyStrength * 4 + roll * 5 - defense * 0.035)),
+      wallLoss: Math.max(1, Math.round(1 + roll * 2)),
+      supplyLoss: Math.max(7, Math.round(8 + armyStrength * 2 + roll * 3)),
+      garrisonLoss: Math.max(55, Math.round(70 + armyStrength * 65 + roll * 60)),
+      attackerLoss: Math.max(25, Math.round((Number(army?.troops) || 0) * 0.004)),
+      attackerSupply: 5,
+      fatigue: 6,
+      summary: "封锁城门与粮道，稳步消耗城内守备",
+    };
+  }
+
+  function captureCity(siege, army, turn, reason) {
+    const strategy = readStrategyState();
+    const city = strategy?.cities?.[siege.cityId];
+    if (!city) return;
+    const previousOwner = city.controller;
+    city.controller = army.owner;
+    city.controllerName = ownerName(army.owner);
+    city.defense = clamp(Math.max(18, siege.walls), 0, 100);
+    city.supply = clamp(Math.max(12, siege.citySupply), 0, 100);
+    city.pressure = clamp(city.pressure - 20, 0, 100);
+    city.courtLoyalty = clamp(city.courtLoyalty + (siege.stance === "persuade" ? 8 : siege.stance === "assault" ? -6 : 2), 0, 100);
+    city.lastChange = `${ownerName(army.owner)}攻取城池：${reason}`;
+    strategy.log = Array.isArray(strategy.log) ? strategy.log : [];
+    strategy.log.unshift({ id: `capture-${siege.id}`, turn, type: "attack", text: `${cityName(siege.cityId)}由${ownerName(previousOwner)}转归${ownerName(army.owner)}。` });
+    strategy.updatedAt = new Date().toISOString();
+    localStorage.setItem(STRATEGY_KEY, JSON.stringify(strategy));
+    strategyDirty = true;
+    siege.status = "captured";
+    siege.capturedTurn = turn;
+    siege.previousOwner = previousOwner;
+    siege.lastChange = `${reason}，${ownerName(army.owner)}取得控制权`;
+    army.status = "defending";
+    army.task = "defend";
+    army.lastChange = `攻取${cityName(siege.cityId)}后整顿城防`;
+    state.conquests.unshift({
+      id: `conquest-${siege.id}`,
+      cityId: siege.cityId,
+      turn,
+      previousOwner,
+      newOwner: army.owner,
+      stance: siege.stance,
+      reason,
+    });
+    state.conquests = state.conquests.slice(0, 30);
+    addLog(turn, "capture", `${cityName(siege.cityId)}城破，控制权由${ownerName(previousOwner)}转归${ownerName(army.owner)}。`);
+    document.dispatchEvent(new CustomEvent("xian:city-captured", { detail: state.conquests[0] }));
+  }
+
+  function setSiegeStance(cityId, stance) {
+    const siege = state?.sieges?.[cityId];
+    if (!siege || siege.status !== "active" || !["assault", "blockade", "persuade"].includes(stance)) return false;
+    siege.stance = stance;
+    siege.lastChange = `围城方略改为${siegeStanceLabel(stance)}`;
+    saveState();
+    renderAll();
+    return true;
   }
 
   function orderRetreat(army, cityId, turn) {
@@ -763,7 +940,7 @@
     const overlay = document.createElement("div");
     overlay.id = "army-system-overlay";
     overlay.className = "army-system-overlay hidden";
-    overlay.innerHTML = `<section class="army-system-window" role="dialog" aria-modal="true" aria-labelledby="army-system-title"><header><div><span class="section-kicker">大司马府军籍</span><h2 id="army-system-title">军团、行军与战役结算</h2><p id="army-system-date">尚未载入本局</p></div><button id="army-system-close" type="button" aria-label="关闭">×</button></header><nav class="army-system-tabs"><button type="button" data-army-tab="armies">军团</button><button type="button" data-army-tab="movements">行军命令</button><button type="button" data-army-tab="battles">战报</button></nav><div id="army-system-content"></div></section>`;
+    overlay.innerHTML = `<section class="army-system-window" role="dialog" aria-modal="true" aria-labelledby="army-system-title"><header><div><span class="section-kicker">大司马府军籍</span><h2 id="army-system-title">军团、行军、围城与战役</h2><p id="army-system-date">尚未载入本局</p></div><button id="army-system-close" type="button" aria-label="关闭">×</button></header><nav class="army-system-tabs"><button type="button" data-army-tab="armies">军团</button><button type="button" data-army-tab="movements">行军命令</button><button type="button" data-army-tab="sieges">围城</button><button type="button" data-army-tab="battles">战报</button></nav><div id="army-system-content"></div></section>`;
     document.body.appendChild(overlay);
     overlay.querySelector("#army-system-close")?.addEventListener("click", closeOverlay);
     overlay.addEventListener("click", event => { if (event.target === overlay) closeOverlay(); });
@@ -806,8 +983,9 @@
     document.querySelectorAll("[data-army-tab]").forEach(button => button.classList.toggle("active", button.dataset.armyTab === activeTab));
     date.textContent = coreState ? `建安军务 · 第 ${coreState.turn}/${coreState.maxTurns || 24} 月` : "尚未载入本局";
     if (!state) { content.innerHTML = '<p class="empty-state">请先开启或读取一局游戏。</p>'; return; }
-    const renderers = { armies: renderArmies, movements: renderMovements, battles: renderBattles };
+    const renderers = { armies: renderArmies, movements: renderMovements, sieges: renderSieges, battles: renderBattles };
     content.innerHTML = renderArmySummary() + (renderers[activeTab] || renderArmies)();
+    content.querySelectorAll("[data-siege-stance]").forEach(button => button.addEventListener("click", () => setSiegeStance(button.dataset.siegeCity, button.dataset.siegeStance)));
   }
 
   function renderArmySummary() {
@@ -815,7 +993,8 @@
     const moving = alive.filter(army => ["marching", "routing"].includes(army.status));
     const total = alive.reduce((sum, army) => sum + army.troops, 0);
     const avgSupply = alive.length ? Math.round(alive.reduce((sum, army) => sum + army.supply, 0) / alive.length) : 0;
-    return `<section class="army-summary"><article><span>完整军团</span><strong>${alive.length}</strong><small>${state.armies ? Object.values(state.armies).length - alive.length : 0} 支已经溃散</small></article><article><span>登记兵力</span><strong>${formatNumber(total)}</strong><small>不等同于可立即投入战斗人数</small></article><article><span>行军与败退</span><strong>${moving.length}</strong><small>${moving.reduce((sum, army) => sum + army.eta, 0)} 段军路待通过</small></article><article><span>平均粮秣</span><strong>${avgSupply}</strong><small>${alive.filter(army => army.supply <= 25).length} 支处于低补给</small></article></section>`;
+    const activeSieges = Object.values(state.sieges || {}).filter(item => item.status === "active").length;
+    return `<section class="army-summary"><article><span>完整军团</span><strong>${alive.length}</strong><small>${state.armies ? Object.values(state.armies).length - alive.length : 0} 支已经溃散</small></article><article><span>登记兵力</span><strong>${formatNumber(total)}</strong><small>不等同于可立即投入战斗人数</small></article><article><span>行军与败退</span><strong>${moving.length}</strong><small>${moving.reduce((sum, army) => sum + army.eta, 0)} 段军路待通过</small></article><article><span>正在围城</span><strong>${activeSieges}</strong><small>${state.conquests.length} 座城池已经易手</small></article><article><span>平均粮秣</span><strong>${avgSupply}</strong><small>${alive.filter(army => army.supply <= 25).length} 支处于低补给</small></article></section>`;
   }
 
   function renderArmies() {
@@ -835,7 +1014,18 @@
   }
 
   function renderBattles() {
-    return `<section><div class="army-section-head"><div><span class="section-kicker">战役结算</span><h3>战报</h3></div><small>当前版本结算野战与撤退，暂不结算围城和城池易手</small></div><div class="battle-report-list">${state.battleReports.length ? state.battleReports.map(report => `<article class="battle-report-card"><div class="battle-report-head"><div><span>${escapeHtml(report.date)}</span><strong>${escapeHtml(report.title)}</strong></div><b>${escapeHtml(report.result)}</b></div><div class="battle-sides"><section><span>进攻方</span><strong>${escapeHtml(report.attackerName)}</strong><small>主将 ${escapeHtml(report.attackerCommander)}</small><p>损失 ${formatNumber(report.attackerLosses)} · 余 ${formatNumber(report.attackerRemaining)}</p></section><i>战</i><section><span>守备方</span><strong>${escapeHtml(report.defenderName)}</strong><small>主将 ${escapeHtml(report.defenderCommander)}</small><p>损失 ${formatNumber(report.defenderLosses)} · 余 ${formatNumber(report.defenderRemaining)}</p></section></div><p>${escapeHtml(report.note)}</p></article>`).join("") : '<p class="empty-state">尚未发生军团接触。可命诸侯向敌军驻地进攻，军团抵达后会自动结算战役。</p>'}</div><section class="army-log"><div class="army-section-head"><div><span class="section-kicker">军中记录</span><h3>最近动态</h3></div></div>${state.log.slice(0, 16).map(item => `<article><span>${escapeHtml(logIcon(item.type))}</span><div><strong>第 ${item.turn} 月</strong><p>${escapeHtml(item.text)}</p></div></article>`).join("")}</section></section>`;
+    return `<section><div class="army-section-head"><div><span class="section-kicker">战役结算</span><h3>战报</h3></div><small>野战胜利后转入围城，城破后会真实改变控制权</small></div><div class="battle-report-list">${state.battleReports.length ? state.battleReports.map(report => `<article class="battle-report-card"><div class="battle-report-head"><div><span>${escapeHtml(report.date)}</span><strong>${escapeHtml(report.title)}</strong></div><b>${escapeHtml(report.result)}</b></div><div class="battle-sides"><section><span>进攻方</span><strong>${escapeHtml(report.attackerName)}</strong><small>主将 ${escapeHtml(report.attackerCommander)}</small><p>损失 ${formatNumber(report.attackerLosses)} · 余 ${formatNumber(report.attackerRemaining)}</p></section><i>战</i><section><span>守备方</span><strong>${escapeHtml(report.defenderName)}</strong><small>主将 ${escapeHtml(report.defenderCommander)}</small><p>损失 ${formatNumber(report.defenderLosses)} · 余 ${formatNumber(report.defenderRemaining)}</p></section></div><p>${escapeHtml(report.note)}</p></article>`).join("") : '<p class="empty-state">尚未发生军团接触。可命诸侯向敌军驻地进攻，军团抵达后会自动结算战役。</p>'}</div><section class="army-log"><div class="army-section-head"><div><span class="section-kicker">军中记录</span><h3>最近动态</h3></div></div>${state.log.slice(0, 16).map(item => `<article><span>${escapeHtml(logIcon(item.type))}</span><div><strong>第 ${item.turn} 月</strong><p>${escapeHtml(item.text)}</p></div></article>`).join("")}</section></section>`;
+  }
+
+  function renderSieges() {
+    const sieges = Object.values(state.sieges || {}).sort((a, b) => (a.status === "active" ? -1 : 1) || (b.startedTurn || 0) - (a.startedTurn || 0));
+    return `<section><div class="army-section-head"><div><span class="section-kicker">城池攻守</span><h3>围城与城池易手</h3></div><small>强攻、围困与劝降各有代价</small></div><div class="siege-list">${sieges.length ? sieges.map(renderSiegeCard).join("") : '<p class="empty-state">尚无围城。进攻军在敌方城池赢得野战后会自动建立围城。</p>'}</div></section>`;
+  }
+
+  function renderSiegeCard(siege) {
+    const army = state.armies[siege.attackerArmyId];
+    const active = siege.status === "active";
+    return `<article class="siege-card ${escapeHtml(siege.status)}"><div class="siege-card-head"><div><span>${active ? "城下军议" : siege.status === "captured" ? "克城记录" : "围城结束"}</span><strong>${escapeHtml(cityName(siege.cityId))}</strong><small>${escapeHtml(ownerName(siege.attackerOwner))}进攻 · ${escapeHtml(ownerName(siege.defenderOwner))}守备</small></div><b>${active ? `${Math.round(siege.progress)}%` : siege.status === "captured" ? "已易手" : "已解围"}</b></div><div class="siege-metrics">${metric("围城进展", siege.progress)}${metric("城墙", siege.walls)}${metric("城内粮秣", siege.citySupply)}${metric("守军", Math.min(100, siege.garrison / 70))}</div><p>${escapeHtml(siege.lastChange)}</p>${active ? `<div class="siege-stances" role="group" aria-label="${escapeHtml(cityName(siege.cityId))}围城方略"><button type="button" data-siege-city="${escapeHtml(siege.cityId)}" data-siege-stance="assault" class="${siege.stance === "assault" ? "active" : ""}"><strong>强攻</strong><span>进展快 · 伤亡高</span></button><button type="button" data-siege-city="${escapeHtml(siege.cityId)}" data-siege-stance="blockade" class="${siege.stance === "blockade" ? "active" : ""}"><strong>围困</strong><span>消耗粮秣 · 稳妥</span></button><button type="button" data-siege-city="${escapeHtml(siege.cityId)}" data-siege-stance="persuade" class="${siege.stance === "persuade" ? "active" : ""}"><strong>劝降</strong><span>依赖名分 · 少伤亡</span></button></div><small>${escapeHtml(armyName(army || { id: siege.attackerArmyId }))} · 兵力 ${formatNumber(army?.troops || 0)} · 粮秣 ${Math.round(army?.supply || 0)}</small>` : ""}</article>`;
   }
 
   function metric(label, value, inverse = false) {
@@ -843,12 +1033,15 @@
   }
 
   function orderStatusLabel(status) { return { executing: "执行中", arrived: "已抵达", failed: "失败" }[status] || status; }
-  function logIcon(type) { return { attack: "攻", support: "援", advance: "调", defend: "守", supply: "粮", ceasefire: "和", retreat: "退", battle: "战", warning: "警", system: "籍" }[type] || "军"; }
+  function siegeStanceLabel(id) { return { assault: "强攻", blockade: "围困", persuade: "劝降" }[id] || id; }
+  function logIcon(type) { return { attack: "攻", support: "援", advance: "调", defend: "守", supply: "粮", ceasefire: "和", retreat: "退", battle: "战", siege: "围", capture: "城", warning: "警", system: "籍" }[type] || "军"; }
   function formatNumber(value) { return Math.max(0, Math.round(Number(value) || 0)).toLocaleString("zh-CN"); }
 
   window.XianArmySystem = Object.freeze({
     choosePrimaryOrder,
     calculateCombatPower,
+    calculateSiegeTurn,
+    setSiegeStance,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
     open: openOverlay,
   });

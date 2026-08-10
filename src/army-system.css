@@ -1,4 +1,4 @@
-/* 天子蒙尘：献帝模拟器 v0.5.0 军团系统 */
+/* 天子蒙尘：献帝模拟器 v0.5.1 军团与围城系统 */
 .army-system-brief{margin-top:1rem;padding:1rem 1.1rem}
 .army-brief-head,.army-section-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.85rem}
 .army-brief-head h2,.army-section-head h3{margin:.1rem 0 0}
@@ -82,6 +82,23 @@ body.army-system-open{overflow:hidden}
 .battle-sides p{margin:.35rem 0 0;color:#a99b83;font-size:.68rem}
 .battle-sides>i{align-self:center;display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;font-style:normal;background:rgba(171,75,59,.13);color:#d28c72}
 .battle-report-card>p{margin:.35rem 0 0;color:#9b8f7d;font-size:.7rem;line-height:1.5}
+.siege-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.siege-card{padding:.9rem;border:1px solid rgba(198,123,68,.32);border-radius:12px;background:linear-gradient(145deg,rgba(112,55,37,.13),rgba(255,255,255,.015))}
+.siege-card.captured{border-color:rgba(112,148,92,.34)}
+.siege-card.lifted{opacity:.7;border-color:rgba(255,255,255,.1)}
+.siege-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem}
+.siege-card-head span{display:block;color:#9b765e;font-size:.6rem;letter-spacing:.08em}
+.siege-card-head strong{display:block;margin:.12rem 0;color:#edd3a2;font-size:1.05rem}
+.siege-card-head small{color:#887b6d}
+.siege-card-head>b{padding:.28rem .5rem;border:1px solid rgba(209,144,83,.28);border-radius:999px;color:#dfad77;font-size:.68rem;white-space:nowrap}
+.siege-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.2rem .8rem;margin:.75rem 0}
+.siege-card>p{min-height:2.2em;margin:.6rem 0;color:#aa9a84;font-size:.7rem;line-height:1.5}
+.siege-card>small{display:block;margin-top:.55rem;color:#817568}
+.siege-stances{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.42rem}
+.siege-stances button{display:grid;gap:.13rem;text-align:left;padding:.55rem .6rem;border:1px solid rgba(222,185,105,.13);border-radius:8px;background:rgba(255,255,255,.018);color:#a99a82}
+.siege-stances button strong{color:#d8bd88;font-size:.74rem}
+.siege-stances button span{font-size:.6rem}
+.siege-stances button.active{border-color:rgba(222,172,88,.5);background:rgba(170,102,50,.12);box-shadow:inset 0 0 0 1px rgba(222,172,88,.08)}
 .army-log{margin-top:1rem;padding-top:.9rem;border-top:1px solid rgba(222,185,105,.11)}
 .army-log>article{display:grid;grid-template-columns:2rem 1fr;gap:.65rem;padding:.55rem 0;border-bottom:1px solid rgba(255,255,255,.04)}
 .army-log>article>span{display:grid;place-items:center;width:1.75rem;height:1.75rem;border-radius:50%;background:rgba(222,185,105,.08);color:#d1ab64;font-size:.72rem}
@@ -89,5 +106,5 @@ body.army-system-open{overflow:hidden}
 .army-log p{margin:.15rem 0 0;color:#b7aa91;font-size:.72rem}
 
 @media(max-width:980px){.army-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.army-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:760px){.army-system-overlay{padding:.45rem}.army-system-window{width:100%;height:96vh;border-radius:12px}.army-system-window>header{padding:.9rem}#army-system-content{padding:.8rem}.army-brief-content,.army-card-grid,.movement-list,.army-order-list{grid-template-columns:1fr}.battle-report-card{grid-column:auto}}
-@media(max-width:480px){.army-summary{grid-template-columns:1fr}.battle-sides{grid-template-columns:1fr}.battle-sides section:last-child{text-align:left}.battle-sides>i{margin:auto}}
+@media(max-width:760px){.army-system-overlay{padding:.45rem}.army-system-window{width:100%;height:96vh;border-radius:12px}.army-system-window>header{padding:.9rem}#army-system-content{padding:.8rem}.army-brief-content,.army-card-grid,.movement-list,.army-order-list,.siege-list{grid-template-columns:1fr}.battle-report-card{grid-column:auto}}
+@media(max-width:480px){.army-summary{grid-template-columns:1fr}.battle-sides{grid-template-columns:1fr}.battle-sides section:last-child{text-align:left}.battle-sides>i{margin:auto}.siege-stances{grid-template-columns:1fr}}

@@ -1,9 +1,9 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.5.0
+ * 天子蒙尘：献帝模拟器 v0.5.1
  * 军团、将领与战役推演基础数据。
  */
 window.XIAN_ARMY_DATA = Object.freeze({
-  version: "0.5.0",
+  version: "0.5.1",
 
   taskLabels: {
     idle: "驻军整顿",
@@ -13,6 +13,7 @@ window.XIAN_ARMY_DATA = Object.freeze({
     supply: "转运粮秣",
     advance: "调兵进驻",
     retreat: "撤退",
+    siege: "围城",
   },
 
   statusLabels: {
@@ -21,6 +22,7 @@ window.XIAN_ARMY_DATA = Object.freeze({
     defending: "守备",
     supplying: "转运",
     engaged: "交战",
+    besieging: "围城",
     routing: "败退",
     recovering: "休整",
     destroyed: "溃散",

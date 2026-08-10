@@ -106,6 +106,7 @@
     DATA.cities.forEach(city => {
       cities[city.id] = {
         controller: city.controller,
+        controllerName: city.controllerName,
         defense: city.defense,
         supply: city.supply,
         courtLoyalty: city.courtLoyalty,
@@ -173,6 +174,7 @@
     DATA.cities.forEach(city => {
       migrated.cities[city.id] = {
         controller: city.controller,
+        controllerName: city.controllerName,
         defense: city.defense,
         supply: city.supply,
         courtLoyalty: city.courtLoyalty,
@@ -654,7 +656,7 @@
   }
 
   function renderCityCard(def, city) {
-    return `<article class="city-node-card ${city.pressure >= 70 ? "danger" : city.supply <= 25 ? "blocked" : ""}"><div><span>${escapeHtml(def.regionId)}</span><strong>${escapeHtml(def.name)}</strong><small>${escapeHtml(def.controllerName)} · ${escapeHtml(def.importance)}</small></div>${metric("守备", city.defense)}${metric("粮秣", city.supply)}${metric("军压", city.pressure, true)}${metric("向心", city.courtLoyalty)}<p>${escapeHtml(city.lastChange)}</p></article>`;
+    return `<article class="city-node-card ${city.pressure >= 70 ? "danger" : city.supply <= 25 ? "blocked" : ""}"><div><span>${escapeHtml(def.regionId)}</span><strong>${escapeHtml(def.name)}</strong><small>${escapeHtml(city.controllerName || controllerName(city.controller) || def.controllerName)} · ${escapeHtml(def.importance)}</small></div>${metric("守备", city.defense)}${metric("粮秣", city.supply)}${metric("军压", city.pressure, true)}${metric("向心", city.courtLoyalty)}<p>${escapeHtml(city.lastChange)}</p></article>`;
   }
 
   function renderRoutes() {
@@ -689,6 +691,13 @@
     const weakest = Object.values(state.cities).sort((a, b) => cityRisk(b) - cityRisk(a))[0];
     if (weakest && cityRisk(weakest) >= 58) return "加强城防";
     return "经营交通";
+  }
+
+  function controllerName(id) {
+    if (id === "court") return "汉廷";
+    if (id === "fragmented") return "地方残部";
+    if (id === "shi_family") return "士氏";
+    return DATA.lords.find(lord => lord.id === id)?.name || id;
   }
 
   function escapeHtml(value) {
