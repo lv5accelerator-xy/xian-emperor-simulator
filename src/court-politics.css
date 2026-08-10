@@ -1,0 +1,52 @@
+/* 天子蒙尘：献帝模拟器 v0.6.0 · 政议系统 */
+.court-politics-brief{margin:0 1.25rem 1rem;padding:1rem 1.1rem;background:linear-gradient(120deg,rgba(104,53,74,.16),rgba(35,53,66,.2))}
+.court-brief-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.7rem}
+.court-brief-head h2{margin:.12rem 0 0;color:#dcc79b;font-size:1rem}
+.court-brief-content{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem}
+.court-brief-content button{display:grid;gap:.18rem;text-align:left;padding:.68rem .75rem;border:1px solid rgba(182,140,164,.18);border-radius:9px;background:rgba(255,255,255,.018);color:#bba98c}
+.court-brief-content button:hover{border-color:rgba(190,136,169,.48);background:rgba(145,80,118,.07)}
+.court-brief-content span{font-size:.62rem;color:#8e7f74}
+.court-brief-content strong{color:#e2ca9b;font-size:.88rem}
+.court-brief-content small{color:#83776b;font-size:.62rem}
+.court-politics-overlay{position:fixed;inset:0;z-index:2450;display:grid;place-items:center;padding:1.25rem;background:rgba(8,7,8,.87);backdrop-filter:blur(8px)}
+.court-politics-overlay.hidden{display:none}
+body.court-politics-open{overflow:hidden}
+.court-politics-window{width:min(1040px,96vw);max-height:91vh;overflow:auto;border:1px solid rgba(188,126,159,.35);border-radius:16px;background:linear-gradient(160deg,#171317,#0f1216 55%,#101821);box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.court-politics-window>header{position:sticky;top:0;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1.05rem 1.2rem;border-bottom:1px solid rgba(205,168,104,.14);background:rgba(20,17,20,.96)}
+.court-politics-window h2{margin:.13rem 0;color:#e5cc9b;font-size:1.25rem}
+.court-politics-window header p{margin:0;color:#887b70;font-size:.68rem}
+#court-politics-close{width:2.35rem;height:2.35rem;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:rgba(255,255,255,.02);color:#bfae92;font-size:1.4rem}
+.court-politics-tabs{position:sticky;top:76px;z-index:2;display:flex;gap:.4rem;padding:.65rem 1.2rem;border-bottom:1px solid rgba(205,168,104,.1);background:rgba(17,15,18,.95)}
+.court-politics-tabs button{padding:.48rem .72rem;border:1px solid transparent;border-radius:8px;background:transparent;color:#8f8276}
+.court-politics-tabs button.active{border-color:rgba(187,124,157,.38);background:rgba(137,76,108,.12);color:#e0c392}
+#court-politics-content{padding:1rem 1.2rem 1.25rem}
+.court-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem;margin-bottom:1rem}
+.court-summary article{padding:.7rem;border:1px solid rgba(205,168,104,.12);border-radius:9px;background:rgba(255,255,255,.016)}
+.court-summary span,.court-summary small{display:block;color:#83776c;font-size:.61rem}
+.court-summary strong{display:block;margin:.12rem 0;color:#ddc493;font-size:1rem}
+.petition-list{display:grid;gap:.78rem}
+.petition-card{padding:.95rem;border:1px solid rgba(187,124,157,.3);border-radius:12px;background:linear-gradient(135deg,rgba(116,59,90,.13),rgba(255,255,255,.015))}
+.petition-card.negotiation{border-color:rgba(82,129,157,.38);background:linear-gradient(135deg,rgba(49,93,122,.13),rgba(255,255,255,.015))}
+.petition-head{display:flex;align-items:flex-start;justify-content:space-between;gap:.8rem}
+.petition-head span{display:block;color:#967c8a;font-size:.61rem}
+.petition-head strong{display:block;margin:.1rem 0;color:#e8d09f;font-size:1rem}
+.petition-head small{color:#83776e}
+.petition-head b{padding:.25rem .48rem;border:1px solid rgba(191,135,165,.25);border-radius:999px;color:#c99bae;font-size:.62rem;white-space:nowrap}
+.petition-card>p{margin:.72rem 0;color:#b1a18d;font-size:.72rem;line-height:1.65}
+.petition-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}
+.petition-choices button{display:grid;gap:.2rem;text-align:left;padding:.62rem .68rem;border:1px solid rgba(216,177,111,.16);border-radius:8px;background:rgba(255,255,255,.018);color:#a99881}
+.petition-choices button:hover{border-color:rgba(210,157,187,.48);transform:translateY(-1px)}
+.petition-choices strong{color:#d9bc87;font-size:.75rem}
+.petition-choices span{font-size:.61rem;line-height:1.4}
+.faction-board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.7rem}
+.court-faction-card{padding:.82rem;border:1px solid rgba(255,255,255,.09);border-left:3px solid var(--faction);border-radius:10px;background:rgba(255,255,255,.018)}
+.court-faction-card>div{display:flex;justify-content:space-between;gap:.7rem}
+.court-faction-card strong{color:#dcc390}.court-faction-card b{color:#bb9dad;font-size:.72rem}
+.court-faction-card p{margin:.45rem 0;color:#918475;font-size:.68rem;line-height:1.5}
+.faction-meter{display:grid;grid-template-columns:3rem 1fr 2rem;gap:.4rem;align-items:center;margin:.3rem 0;color:#81756a;font-size:.61rem}
+.faction-meter i{height:5px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.06)}
+.faction-meter i b{display:block;height:100%;background:var(--faction)}
+.court-history{display:grid;gap:.45rem}
+.court-history article{display:grid;grid-template-columns:5rem 1fr auto;gap:.7rem;align-items:start;padding:.66rem .7rem;border:1px solid rgba(255,255,255,.07);border-radius:8px}
+.court-history strong{color:#c9ad7a;font-size:.68rem}.court-history p{margin:0;color:#9b8d7c;font-size:.68rem;line-height:1.45}.court-history small{color:#756b62}
+@media(max-width:760px){.court-politics-brief{margin:.7rem}.court-brief-content,.petition-choices,.court-summary{grid-template-columns:1fr}.court-politics-overlay{align-items:end;padding:0}.court-politics-window{width:100%;max-height:94vh;border-radius:16px 16px 0 0}.court-politics-tabs{top:74px;overflow-x:auto}.faction-board{grid-template-columns:1fr}.court-history article{grid-template-columns:1fr}.court-history small{justify-self:start}}

@@ -33,7 +33,24 @@ function loadArmyApi() {
   return context.window.XianArmySystem;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "0.5.2";
+function loadCourtApi() {
+  function StorageMock() {}
+  StorageMock.prototype.setItem = function setItem() {};
+  StorageMock.prototype.getItem = function getItem() { return null; };
+  const context = {
+    console,
+    setTimeout,
+    clearTimeout,
+    Storage: StorageMock,
+    localStorage: new StorageMock(),
+    document: { readyState: "loading", addEventListener() {} },
+    window: { addEventListener() {}, clearTimeout, setTimeout },
+  };
+  vm.runInNewContext(read("src/court-politics.js"), context, { filename: "court-politics.js" });
+  return context.window.XianCourtPolitics;
+}
+
+const expectedVersion = process.env.EXPECTED_VERSION || "0.6.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -63,5 +80,15 @@ const recruit = armyApi.getJudgmentDecision("recruit", judgment, { stats: { pres
 assert.equal(appoint.city.controller, "court", "direct appointment should place the city under court control");
 assert.ok(appoint.effects.caoAlert > 0, "direct appointment should alarm Cao's faction");
 assert.ok(recruit.recruitChance >= 25 && recruit.recruitChance <= 88, "recruitment chance should stay bounded");
+
+const courtApi = loadCourtApi();
+assert.ok(courtApi, "court politics diagnostics API should load");
+assert.equal(courtApi.factions.length, 5, "five political factions should be available");
+const courtState = { factions: { imperial: { support: 50, tension: 30 } } };
+const acceptGuard = courtApi.previewResponse("fu_guard", "accept", courtState);
+const refuseGuard = courtApi.previewResponse("fu_guard", "refuse", courtState);
+assert.ok(acceptGuard.supportAfter > refuseGuard.supportAfter, "accepting a petition should improve its faction support");
+assert.ok(acceptGuard.effects.security > 0, "guard petition should improve court security");
+assert.ok(courtApi.petitions.some(item => item.type === "negotiation"), "dynamic negotiations should be included");
 
 console.log(`release regression ok: v${expectedVersion}`);

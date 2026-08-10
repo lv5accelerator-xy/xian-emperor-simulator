@@ -27,6 +27,7 @@ jobs:
           node --check src/decree-confirmation.js
           node --check src/army-data.js
           node --check src/army-system.js
+          node --check src/court-politics.js
 
       - name: Validate embedded audio
         run: |
@@ -218,7 +219,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v0.5.2' index.html
+          grep -q 'v0.6.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio.js' index.html
@@ -234,6 +235,8 @@ jobs:
           grep -q 'src/army-system.css' index.html
           grep -q 'src/army-data.js' index.html
           grep -q 'src/army-system.js' index.html
+          grep -q 'src/court-politics.css' index.html
+          grep -q 'src/court-politics.js' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio.js
@@ -249,6 +252,8 @@ jobs:
           test -f src/army-system.css
           test -f src/army-data.js
           test -f src/army-system.js
+          test -f src/court-politics.css
+          test -f src/court-politics.js
 
       - name: Run release regression
-        run: EXPECTED_VERSION=0.5.2 node tests/release-regression.js
+        run: EXPECTED_VERSION=0.6.0 node tests/release-regression.js
