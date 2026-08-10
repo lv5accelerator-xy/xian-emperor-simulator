@@ -1695,4 +1695,22 @@
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
+
+  function applyExternalPackage(pkg = {}) {
+    if (!state || state.ended) return { applied: false, changes: "" };
+    const changes = applyPackage(pkg);
+    if (pkg.report?.title && pkg.report?.text) {
+      addReport(pkg.report.title, `${pkg.report.text}${changes ? `｜${changes}` : ""}`, pkg.report.type || "decision");
+    }
+    if (pkg.chronicle) addChronicle(formatReignDate(state.year, state.month), pkg.chronicle);
+    checkImmediateEnding();
+    saveGame(true);
+    renderAll();
+    return { applied: true, changes };
+  }
+
+  window.XianEmperorGame = Object.freeze({
+    applyExternalPackage,
+    getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
+  });
 })();

@@ -11,6 +11,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 function loadArmyApi() {
   function StorageMock() {}
   StorageMock.prototype.setItem = function setItem() {};
+  StorageMock.prototype.getItem = function getItem() { return null; };
   const context = {
     console,
     setTimeout,
@@ -32,7 +33,7 @@ function loadArmyApi() {
   return context.window.XianArmySystem;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "0.5.1";
+const expectedVersion = process.env.EXPECTED_VERSION || "0.5.2";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -55,5 +56,12 @@ assert.ok(assault.progress > blockade.progress, "assault should make faster prog
 assert.ok(assault.attackerLoss > blockade.attackerLoss, "assault should cost more attackers");
 assert.ok(blockade.supplyLoss > persuade.supplyLoss, "blockade should consume more city supply");
 assert.ok(persuade.attackerLoss < assault.attackerLoss, "persuasion should reduce attacker losses");
+
+const judgment = { cityId: "xudu", newOwner: "cao_cao", stance: "persuade" };
+const appoint = armyApi.getJudgmentDecision("appoint", judgment, { stats: { prestige: 60 } });
+const recruit = armyApi.getJudgmentDecision("recruit", judgment, { stats: { prestige: 60 } });
+assert.equal(appoint.city.controller, "court", "direct appointment should place the city under court control");
+assert.ok(appoint.effects.caoAlert > 0, "direct appointment should alarm Cao's faction");
+assert.ok(recruit.recruitChance >= 25 && recruit.recruitChance <= 88, "recruitment chance should stay bounded");
 
 console.log(`release regression ok: v${expectedVersion}`);

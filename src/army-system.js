@@ -1,6 +1,6 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.5.1
- * 军团、行军、粮秣、野战、围城与城池易手。
+ * 天子蒙尘：献帝模拟器 v0.5.2
+ * 军团、行军、野战、围城、城池易手与战后裁决。
  */
 (() => {
   "use strict";
@@ -16,7 +16,7 @@
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STRATEGY_KEY = "xian_emperor_strategy_network_v040";
   const STORAGE_KEY = "xian_emperor_armies_v050";
-  const VERSION = "0.5.1";
+  const VERSION = "0.5.2";
   const MAX_REPORTS = 40;
   const MAX_ORDERS = 50;
   const MAX_LOG = 80;
@@ -144,6 +144,10 @@
       battleReports: [],
       sieges: {},
       conquests: [],
+      pendingJudgments: [],
+      judgmentHistory: [],
+      captives: [],
+      surrenderedOfficers: [],
       log: [{ id: `army-opening-${Date.now()}`, turn: core.turn, type: "system", text: "大司马府建立军团、兵力、粮秣与行军档案。" }],
       updatedAt: new Date().toISOString(),
     };
@@ -159,6 +163,10 @@
       battleReports: Array.isArray(current.battleReports) ? current.battleReports : [],
       sieges: current.sieges && typeof current.sieges === "object" ? current.sieges : {},
       conquests: Array.isArray(current.conquests) ? current.conquests : [],
+      pendingJudgments: Array.isArray(current.pendingJudgments) ? current.pendingJudgments : [],
+      judgmentHistory: Array.isArray(current.judgmentHistory) ? current.judgmentHistory : [],
+      captives: Array.isArray(current.captives) ? current.captives : [],
+      surrenderedOfficers: Array.isArray(current.surrenderedOfficers) ? current.surrenderedOfficers : [],
       log: Array.isArray(current.log) ? current.log : [],
       lastReportTimestamp: Number(current.lastReportTimestamp) || 0,
       lastProcessedTurn: Number.isFinite(current.lastProcessedTurn) ? current.lastProcessedTurn : core.turn,
@@ -696,6 +704,7 @@
       reason,
     });
     state.conquests = state.conquests.slice(0, 30);
+    createPostwarJudgment(siege, army, previousOwner, turn);
     addLog(turn, "capture", `${cityName(siege.cityId)}城破，控制权由${ownerName(previousOwner)}转归${ownerName(army.owner)}。`);
     document.dispatchEvent(new CustomEvent("xian:city-captured", { detail: state.conquests[0] }));
   }
@@ -706,6 +715,148 @@
     siege.stance = stance;
     siege.lastChange = `围城方略改为${siegeStanceLabel(stance)}`;
     saveState();
+    renderAll();
+    return true;
+  }
+
+  function createPostwarJudgment(siege, army, previousOwner, turn) {
+    if (state.pendingJudgments.some(item => item.conquestId === `conquest-${siege.id}`)) return;
+    const commanderId = siege.defenderCommander;
+    const commander = commanderDef(commanderId);
+    const captureChance = siege.stance === "persuade" ? 0.82 : siege.stance === "blockade" ? 0.62 : 0.38;
+    const captured = Boolean(commanderId && seededRandom(`${siege.id}-captive`)() <= captureChance);
+    let captiveId = null;
+    if (captured) {
+      captiveId = `captive-${siege.id}-${commanderId}`;
+      state.captives.unshift({
+        id: captiveId,
+        commanderId,
+        name: commander?.name || commanderId,
+        formerOwner: previousOwner,
+        cityId: siege.cityId,
+        capturedTurn: turn,
+        status: "awaiting",
+        lastChange: "城破后被押送御前候旨",
+      });
+    }
+    state.pendingJudgments.unshift({
+      id: `judgment-${siege.id}`,
+      conquestId: `conquest-${siege.id}`,
+      cityId: siege.cityId,
+      previousOwner,
+      newOwner: army.owner,
+      attackerArmyId: army.id,
+      captiveId,
+      stance: siege.stance,
+      turn,
+      status: "pending",
+    });
+    addLog(turn, "judgment", `${cityName(siege.cityId)}战后处置待天子裁决${captured ? `，俘将${commander?.name || commanderId}一并候旨` : ""}。`);
+  }
+
+  function getJudgmentDecision(decision, judgment, core = coreState) {
+    const city = readStrategyState()?.cities?.[judgment?.cityId] || {};
+    const captive = state?.captives?.find(item => item.id === judgment?.captiveId);
+    const prestige = clamp(core?.stats?.prestige, 0, 100);
+    const recruitChance = clamp(Math.round(30 + prestige * 0.35 + clamp(city.courtLoyalty, 0, 100) * 0.25 + (judgment?.stance === "persuade" ? 12 : 0)), 25, 88);
+    const choices = {
+      pacify: {
+        label: "赦降安民",
+        effects: { prestige: 3, officials: 2 },
+        hidden: { peopleStability: 5 },
+        city: { defense: 2, supply: 4, courtLoyalty: 12, pressure: -10 },
+        captiveStatus: captive ? "released" : null,
+        text: "保全降卒与百姓，旧将释归，地方向心明显恢复。",
+      },
+      appoint: {
+        label: "汉官接掌",
+        effects: { authority: 5, treasury: -6, caoAlert: 6 },
+        hidden: { loyalNetwork: 4 },
+        city: { defense: 4, supply: -2, courtLoyalty: 9, pressure: -4, controller: "court" },
+        captiveStatus: captive ? "detained" : null,
+        text: "绕过功臣而由朝廷直接任官，皇权上升，也会引起实力派警觉。",
+      },
+      reward: {
+        label: "论功行赏",
+        effects: { treasury: -5, officials: 2, caoAlert: -2 },
+        hidden: { externalBalance: 3 },
+        city: { defense: 8, supply: 3, courtLoyalty: 2, pressure: -8 },
+        captiveStatus: captive ? "released" : null,
+        trust: 8,
+        text: "承认攻城方继续治理，军心与盟友信任提高。",
+      },
+      recruit: {
+        label: "纳降任用",
+        effects: { authority: 2, prestige: 2, caoAlert: 3 },
+        hidden: { loyalNetwork: 3, leakRisk: 2 },
+        city: { defense: 3, supply: 2, courtLoyalty: 7, pressure: -6 },
+        captiveStatus: captive ? "recruit-check" : null,
+        recruitChance,
+        text: captive ? `尝试以汉室名分招纳${captive.name}，预计成功率 ${recruitChance}%。` : "收编降官与守军骨干，为朝廷补充可用之人。",
+      },
+    };
+    return choices[decision] || null;
+  }
+
+  function resolvePostwarJudgment(judgmentId, decision) {
+    const judgment = state?.pendingJudgments?.find(item => item.id === judgmentId && item.status === "pending");
+    if (!judgment) return false;
+    const result = getJudgmentDecision(decision, judgment, coreState);
+    if (!result) return false;
+    const strategy = readStrategyState();
+    const city = strategy?.cities?.[judgment.cityId];
+    if (!city) return false;
+    const captive = state.captives.find(item => item.id === judgment.captiveId);
+    Object.entries(result.city || {}).forEach(([key, value]) => {
+      if (key === "controller") {
+        city.controller = value;
+        city.controllerName = ownerName(value);
+      } else {
+        city[key] = clamp(Number(city[key] || 0) + Number(value || 0), 0, 100);
+      }
+    });
+    if (result.trust && strategy.strategies?.[judgment.newOwner]) {
+      strategy.strategies[judgment.newOwner].trust = clamp(strategy.strategies[judgment.newOwner].trust + result.trust, 0, 100);
+      strategy.strategies[judgment.newOwner].lastChange = `${cityName(judgment.cityId)}战后论功行赏`;
+    }
+    let recruitSucceeded = false;
+    if (captive) {
+      if (result.captiveStatus === "recruit-check") {
+        recruitSucceeded = seededRandom(`${judgment.id}-recruit`)() * 100 <= result.recruitChance;
+        captive.status = recruitSucceeded ? "recruited" : "detained";
+        captive.lastChange = recruitSucceeded ? "奉诏归降，列入汉廷可用将领" : "拒绝归降，继续留置候议";
+        if (recruitSucceeded) state.surrenderedOfficers.unshift({ commanderId: captive.commanderId, name: captive.name, joinedTurn: judgment.turn, sourceCityId: judgment.cityId });
+      } else if (result.captiveStatus) {
+        captive.status = result.captiveStatus;
+        captive.lastChange = result.captiveStatus === "released" ? "奉诏获释" : "留置朝廷看管";
+      }
+    } else if (decision === "recruit") {
+      state.surrenderedOfficers.unshift({ commanderId: `garrison-${judgment.cityId}-${judgment.turn}`, name: `${cityName(judgment.cityId)}降官`, joinedTurn: judgment.turn, sourceCityId: judgment.cityId });
+      recruitSucceeded = true;
+    }
+    city.lastChange = `${result.label}：${result.text}${decision === "recruit" && captive ? (recruitSucceeded ? " 招降成功。" : " 对方暂未归顺。") : ""}`;
+    strategy.log = Array.isArray(strategy.log) ? strategy.log : [];
+    strategy.log.unshift({ id: `judgment-result-${judgment.id}`, turn: judgment.turn, type: "diplomacy", text: `${cityName(judgment.cityId)}战后裁决：${result.label}。` });
+    strategy.updatedAt = new Date().toISOString();
+    localStorage.setItem(STRATEGY_KEY, JSON.stringify(strategy));
+    strategyDirty = true;
+    judgment.status = "resolved";
+    judgment.decision = decision;
+    judgment.decisionLabel = result.label;
+    judgment.resolvedAt = new Date().toISOString();
+    judgment.recruitSucceeded = recruitSucceeded;
+    state.pendingJudgments = state.pendingJudgments.filter(item => item.status === "pending");
+    state.judgmentHistory.unshift(judgment);
+    state.judgmentHistory = state.judgmentHistory.slice(0, 30);
+    state.surrenderedOfficers = state.surrenderedOfficers.slice(0, 24);
+    addLog(coreState?.turn || judgment.turn, "judgment", `${cityName(judgment.cityId)}战后裁决为“${result.label}”。`);
+    saveState();
+    window.XianEmperorGame?.applyExternalPackage({
+      effects: result.effects,
+      hidden: result.hidden,
+      report: { title: `战后裁决·${cityName(judgment.cityId)}`, text: `${result.label}：${result.text}`, type: "decision" },
+      chronicle: `${cityName(judgment.cityId)}既定，朝廷诏以${result.label}处置战后诸事。`,
+    });
     renderAll();
     return true;
   }
@@ -940,7 +1091,7 @@
     const overlay = document.createElement("div");
     overlay.id = "army-system-overlay";
     overlay.className = "army-system-overlay hidden";
-    overlay.innerHTML = `<section class="army-system-window" role="dialog" aria-modal="true" aria-labelledby="army-system-title"><header><div><span class="section-kicker">大司马府军籍</span><h2 id="army-system-title">军团、行军、围城与战役</h2><p id="army-system-date">尚未载入本局</p></div><button id="army-system-close" type="button" aria-label="关闭">×</button></header><nav class="army-system-tabs"><button type="button" data-army-tab="armies">军团</button><button type="button" data-army-tab="movements">行军命令</button><button type="button" data-army-tab="sieges">围城</button><button type="button" data-army-tab="battles">战报</button></nav><div id="army-system-content"></div></section>`;
+    overlay.innerHTML = `<section class="army-system-window" role="dialog" aria-modal="true" aria-labelledby="army-system-title"><header><div><span class="section-kicker">大司马府军籍</span><h2 id="army-system-title">军团、围城与战后裁决</h2><p id="army-system-date">尚未载入本局</p></div><button id="army-system-close" type="button" aria-label="关闭">×</button></header><nav class="army-system-tabs"><button type="button" data-army-tab="armies">军团</button><button type="button" data-army-tab="movements">行军命令</button><button type="button" data-army-tab="sieges">围城</button><button type="button" data-army-tab="judgments">战后裁决</button><button type="button" data-army-tab="battles">战报</button></nav><div id="army-system-content"></div></section>`;
     document.body.appendChild(overlay);
     overlay.querySelector("#army-system-close")?.addEventListener("click", closeOverlay);
     overlay.addEventListener("click", event => { if (event.target === overlay) closeOverlay(); });
@@ -983,9 +1134,10 @@
     document.querySelectorAll("[data-army-tab]").forEach(button => button.classList.toggle("active", button.dataset.armyTab === activeTab));
     date.textContent = coreState ? `建安军务 · 第 ${coreState.turn}/${coreState.maxTurns || 24} 月` : "尚未载入本局";
     if (!state) { content.innerHTML = '<p class="empty-state">请先开启或读取一局游戏。</p>'; return; }
-    const renderers = { armies: renderArmies, movements: renderMovements, sieges: renderSieges, battles: renderBattles };
+    const renderers = { armies: renderArmies, movements: renderMovements, sieges: renderSieges, judgments: renderJudgments, battles: renderBattles };
     content.innerHTML = renderArmySummary() + (renderers[activeTab] || renderArmies)();
     content.querySelectorAll("[data-siege-stance]").forEach(button => button.addEventListener("click", () => setSiegeStance(button.dataset.siegeCity, button.dataset.siegeStance)));
+    content.querySelectorAll("[data-judgment-decision]").forEach(button => button.addEventListener("click", () => resolvePostwarJudgment(button.dataset.judgmentId, button.dataset.judgmentDecision)));
   }
 
   function renderArmySummary() {
@@ -994,7 +1146,7 @@
     const total = alive.reduce((sum, army) => sum + army.troops, 0);
     const avgSupply = alive.length ? Math.round(alive.reduce((sum, army) => sum + army.supply, 0) / alive.length) : 0;
     const activeSieges = Object.values(state.sieges || {}).filter(item => item.status === "active").length;
-    return `<section class="army-summary"><article><span>完整军团</span><strong>${alive.length}</strong><small>${state.armies ? Object.values(state.armies).length - alive.length : 0} 支已经溃散</small></article><article><span>登记兵力</span><strong>${formatNumber(total)}</strong><small>不等同于可立即投入战斗人数</small></article><article><span>行军与败退</span><strong>${moving.length}</strong><small>${moving.reduce((sum, army) => sum + army.eta, 0)} 段军路待通过</small></article><article><span>正在围城</span><strong>${activeSieges}</strong><small>${state.conquests.length} 座城池已经易手</small></article><article><span>平均粮秣</span><strong>${avgSupply}</strong><small>${alive.filter(army => army.supply <= 25).length} 支处于低补给</small></article></section>`;
+    return `<section class="army-summary"><article><span>完整军团</span><strong>${alive.length}</strong><small>${state.armies ? Object.values(state.armies).length - alive.length : 0} 支已经溃散</small></article><article><span>登记兵力</span><strong>${formatNumber(total)}</strong><small>不等同于可立即投入战斗人数</small></article><article><span>行军与败退</span><strong>${moving.length}</strong><small>${moving.reduce((sum, army) => sum + army.eta, 0)} 段军路待通过</small></article><article><span>正在围城</span><strong>${activeSieges}</strong><small>${state.conquests.length} 座城池已经易手</small></article><article><span>待裁决</span><strong>${state.pendingJudgments.length}</strong><small>${state.captives.filter(item => item.status === "awaiting").length} 名俘虏候旨</small></article><article><span>归降将吏</span><strong>${state.surrenderedOfficers.length}</strong><small>${state.judgmentHistory.length} 次战后处置</small></article><article><span>平均粮秣</span><strong>${avgSupply}</strong><small>${alive.filter(army => army.supply <= 25).length} 支处于低补给</small></article></section>`;
   }
 
   function renderArmies() {
@@ -1022,6 +1174,19 @@
     return `<section><div class="army-section-head"><div><span class="section-kicker">城池攻守</span><h3>围城与城池易手</h3></div><small>强攻、围困与劝降各有代价</small></div><div class="siege-list">${sieges.length ? sieges.map(renderSiegeCard).join("") : '<p class="empty-state">尚无围城。进攻军在敌方城池赢得野战后会自动建立围城。</p>'}</div></section>`;
   }
 
+  function renderJudgments() {
+    const pending = state.pendingJudgments || [];
+    const history = state.judgmentHistory || [];
+    const captiveCards = (state.captives || []).filter(item => item.status !== "released");
+    return `<section><div class="army-section-head"><div><span class="section-kicker">克城之后</span><h3>战后裁决</h3></div><small>城池、功臣与降将必须一并权衡</small></div><div class="judgment-list">${pending.length ? pending.map(renderJudgmentCard).join("") : '<p class="empty-state">当前没有等待裁决的克城事务。</p>'}</div>${captiveCards.length ? `<div class="army-section-head judgment-subhead"><div><span class="section-kicker">御前候旨</span><h3>俘虏与归降</h3></div><small>${state.surrenderedOfficers.length} 人已经归降</small></div><div class="captive-list">${captiveCards.map(item => `<article><div><strong>${escapeHtml(item.name)}</strong><b>${escapeHtml(captiveStatusLabel(item.status))}</b></div><p>${escapeHtml(ownerName(item.formerOwner))}旧将 · ${escapeHtml(cityName(item.cityId))}</p><small>${escapeHtml(item.lastChange)}</small></article>`).join("")}</div>` : ""}${history.length ? `<div class="army-section-head judgment-subhead"><div><span class="section-kicker">诏令归档</span><h3>历次处置</h3></div></div><div class="judgment-history">${history.slice(0, 12).map(item => `<article><strong>${escapeHtml(cityName(item.cityId))}</strong><span>${escapeHtml(item.decisionLabel)}</span><small>第 ${item.turn} 月 · ${escapeHtml(ownerName(item.newOwner))}克城</small></article>`).join("")}</div>` : ""}</section>`;
+  }
+
+  function renderJudgmentCard(judgment) {
+    const captive = state.captives.find(item => item.id === judgment.captiveId);
+    const recruit = getJudgmentDecision("recruit", judgment, coreState);
+    return `<article class="judgment-card"><div class="judgment-card-head"><div><span>第 ${judgment.turn} 月克城</span><strong>${escapeHtml(cityName(judgment.cityId))}</strong><small>${escapeHtml(ownerName(judgment.previousOwner))} → ${escapeHtml(ownerName(judgment.newOwner))}</small></div><b>${captive ? `俘将 ${escapeHtml(captive.name)}` : "守军请降"}</b></div><p>城池已经易手，但由谁治理、如何安民以及怎样处置降将，将决定皇权与诸侯关系。</p><div class="judgment-actions"><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="pacify"><strong>赦降安民</strong><span>威望与民稳上升</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="appoint"><strong>汉官接掌</strong><span>皇权上升 · 曹氏警戒</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="reward"><strong>论功行赏</strong><span>功臣保有城池</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="recruit"><strong>纳降任用</strong><span>${captive ? `归降机会 ${recruit.recruitChance}%` : "收编降官"}</span></button></div></article>`;
+  }
+
   function renderSiegeCard(siege) {
     const army = state.armies[siege.attackerArmyId];
     const active = siege.status === "active";
@@ -1034,6 +1199,7 @@
 
   function orderStatusLabel(status) { return { executing: "执行中", arrived: "已抵达", failed: "失败" }[status] || status; }
   function siegeStanceLabel(id) { return { assault: "强攻", blockade: "围困", persuade: "劝降" }[id] || id; }
+  function captiveStatusLabel(id) { return { awaiting: "候旨", detained: "留置", recruited: "归降", released: "获释" }[id] || id; }
   function logIcon(type) { return { attack: "攻", support: "援", advance: "调", defend: "守", supply: "粮", ceasefire: "和", retreat: "退", battle: "战", siege: "围", capture: "城", warning: "警", system: "籍" }[type] || "军"; }
   function formatNumber(value) { return Math.max(0, Math.round(Number(value) || 0)).toLocaleString("zh-CN"); }
 
@@ -1042,6 +1208,8 @@
     calculateCombatPower,
     calculateSiegeTurn,
     setSiegeStance,
+    getJudgmentDecision,
+    resolvePostwarJudgment,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
     open: openOverlay,
   });

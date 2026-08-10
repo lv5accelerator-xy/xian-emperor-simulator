@@ -218,7 +218,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v0.5.1' index.html
+          grep -q 'v0.5.2' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio.js' index.html
@@ -251,4 +251,4 @@ jobs:
           test -f src/army-system.js
 
       - name: Run release regression
-        run: node tests/release-regression.js
+        run: EXPECTED_VERSION=0.5.2 node tests/release-regression.js
