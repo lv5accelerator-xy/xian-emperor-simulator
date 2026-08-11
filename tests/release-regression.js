@@ -63,17 +63,20 @@ function loadGameApi() {
   return { api: context.window.XianEmperorGame, data: context.window.GAME_DATA };
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "1.1.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "1.5.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
-assert.match(read("index.html"), /imperial-progress\.css\?v=1\.1\.0/);
-assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.1\.0/);
-assert.match(read("index.html"), /imperial-progress\.js\?v=1\.1\.0/);
-assert.match(read("index.html"), /grand-map\.css\?v=1\.1\.0/);
-assert.match(read("index.html"), /grand-map\.js\?v=1\.1\.0/);
-assert.match(read("index.html"), /ui-v110\.css\?v=1\.1\.0/);
-assert.match(read("index.html"), /ui-v110\.js\?v=1\.1\.0/);
+assert.match(read("index.html"), /imperial-progress\.css\?v=1\.5\.0/);
+assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.5\.0/);
+assert.match(read("index.html"), /imperial-progress\.js\?v=1\.5\.0/);
+assert.match(read("index.html"), /grand-map\.css\?v=1\.5\.0/);
+assert.match(read("index.html"), /grand-map\.js\?v=1\.5\.0/);
+assert.match(read("index.html"), /campaign-evolution\.css\?v=1\.5\.0/);
+assert.match(read("index.html"), /campaign-evolution-data\.js\?v=1\.5\.0/);
+assert.match(read("index.html"), /campaign-evolution\.js\?v=1\.5\.0/);
+assert.match(read("index.html"), /ui-v110\.css\?v=1\.5\.0/);
+assert.match(read("index.html"), /ui-v110\.js\?v=1\.5\.0/);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
 assert.match(read("src/game.js"), /schemaVersion:\s*100/);
 assert.match(read("src/game.js"), /__xianFullSaveImporting\s*=\s*true/);
@@ -85,6 +88,7 @@ for (const file of [
   "army-system.js",
   "court-politics.js",
   "imperial-progress.js",
+  "campaign-evolution.js",
 ]) {
   assert.match(read(path.join("src", file)), /__xianFullSaveImporting/, `${file} must preserve imported subsystem data`);
 }
@@ -149,5 +153,7 @@ const challengePass = game.api.calculateScenarioChallenge(lateScenario, { turn: 
 const challengeFail = game.api.calculateScenarioChallenge(lateScenario, { turn: 12, maxTurns: 12, stats: { prestige: 40, authority: 45 }, hidden: {} });
 assert.equal(challengePass.completed, true, "meeting all late-scenario goals should complete its challenge");
 assert.equal(challengeFail.completed, false, "missing a late-scenario goal should fail its challenge");
+
+assert.match(read("src/game.js"), /xian_emperor_campaign_evolution_v150/, "full saves should include campaign evolution data");
 
 console.log(`release regression ok: v${expectedVersion}`);

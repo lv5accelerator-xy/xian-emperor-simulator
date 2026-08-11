@@ -14,7 +14,7 @@
   const GAME_SAVE_KEY = "xian_emperor_simulator_v01";
   const WORLD_SAVE_KEY = "xian_emperor_world_v020";
   const STORAGE_KEY = "xian_emperor_strategy_network_v040";
-  const VERSION = "0.7.0";
+  const VERSION = "1.5.0";
   const MAX_LOG = 60;
   const MAX_PROMISES = 40;
 
@@ -663,7 +663,7 @@
 
   function renderRoutes() {
     const sorted = DATA.routes.map(def => [def, state.routes[def.id]]).sort((a, b) => b[1].pressure - a[1].pressure);
-    return `<section><div class="strategy-section-head"><div><span class="section-kicker">战争路线</span><h3>军路与补给线</h3></div><small>按军事压力排序</small></div><div class="route-network-list">${sorted.map(([def, route]) => `<article class="route-card ${route.status === "战线激烈" ? "danger" : route.status === "补给阻断" ? "blocked" : ""}"><div class="route-card-head"><div><strong>${escapeHtml(def.name)}</strong><small>${escapeHtml(def.type)} · ${escapeHtml(def.terrain)}</small></div><b>${escapeHtml(route.status)}</b></div><div class="route-endpoints"><span>${escapeHtml(cityDef(def.from)?.name || def.from)}</span><i>⇄</i><span>${escapeHtml(cityDef(def.to)?.name || def.to)}</span></div>${metric("补给", route.supply)}${metric("军压", route.pressure, true)}<p>${escapeHtml(route.lastChange)}</p></article>`).join("")}</div></section>`;
+    return `<section><div class="strategy-section-head"><div><span class="section-kicker">战争路线</span><h3>军路与补给线</h3></div><small>按军事压力排序</small></div><div class="route-network-list">${sorted.map(([def, route]) => `<article class="route-card ${route.status === "战线激烈" ? "danger" : /阻断|封锁/.test(route.status) ? "blocked" : ""}"><div class="route-card-head"><div><strong>${escapeHtml(def.name)}</strong><small>${escapeHtml(def.type)} · ${escapeHtml(def.terrain)}</small></div><b>${escapeHtml(route.status)}</b></div><div class="route-endpoints"><span>${escapeHtml(cityDef(def.from)?.name || def.from)}</span><i>⇄</i><span>${escapeHtml(cityDef(def.to)?.name || def.to)}</span></div>${metric("补给", route.supply)}${metric("军压", route.pressure, true)}<p>${escapeHtml(route.lastChange)}</p></article>`).join("")}</div></section>`;
   }
 
   function renderPromises() {
@@ -702,6 +702,45 @@
     return DATA.lords.find(lord => lord.id === id)?.name || id;
   }
 
+  function applyCampaignEffects(pkg = {}) {
+    if (!state) return false;
+    Object.entries(pkg.cities || {}).forEach(([id, effects]) => {
+      const city = state.cities[id];
+      if (!city) return;
+      ["defense", "supply", "courtLoyalty", "pressure"].forEach(key => {
+        if (Number.isFinite(Number(effects[key]))) city[key] = clamp(Number(city[key] || 0) + Number(effects[key]), 0, 100);
+      });
+      if (effects.controller) city.controller = effects.controller;
+      if (effects.controllerName) city.controllerName = effects.controllerName;
+      city.lastChange = effects.reason || pkg.reason || "战役态势调整";
+    });
+    Object.entries(pkg.routes || {}).forEach(([id, effects]) => {
+      const route = state.routes[id];
+      if (!route) return;
+      if (Number.isFinite(Number(effects.supply))) route.supply = clamp(Number(route.supply || 0) + Number(effects.supply), 0, 100);
+      if (Number.isFinite(Number(effects.pressure))) route.pressure = clamp(Number(route.pressure || 0) + Number(effects.pressure), 0, 100);
+      ["blockadedUntil", "weatherUntilTurn", "weatherCost"].forEach(key => {
+        if (effects[key] === null) delete route[key];
+        else if (Number.isFinite(Number(effects[key]))) route[key] = Number(effects[key]);
+      });
+      route.status = Number(route.blockadedUntil || 0) >= Number(coreState?.turn || 0) ? "道路封锁" : routeStatus(route.supply, route.pressure);
+      route.lastChange = effects.reason || pkg.reason || "战役态势调整";
+    });
+    Object.entries(pkg.strategies || {}).forEach(([id, effects]) => {
+      const strategy = state.strategies[id];
+      if (!strategy) return;
+      if (Number.isFinite(Number(effects.trust))) strategy.trust = clamp(Number(strategy.trust || 0) + Number(effects.trust), 0, 100);
+      if (Number.isFinite(Number(effects.readiness))) strategy.readiness = clamp(Number(strategy.readiness || 0) + Number(effects.readiness), 0, 100);
+      strategy.lastChange = effects.reason || pkg.reason || "人物差遣影响";
+    });
+    if (pkg.log) state.log.unshift({ id: `campaign-${Date.now()}`, turn: Number(coreState?.turn || state.lastProcessedTurn || 1), type: pkg.type || "system", text: pkg.log });
+    state.log = state.log.slice(0, MAX_LOG);
+    saveState();
+    renderAll();
+    document.dispatchEvent(new CustomEvent("xian:strategy-campaign-update", { detail: { reason: pkg.reason || "战役态势调整" } }));
+    return true;
+  }
+
   function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
   }
@@ -713,6 +752,7 @@
     detectPromises,
     findRoutePath,
     extractEdictText,
+    applyCampaignEffects,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
     open: openOverlay,
   });

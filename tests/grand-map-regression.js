@@ -49,6 +49,9 @@ assert.match(html, /测试勤王军|1支军团/);
 assert.match(html, /军压 86/);
 assert.match(html, /九州军政总览/);
 assert.match(html, /拖动画面平移/);
+assert.match(html, /本月关键警讯 · 最多三条/);
+assert.match(html, /选择军团后可直接在地图下令/);
+assert.match(html, /舆图指引/);
 
 for (const city of context.window.XIAN_STRATEGY_DATA.cities) {
   assert.match(html, new RegExp(`data-grand-city="${city.id}"`), `missing city ${city.id}`);

@@ -16,7 +16,7 @@
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STRATEGY_KEY = "xian_emperor_strategy_network_v040";
   const STORAGE_KEY = "xian_emperor_armies_v050";
-  const VERSION = "0.7.0";
+  const VERSION = "1.5.0";
   const MAX_REPORTS = 40;
   const MAX_ORDERS = 50;
   const MAX_LOG = 80;
@@ -293,6 +293,130 @@
     routeIds.forEach(routeId => adjustStrategyRoute(routeId, { pressure: task === "attack" ? 3 : 1, supply: task === "supply" ? 2 : -1 }, `${armyName(army)}奉诏进入军路`));
   }
 
+  function previewMapOrder(armyId, targetCityId, task) {
+    const army = state?.armies?.[armyId];
+    const city = STRATEGY_DATA.cities.find(item => item.id === targetCityId);
+    const allowedTasks = ["attack", "support", "defend", "supply", "retreat"];
+    if (!state || !coreState) return { ok: false, message: "尚未载入本局军籍。" };
+    if (!army || army.status === "destroyed") return { ok: false, message: "该军团已经失去建制。" };
+    if (!city) return { ok: false, message: "没有找到目标城池。" };
+    if (!allowedTasks.includes(task)) return { ok: false, message: "该军令暂不支持从舆图下达。" };
+    if (["engaged", "besieging"].includes(army.status) && task !== "retreat") {
+      return { ok: false, message: "军团正处于交战或围城状态，只能先下令撤退。" };
+    }
+    if (targetCityId === army.cityId && ["attack", "support", "retreat"].includes(task)) {
+      return { ok: false, message: "请选择另一座城池作为军令目标。" };
+    }
+
+    const routeIds = targetCityId === army.cityId ? [] : STRATEGY_API.findRoutePath(army.cityId, targetCityId);
+    if (targetCityId !== army.cityId && !routeIds.length) return { ok: false, message: "起点与目标之间没有可用军路。" };
+    const strategyState = readStrategyState();
+    const routeStates = routeIds.map(id => strategyState?.routes?.[id] || STRATEGY_DATA.routes.find(route => route.id === id) || {});
+    const maxPressure = routeStates.length ? Math.max(...routeStates.map(route => Number(route.pressure || 0))) : 0;
+    const minSupply = routeStates.length ? Math.min(...routeStates.map(route => Number(route.supply ?? 100))) : 100;
+    const relation = Number(coreState.relations?.[army.commander] ?? 55);
+    const ownerTrust = Number(strategyState?.strategies?.[army.owner]?.trust ?? 50);
+    const courtBonus = army.owner === "court" ? 20 : 0;
+    const execution = clamp(18 + Number(coreState.stats.authority || 0) * .32 + Number(coreState.stats.prestige || 0) * .2 + relation * .12 + ownerTrust * .1 + courtBonus, 25, 96);
+    const estimatedSupplyCost = routeIds.reduce((sum, id) => {
+      const def = STRATEGY_DATA.routes.find(route => route.id === id);
+      const current = strategyState?.routes?.[id] || {};
+      const blockedCost = Number(current.blockadedUntil || 0) >= Number(coreState.turn || 0) ? 4 : 0;
+      const weatherCost = Number(current.weatherUntilTurn || 0) >= Number(coreState.turn || 0) ? Number(current.weatherCost || 0) : 0;
+      return sum + (/栈道|山道|关道|远道/.test(def?.type || "") ? 8 : /水路/.test(def?.type || "") ? 6 : 5) + blockedCost + weatherCost;
+    }, task === "supply" ? 2 : 0);
+    const warnings = [];
+    if (routeStates.some(route => Number(route.blockadedUntil || 0) >= Number(coreState.turn || 0))) warnings.push("沿途存在道路封锁，军团可能停滞");
+    if (maxPressure >= 75) warnings.push("沿途存在高压战线");
+    if (minSupply <= 28) warnings.push("至少一段军路补给困难");
+    if (army.supply < estimatedSupplyCost + 15) warnings.push("军团现有粮秣可能不足");
+    if (execution < 52) warnings.push("诏令执行度偏低，军团战力会受影响");
+
+    return {
+      ok: true,
+      armyId,
+      armyName: armyName(army),
+      task,
+      taskLabel: taskLabel(task),
+      originCityId: army.cityId,
+      originName: cityName(army.cityId),
+      targetCityId,
+      targetName: cityName(targetCityId),
+      routeIds,
+      routeNames: routeIds.map(routeName),
+      eta: routeIds.length,
+      execution: Math.round(execution),
+      estimatedSupplyCost,
+      maxPressure: Math.round(maxPressure),
+      minSupply: Math.round(minSupply),
+      warnings,
+    };
+  }
+
+  function issueMapOrder(armyId, targetCityId, task) {
+    const preview = previewMapOrder(armyId, targetCityId, task);
+    if (!preview.ok) return preview;
+    const game = window.XianEmperorGame;
+    if (!game?.performExternalAction) return { ok: false, message: "核心行动接口尚未就绪。" };
+    const treasuryCost = task === "supply" ? -3 : task === "attack" ? -1 : 0;
+    const actionAccepted = game.performExternalAction({
+      title: `舆图军令·${preview.taskLabel}`,
+      text: `${preview.armyName}奉命自${preview.originName}${preview.eta ? `沿${preview.routeNames.join("、")}` : "就地"}${preview.eta ? `前往${preview.targetName}` : `守备${preview.targetName}`}，预计${preview.eta}个月完成部署。`,
+      chronicle: `天子在九州舆图上向${preview.armyName}下达${preview.taskLabel}军令，目标为${preview.targetName}。`,
+      effects: treasuryCost ? { treasury: treasuryCost } : {},
+    });
+    if (!actionAccepted) return { ok: false, message: "请先裁决本月奏报，并确认仍有行动次数。" };
+
+    const army = state.armies[armyId];
+    const turn = Number(window.XianEmperorGame.getState()?.turn || coreState.turn || 1);
+    army.originCityId = army.cityId;
+    army.targetCityId = targetCityId;
+    army.routeIds = [...preview.routeIds];
+    army.routeIndex = 0;
+    army.currentRouteId = preview.routeIds[0] || null;
+    army.task = task;
+    army.orderedTurn = turn;
+    army.orderAuthority = preview.execution;
+    army.eta = preview.eta;
+    army.fatigue = clamp(army.fatigue + (task === "retreat" ? 5 : 3), 0, 100);
+    army.status = preview.eta ? (task === "retreat" ? "routing" : "marching") : task === "defend" ? "defending" : task === "supply" ? "supplying" : "recovering";
+    army.lastChange = `舆图军令：${preview.taskLabel}至${preview.targetName}`;
+    state.orders.unshift({
+      id: `map-order-${Date.now()}-${army.id}`,
+      turn,
+      armyId: army.id,
+      owner: army.owner,
+      task,
+      originCityId: preview.originCityId,
+      targetCityId,
+      routeIds: [...preview.routeIds],
+      execution: preview.execution,
+      text: `御前舆图直令：${preview.armyName}${preview.taskLabel}至${preview.targetName}`,
+      status: preview.eta ? "executing" : "arrived",
+      source: "grand-map",
+    });
+    preview.routeIds.forEach(routeId => adjustStrategyRoute(routeId, { pressure: task === "attack" ? 3 : task === "retreat" ? -1 : 1, supply: task === "supply" ? 2 : -1 }, `${preview.armyName}奉舆图军令进入军路`));
+    addLog(turn, task, `${preview.armyName}奉舆图军令${preview.taskLabel}，目标${preview.targetName}。`);
+    trimCollections();
+    saveState();
+    renderAll();
+    document.dispatchEvent(new CustomEvent("xian:map-order", { detail: preview }));
+    return { ...preview, ok: true, message: "军令已进入大司马府军籍。" };
+  }
+
+  function applyCampaignAssignment(armyId, effects = {}, reason = "人物督军") {
+    const army = state?.armies?.[armyId];
+    if (!army || army.status === "destroyed") return false;
+    ["morale", "supply", "training", "loyalty"].forEach(key => {
+      if (Number.isFinite(Number(effects[key]))) army[key] = clamp(Number(army[key] || 0) + Number(effects[key]), 0, 100);
+    });
+    if (Number.isFinite(Number(effects.fatigue))) army.fatigue = clamp(Number(army.fatigue || 0) + Number(effects.fatigue), 0, 100);
+    army.lastChange = reason;
+    saveState();
+    renderAll();
+    return true;
+  }
+
   function stopArmies(owners, text, turn) {
     let stopped = 0;
     Object.values(state.armies).forEach(army => {
@@ -360,7 +484,9 @@
     const pressure = Number(routeState?.pressure ?? routeDef.pressure ?? 40);
     const routeSupply = Number(routeState?.supply ?? routeDef.supply ?? 55);
     const terrainCost = /栈道|山道|关道|远道/.test(routeDef.type) ? 2 : /水路/.test(routeDef.type) ? 1 : 0;
-    const consumption = Math.round(4 + terrainCost + pressure / 28 + army.troops / 9000);
+    const blockaded = Number(routeState?.blockadedUntil || 0) >= turn;
+    const weatherCost = Number(routeState?.weatherUntilTurn || 0) >= turn ? Number(routeState?.weatherCost || 0) : 0;
+    const consumption = Math.round(4 + terrainCost + weatherCost + (blockaded ? 4 : 0) + pressure / 28 + army.troops / 9000);
     army.supply = clamp(army.supply - consumption, 0, 100);
     army.fatigue = clamp(army.fatigue + 8 + terrainCost, 0, 100);
     army.morale = clamp(army.morale - (pressure >= 70 ? 4 : pressure >= 55 ? 2 : 1), 0, 100);
@@ -376,8 +502,16 @@
       return;
     }
 
-    if (pressure >= 72 || routeSupply <= 25) {
-      const attritionRate = pressure >= 82 ? 0.018 : 0.009;
+    if (blockaded && rng() < .42) {
+      army.fatigue = clamp(army.fatigue + 5, 0, 100);
+      army.morale = clamp(army.morale - 3, 0, 100);
+      army.lastChange = `${routeDef.name}遭到封锁，本月未能通过`;
+      addLog(turn, "warning", `${armyName(army)}在${routeDef.name}遭到封锁，行军停滞。`);
+      return;
+    }
+
+    if (blockaded || pressure >= 72 || routeSupply <= 25) {
+      const attritionRate = blockaded ? 0.021 : pressure >= 82 ? 0.018 : 0.009;
       const lost = Math.max(0, Math.round(army.troops * attritionRate * (0.65 + rng() * 0.7)));
       army.troops = Math.max(0, army.troops - lost);
       if (lost) addLog(turn, "warning", `${armyName(army)}通过${routeDef.name}时受袭与掉队，损失${lost}人。`);
@@ -1215,6 +1349,9 @@
     setSiegeStance,
     getJudgmentDecision,
     resolvePostwarJudgment,
+    previewMapOrder,
+    issueMapOrder,
+    applyCampaignAssignment,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
     open: openOverlay,
   });
