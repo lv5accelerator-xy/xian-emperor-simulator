@@ -1,10 +1,18 @@
-/* 天子蒙尘：献帝模拟器 v0.2.3.3 稳定音频系统 */
+/* 天子蒙尘：献帝模拟器 v0.7.1 场景音乐与稳定音效系统 */
 (() => {
   "use strict";
 
   const KEY = "xian_emperor_audio_v023";
   const OLD_KEY = "xian_emperor_audio_v022";
   const SRC = window.XIAN_AUDIO_DATA || {};
+  const MUSIC = window.XIAN_MUSIC_TRACKS || { court: SRC.bgm };
+  const MUSIC_LABELS = {
+    menu: "汉室余晖",
+    court: "玉阶无声",
+    crisis: "宫门将闭",
+    battle: "诏令出京",
+    ending: "山河仍在",
+  };
   const DEFAULTS = {
     sfxEnabled: true,
     sfxVolume: 0.58,
@@ -22,6 +30,7 @@
 
   let settings = loadSettings();
   let bgm = null;
+  let currentTrack = null;
   let initialized = false;
   let musicUnlocked = false;
   let lastReportSignature = "";
@@ -159,21 +168,38 @@
       ?.classList.toggle("muted", !settings.musicEnabled);
   }
 
-  function ensureMusic() {
-    if (bgm || !SRC.bgm) return bgm;
+  function ensureMusic(trackName) {
+    const source = MUSIC[trackName] || MUSIC.court || SRC.bgm;
+    if (!source) return null;
     try {
-      bgm = new Audio();
-      bgm.loop = true;
-      bgm.preload = "none";
-      bgm.src = SRC.bgm;
-      bgm.setAttribute?.("data-audio-role", "court-bgm");
+      if (!bgm) {
+        bgm = new Audio();
+        bgm.loop = true;
+        bgm.preload = "none";
+        bgm.setAttribute?.("data-audio-role", "scene-bgm");
+        bgm.addEventListener?.("error", () => {
+          console.warn(`场景音乐加载失败：${currentTrack || "unknown"}。`);
+        });
+      }
+      if (currentTrack !== trackName) {
+        bgm.pause();
+        bgm.src = source;
+        bgm.currentTime = 0;
+        currentTrack = trackName;
+        bgm.setAttribute?.("data-audio-scene", trackName);
+        document.documentElement?.setAttribute("data-music-scene", trackName);
+        const musicGroup = document.querySelector('[data-audio-kind="music"]');
+        musicGroup?.setAttribute("data-music-scene", trackName);
+        const musicButton = document.getElementById("music-toggle-btn");
+        if (musicButton) {
+          musicButton.title = `开启或关闭背景音乐 · 当前：${MUSIC_LABELS[trackName] || trackName}`;
+        }
+      }
       setMusicVolume();
-      bgm.addEventListener?.("error", () => {
-        console.warn("朝堂背景音乐加载失败。");
-      });
     } catch (error) {
-      console.warn("无法初始化朝堂背景音乐。", error);
+      console.warn("无法初始化场景音乐。", error);
       bgm = null;
+      currentTrack = null;
     }
     return bgm;
   }
@@ -192,16 +218,31 @@
     );
   }
 
-  function startMusic() {
+  function isShown(id) {
+    const element = document.getElementById(id);
+    return Boolean(element && !element.classList.contains("hidden"));
+  }
+
+  function getMusicContext() {
+    if (isShown("end-screen")) return "ending";
+    if (isShown("danger-banner") && gameActive()) return "crisis";
+    if (isShown("army-system-overlay") && gameActive()) return "battle";
+    if (isShown("start-screen")) return "menu";
+    if (gameActive()) return "court";
+    return null;
+  }
+
+  function startMusic(preferredTrack = null) {
+    const trackName = preferredTrack || getMusicContext();
     if (
       !settings.musicEnabled
       || settings.musicVolume <= 0
-      || !SRC.bgm
+      || !trackName
+      || !(MUSIC[trackName] || MUSIC.court || SRC.bgm)
       || document.hidden
-      || !gameActive()
     ) return false;
 
-    const music = ensureMusic();
+    const music = ensureMusic(trackName);
     if (!music) return false;
     setMusicVolume();
     if (!music.paused) return true;
@@ -224,11 +265,12 @@
   }
 
   function syncMusic() {
-    if (document.hidden || !settings.musicEnabled || !gameActive()) {
+    const trackName = getMusicContext();
+    if (document.hidden || !settings.musicEnabled || !trackName) {
       pauseMusic();
       return;
     }
-    if (musicUnlocked) startMusic();
+    if (musicUnlocked) startMusic(trackName);
   }
 
   function getEffectAudio(name) {
@@ -282,7 +324,10 @@
   function bindClicks() {
     document.addEventListener("click", event => {
       const button = event.target.closest?.("button, [role='button']");
-      if (!button) return;
+      if (!button) {
+        startMusic();
+        return;
+      }
       if (button.closest?.(".audio-controls")) return;
 
       const id = button.id || "";
@@ -295,8 +340,8 @@
       }
 
       if (id === "ending-restart") {
-        pauseMusic();
         play("button", 0.7);
+        startMusic("menu");
         return;
       }
 
@@ -334,7 +379,7 @@
   }
 
   function observeStableTargets() {
-    observeElement("danger-banner", inspectDanger, {
+    observeElement("danger-banner", () => { inspectDanger(); syncMusic(); }, {
       childList: true,
       subtree: true,
       characterData: true,
@@ -353,6 +398,16 @@
     });
 
     observeElement("end-screen", syncMusic, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    observeElement("start-screen", syncMusic, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    observeElement("army-system-overlay", syncMusic, {
       attributes: true,
       attributeFilter: ["class"],
     });
@@ -416,8 +471,10 @@
       initialized,
       musicPaused: bgm ? bgm.paused : true,
       musicUnlocked,
+      currentTrack,
       observedTargets: observers.length,
       audioKeys: Object.keys(SRC),
+      musicKeys: Object.keys(MUSIC),
     }),
   });
 })();

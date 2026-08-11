@@ -18,6 +18,7 @@ jobs:
         run: |
           node --check src/audio.js
           node --check src/audio-data.js
+          node --check src/audio-tracks.js
           node --check src/world-hotfix.js
           node --check src/world-system.js
           node --check src/decree-world.js
@@ -49,6 +50,30 @@ jobs:
             }
           }
           console.log('Embedded audio payloads are valid.');
+          NODE
+
+      - name: Validate scene music and archived alternates
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const context = { window: {} };
+          vm.runInNewContext(fs.readFileSync('src/audio-tracks.js', 'utf8'), context);
+          const tracks = context.window.XIAN_MUSIC_TRACKS;
+          const expected = ['menu', 'court', 'crisis', 'battle', 'ending'];
+          if (JSON.stringify(Object.keys(tracks || {})) !== JSON.stringify(expected)) {
+            throw new Error(`Unexpected scene music manifest: ${JSON.stringify(Object.keys(tracks || {}))}`);
+          }
+          for (const [scene, file] of Object.entries(tracks)) {
+            if (file.includes('/alternates/')) throw new Error(`Backup track used at runtime: ${scene}`);
+            const bytes = fs.readFileSync(file);
+            if (bytes.length < 500000 || bytes.subarray(0, 3).toString('ascii') !== 'ID3') {
+              throw new Error(`Invalid scene MP3: ${scene}`);
+            }
+          }
+          const alternates = fs.readdirSync('assets/audio/bgm/alternates').filter(file => file.endsWith('.mp3'));
+          if (alternates.length !== 3) throw new Error(`Expected 3 archived alternates, found ${alternates.length}`);
+          console.log('Scene music and archived alternates are valid.');
           NODE
 
       - name: Guard against observer and preload regressions
@@ -219,9 +244,10 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v0.7.0' index.html
+          grep -q 'v0.7.1' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
+          grep -q 'src/audio-tracks.js' index.html
           grep -q 'src/audio.js' index.html
           grep -q 'src/world-hotfix.js' index.html
           grep -q 'src/decree-world.css' index.html
@@ -240,6 +266,7 @@ jobs:
           grep -q 'src/scenario-system.css' index.html
           test -f src/audio.css
           test -f src/audio-data.js
+          test -f src/audio-tracks.js
           test -f src/audio.js
           test -f src/world-hotfix.js
           test -f src/decree-world.css
@@ -258,4 +285,4 @@ jobs:
           test -f src/scenario-system.css
 
       - name: Run release regression
-        run: EXPECTED_VERSION=0.7.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=0.7.1 node tests/release-regression.js

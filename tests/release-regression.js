@@ -63,10 +63,24 @@ function loadGameApi() {
   return { api: context.window.XianEmperorGame, data: context.window.GAME_DATA };
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "0.7.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "0.7.1";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
+
+const musicContext = { window: {} };
+vm.runInNewContext(read("src/audio-tracks.js"), musicContext, { filename: "audio-tracks.js" });
+const musicTracks = musicContext.window.XIAN_MUSIC_TRACKS;
+assert.deepEqual(Array.from(Object.keys(musicTracks)), ["menu", "court", "crisis", "battle", "ending"]);
+for (const [scene, file] of Object.entries(musicTracks)) {
+  assert.equal(file.includes("/alternates/"), false, `${scene} must not reference a backup track`);
+  const bytes = fs.readFileSync(path.join(root, file));
+  assert.ok(bytes.length > 500_000, `${scene} music file is unexpectedly small`);
+  assert.equal(bytes.subarray(0, 3).toString("ascii"), "ID3", `${scene} music file should be an MP3`);
+}
+const alternateFiles = fs.readdirSync(path.join(root, "assets/audio/bgm/alternates"))
+  .filter(name => name.endsWith(".mp3"));
+assert.equal(alternateFiles.length, 3, "three backup tracks should be archived");
 
 for (const file of fs.readdirSync(path.join(root, "src")).filter((name) => name.endsWith(".js"))) {
   new vm.Script(read(path.join("src", file)), { filename: file });
