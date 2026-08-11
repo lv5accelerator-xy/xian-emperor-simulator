@@ -33,6 +33,8 @@ jobs:
           node --check src/court-politics.js
           node --check src/imperial-progress-data.js
           node --check src/imperial-progress.js
+          node --check src/grand-map.js
+          node --check src/ui-v110.js
 
       - name: Validate embedded audio
         run: |
@@ -248,7 +250,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v1.0.0' index.html
+          grep -q 'v1.1.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -268,9 +270,13 @@ jobs:
           grep -q 'src/court-politics.css' index.html
           grep -q 'src/court-politics.js' index.html
           grep -q 'src/scenario-system.css' index.html
-          grep -q 'src/imperial-progress.css?v=1.0.0' index.html
-          grep -q 'src/imperial-progress-data.js?v=1.0.0' index.html
-          grep -q 'src/imperial-progress.js?v=1.0.0' index.html
+          grep -q 'src/imperial-progress.css?v=1.1.0' index.html
+          grep -q 'src/imperial-progress-data.js?v=1.1.0' index.html
+          grep -q 'src/imperial-progress.js?v=1.1.0' index.html
+          grep -q 'src/grand-map.css?v=1.1.0' index.html
+          grep -q 'src/grand-map.js?v=1.1.0' index.html
+          grep -q 'src/ui-v110.css?v=1.1.0' index.html
+          grep -q 'src/ui-v110.js?v=1.1.0' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio-tracks.js
@@ -293,14 +299,22 @@ jobs:
           test -f src/imperial-progress.css
           test -f src/imperial-progress-data.js
           test -f src/imperial-progress.js
+          test -f src/grand-map.css
+          test -f src/grand-map.js
+          test -f src/ui-v110.css
+          test -f src/ui-v110.js
           test -f patch-notes/v0.8.0.txt
           test -f patch-notes/v0.8.1.txt
           test -f patch-notes/v0.9.0.txt
           test -f patch-notes/v0.9.5.txt
           test -f patch-notes/v1.0.0.txt
+          test -f patch-notes/v1.1.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
 
+      - name: Run grand map regression
+        run: node tests/grand-map-regression.js
+
       - name: Run release regression
-        run: EXPECTED_VERSION=1.0.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=1.1.0 node tests/release-regression.js

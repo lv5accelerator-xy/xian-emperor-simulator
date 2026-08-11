@@ -63,13 +63,17 @@ function loadGameApi() {
   return { api: context.window.XianEmperorGame, data: context.window.GAME_DATA };
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "1.0.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "1.1.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
-assert.match(read("index.html"), /imperial-progress\.css\?v=1\.0\.0/);
-assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.0\.0/);
-assert.match(read("index.html"), /imperial-progress\.js\?v=1\.0\.0/);
+assert.match(read("index.html"), /imperial-progress\.css\?v=1\.1\.0/);
+assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.1\.0/);
+assert.match(read("index.html"), /imperial-progress\.js\?v=1\.1\.0/);
+assert.match(read("index.html"), /grand-map\.css\?v=1\.1\.0/);
+assert.match(read("index.html"), /grand-map\.js\?v=1\.1\.0/);
+assert.match(read("index.html"), /ui-v110\.css\?v=1\.1\.0/);
+assert.match(read("index.html"), /ui-v110\.js\?v=1\.1\.0/);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
 assert.match(read("src/game.js"), /schemaVersion:\s*100/);
 assert.match(read("src/game.js"), /__xianFullSaveImporting\s*=\s*true/);
