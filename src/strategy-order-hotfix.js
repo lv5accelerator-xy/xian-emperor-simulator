@@ -160,7 +160,7 @@
     const previousSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function orderedStrategySetItem(key, value) {
       previousSetItem.apply(this, arguments);
-      if (this !== localStorage || key !== CORE_KEY || window.__xianStrategyRefreshOnly) return;
+      if (this !== localStorage || key !== CORE_KEY || window.__xianFullSaveImporting || window.__xianStrategyRefreshOnly) return;
       window.clearTimeout(timer);
       timer = window.setTimeout(() => correctLatestEdicts(value), 170);
     };

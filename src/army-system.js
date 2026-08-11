@@ -44,6 +44,7 @@
       if (
         this !== localStorage ||
         key !== CORE_KEY ||
+        window.__xianFullSaveImporting ||
         window.__xianArmyRefreshOnly ||
         window.__xianStrategyRefreshOnly
       ) return;

@@ -37,7 +37,7 @@
     const previousSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function strategyAwareSetItem(key, value) {
       previousSetItem.apply(this, arguments);
-      if (this === localStorage && key === GAME_SAVE_KEY) {
+      if (!window.__xianFullSaveImporting && this === localStorage && key === GAME_SAVE_KEY) {
         window.clearTimeout(processTimer);
         processTimer = window.setTimeout(() => processCoreSave(value), 90);
       }

@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v0.7.0
+ * 天子蒙尘：献帝模拟器 v1.0.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -9,6 +9,19 @@
   const DATA = window.GAME_DATA;
   const SAVE_KEY = "xian_emperor_simulator_v01";
   const SCENARIO_RECORDS_KEY = "xian_emperor_scenario_records_v070";
+  const PORTABLE_STORAGE_KEYS = [
+    SAVE_KEY,
+    "xian_emperor_monthly_reports_v011",
+    "xian_emperor_month_snapshot_v011",
+    "xian_emperor_world_v020",
+    "xian_emperor_decree_world_v030",
+    "xian_emperor_strategy_network_v040",
+    "xian_emperor_armies_v050",
+    "xian_emperor_court_politics_v060",
+    "xian_emperor_audio_v023",
+    SCENARIO_RECORDS_KEY,
+    "xian_emperor_progression_v100",
+  ];
   const MAX_REPORTS = 10;
 
   const STARTING_STATS = {
@@ -220,6 +233,7 @@
 
     return {
       version: DATA.version,
+      schemaVersion: 100,
       scenarioId: scenario.id,
       difficulty,
       turn: 1,
@@ -552,11 +566,11 @@
 
   function renderDangerBanner() {
     const warnings = [];
-    if (state.stats.caoAlert >= 85) warnings.push("曹氏警戒已进入危险区");
-    if (state.stats.security <= 20) warnings.push("宫廷安全濒临崩溃");
-    if (state.hidden.leakRisk >= 75) warnings.push("密线极可能泄露");
-    if (state.stats.treasury <= 12) warnings.push("国库将尽");
-    if (state.stats.prestige <= 15) warnings.push("天下将弃汉廷");
+    if (state.stats.caoAlert >= 85) warnings.push("曹氏警戒已进入危险区：减少密令与扩权，先安抚外府");
+    if (state.stats.security <= 20) warnings.push("宫廷安全濒临崩溃：优先整饬宫门与宿卫");
+    if (state.hidden.leakRisk >= 75) warnings.push("密线极可能泄露：暂停联络并清理耳目");
+    if (state.stats.treasury <= 12) warnings.push("国库将尽：避免赏赐、赈济与高消耗行动");
+    if (state.stats.prestige <= 15) warnings.push("天下将弃汉廷：通过朝仪、赈济或外交恢复威望");
 
     if (warnings.length === 0) {
       el["danger-banner"].classList.add("hidden");
@@ -1299,8 +1313,11 @@
     const s = state.stats;
     const h = state.hidden;
     let ending;
+    const pathEnding = window.XianImperialProgress?.getPathEnding?.(state);
 
-    if (s.authority >= 70 && h.loyalNetwork >= 58 && s.security >= 34 && s.caoAlert < 94) {
+    if (pathEnding) {
+      ending = pathEnding;
+    } else if (s.authority >= 70 && h.loyalNetwork >= 58 && s.security >= 34 && s.caoAlert < 94) {
       ending = {
         title: "再振汉纲",
         text: "你没有凭空得到百万雄兵，而是重新建立了可执行的诏令、可信的中枢与互相呼应的忠臣网络。曹氏仍强，但汉廷已不再只是印玺与名号。新的较量才刚开始。",
@@ -1545,6 +1562,7 @@
     state.updatedAt = new Date().toISOString();
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      document.dispatchEvent(new CustomEvent("xian:core-saved", { detail: { turn: state.turn, createdAt: state.createdAt } }));
       updateContinueButton();
       if (!silent) showToast("御前存档已保存到本浏览器。", "success");
     } catch (error) {
@@ -1579,6 +1597,8 @@
     const migrated = {
       ...createInitialState(save.difficulty || "standard", save.scenarioId || "jianan_196"),
       ...save,
+      version: DATA.version,
+      schemaVersion: 100,
       scenarioId: save.scenarioId || "jianan_196",
       stats: { ...STARTING_STATS, ...(save.stats || {}) },
       hidden: { ...STARTING_HIDDEN, ...(save.hidden || {}) },
@@ -1596,9 +1616,23 @@
 
   function exportSave() {
     if (!state) return;
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json;charset=utf-8" });
-    downloadBlob(blob, `xian-emperor-save-turn-${state.turn}.json`);
-    showToast("存档 JSON 已导出。", "success");
+    saveGame(true);
+    const stores = {};
+    PORTABLE_STORAGE_KEYS.forEach(key => {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw !== null) stores[key] = JSON.parse(raw);
+      } catch (_) {}
+    });
+    const bundle = {
+      format: "xian-emperor-full-save",
+      version: DATA.version,
+      exportedAt: new Date().toISOString(),
+      stores,
+    };
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json;charset=utf-8" });
+    downloadBlob(blob, `xian-emperor-v${DATA.version}-turn-${state.turn}.json`);
+    showToast("完整存档包已导出，包含军团、政议、方略与收藏。", "success");
   }
 
   function importSave(event) {
@@ -1609,13 +1643,30 @@
     reader.onload = () => {
       try {
         const imported = JSON.parse(String(reader.result));
-        if (!validateSave(imported)) throw new Error("Invalid save");
-        state = migrateSave(imported);
+        const isBundle = imported?.format === "xian-emperor-full-save" && imported.stores && typeof imported.stores === "object";
+        const importedCore = isBundle ? imported.stores[SAVE_KEY] : imported;
+        if (!validateSave(importedCore)) throw new Error("Invalid save");
+        if (isBundle) {
+          window.__xianFullSaveImporting = true;
+          PORTABLE_STORAGE_KEYS.filter(key => key !== SAVE_KEY).forEach(key => {
+            if (Object.prototype.hasOwnProperty.call(imported.stores, key)) {
+              localStorage.setItem(key, JSON.stringify(imported.stores[key]));
+            }
+          });
+        }
+        state = migrateSave(importedCore);
+        if (isBundle) {
+          localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+          showToast("完整存档包已导入，正在重新载入全部系统。", "success");
+          setTimeout(() => window.location.reload(), 350);
+          return;
+        }
         saveGame(true);
         enterGame();
         if (state.ended && state.ending) displayEnding(state.ending);
-        showToast("外部存档已导入。", "success");
+        showToast("旧版核心存档已迁移并导入。", "success");
       } catch (error) {
+        window.__xianFullSaveImporting = false;
         console.error(error);
         showToast("导入失败：文件不是有效存档。", "error");
       }
@@ -1826,8 +1877,15 @@
     return { applied: true, changes };
   }
 
+  function performExternalAction(pkg = {}) {
+    if (!canAct()) return false;
+    completeAction(pkg);
+    return true;
+  }
+
   window.XianEmperorGame = Object.freeze({
     applyExternalPackage,
+    performExternalAction,
     getScenarioById: (id) => JSON.parse(JSON.stringify(getScenarioById(id))),
     calculateScenarioChallenge: (scenario, gameState) => calculateScenarioChallenge(scenario, gameState),
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,

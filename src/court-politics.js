@@ -53,7 +53,7 @@
     const previousSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function courtAwareSetItem(key, value) {
       previousSetItem.apply(this, arguments);
-      if (this !== localStorage || key !== CORE_KEY || window.__xianCourtWriting) return;
+      if (this !== localStorage || key !== CORE_KEY || window.__xianFullSaveImporting || window.__xianCourtWriting) return;
       window.clearTimeout(processTimer);
       processTimer = window.setTimeout(() => processCoreSave(value), 280);
     };

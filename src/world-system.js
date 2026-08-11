@@ -43,7 +43,7 @@
     const nativeSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function patchedSetItem(key, value) {
       nativeSetItem.apply(this, arguments);
-      if (this === localStorage && key === GAME_SAVE_KEY) {
+      if (!window.__xianFullSaveImporting && this === localStorage && key === GAME_SAVE_KEY) {
         queueSync(value, "core-save");
       }
     };

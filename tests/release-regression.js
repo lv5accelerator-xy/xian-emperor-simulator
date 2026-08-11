@@ -63,10 +63,27 @@ function loadGameApi() {
   return { api: context.window.XianEmperorGame, data: context.window.GAME_DATA };
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "0.7.1";
+const expectedVersion = process.env.EXPECTED_VERSION || "1.0.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
+assert.match(read("index.html"), /imperial-progress\.css\?v=1\.0\.0/);
+assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.0\.0/);
+assert.match(read("index.html"), /imperial-progress\.js\?v=1\.0\.0/);
+assert.match(read("src/game.js"), /xian-emperor-full-save/);
+assert.match(read("src/game.js"), /schemaVersion:\s*100/);
+assert.match(read("src/game.js"), /__xianFullSaveImporting\s*=\s*true/);
+for (const file of [
+  "world-system.js",
+  "decree-world.js",
+  "strategy-network.js",
+  "strategy-order-hotfix.js",
+  "army-system.js",
+  "court-politics.js",
+  "imperial-progress.js",
+]) {
+  assert.match(read(path.join("src", file)), /__xianFullSaveImporting/, `${file} must preserve imported subsystem data`);
+}
 
 const musicContext = { window: {} };
 vm.runInNewContext(read("src/audio-tracks.js"), musicContext, { filename: "audio-tracks.js" });
@@ -119,6 +136,7 @@ assert.ok(acceptGuard.effects.security > 0, "guard petition should improve court
 assert.ok(courtApi.petitions.some(item => item.type === "negotiation"), "dynamic negotiations should be included");
 
 const game = loadGameApi();
+assert.equal(game.data.version, expectedVersion, "game data version should match the release");
 assert.equal(game.data.scenarios.length, 5, "five historical scenarios should be available");
 assert.deepEqual(Array.from(game.data.scenarios, item => item.startYear), [189, 195, 196, 200, 220]);
 const lateScenario = game.api.getScenarioById("yankang_220");

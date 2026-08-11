@@ -49,7 +49,7 @@
     const previousSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function decreeAwareSetItem(key, value) {
       previousSetItem.apply(this, arguments);
-      if (this === localStorage && key === GAME_SAVE_KEY) queueProcess(value);
+      if (!window.__xianFullSaveImporting && this === localStorage && key === GAME_SAVE_KEY) queueProcess(value);
     };
   }
 
