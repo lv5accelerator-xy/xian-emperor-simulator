@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v1.5.1
+ * 天子蒙尘：献帝模拟器 v2.0.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -22,6 +22,11 @@
     SCENARIO_RECORDS_KEY,
     "xian_emperor_progression_v100",
     "xian_emperor_campaign_evolution_v150",
+    "xian_emperor_command_center_v160",
+    "xian_emperor_character_memory_v170",
+    "xian_emperor_world_marks_v180",
+    "xian_emperor_historian_v190",
+    "xian_emperor_dynasty_saga_v200",
   ];
   const MAX_REPORTS = 10;
 
@@ -457,6 +462,17 @@
     if (!choice) return;
 
     const deltaText = applyPackage(choice);
+    document.dispatchEvent(new CustomEvent("xian:decision-resolved", { detail: {
+      eventId: event.id,
+      eventTitle: event.title,
+      choiceIndex,
+      choiceLabel: choice.label,
+      chronicle: choice.chronicle,
+      relations: { ...(choice.relations || {}) },
+      turn: state.turn,
+      date: formatReignDate(state.year, state.month),
+      createdAt: state.createdAt,
+    } }));
     state.eventResolved = true;
     state.recentEventIds.push(event.id);
     state.recentEventIds = state.recentEventIds.slice(-4);
@@ -1181,6 +1197,7 @@
       return;
     }
 
+    document.dispatchEvent(new CustomEvent("xian:before-month-end", { detail: { turn: state.turn, createdAt: state.createdAt } }));
     applyMonthlyDynamics();
     if (checkImmediateEnding()) return;
 
@@ -1364,6 +1381,12 @@
     state.updatedAt = new Date().toISOString();
     addChronicle(formatReignDate(state.year, state.month), `终局：${ending.title}。${ending.text}`);
     recordScenarioResult();
+    document.dispatchEvent(new CustomEvent("xian:campaign-concluded", { detail: {
+      state: JSON.parse(JSON.stringify(state)),
+      scenario: JSON.parse(JSON.stringify(getActiveScenario())),
+      score: calculateScenarioScore(state),
+      challenge: calculateScenarioChallenge(getActiveScenario(), state),
+    } }));
     saveGame(true);
     displayEnding(ending);
   }

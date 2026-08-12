@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v1.5.1' index.html
+          grep -q 'v2.0.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -260,7 +260,17 @@ jobs:
           grep -q 'src/campaign-evolution-data.js?v=1.5.1' index.html
           grep -q 'src/campaign-evolution.js?v=1.5.1' index.html
           grep -q 'src/ui.css?v=1.5.1' index.html
-          grep -q 'src/ui.js?v=1.5.1' index.html
+          grep -q 'src/ui.js?v=2.0.0' index.html
+          grep -q 'src/command-center.css?v=1.6.0' index.html
+          grep -q 'src/command-center.js?v=1.6.0' index.html
+          grep -q 'src/character-memory.css?v=1.7.0' index.html
+          grep -q 'src/character-memory.js?v=1.7.0' index.html
+          grep -q 'src/world-marks.css?v=1.8.0' index.html
+          grep -q 'src/world-marks.js?v=1.8.0' index.html
+          grep -q 'src/historian.css?v=1.9.0' index.html
+          grep -q 'src/historian.js?v=1.9.0' index.html
+          grep -q 'src/dynasty-saga.css?v=2.0.0' index.html
+          grep -q 'src/dynasty-saga.js?v=2.0.0-r2' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio-tracks.js
@@ -288,6 +298,16 @@ jobs:
           test -f src/campaign-evolution.js
           test -f src/ui.css
           test -f src/ui.js
+          test -f src/command-center.css
+          test -f src/command-center.js
+          test -f src/character-memory.css
+          test -f src/character-memory.js
+          test -f src/world-marks.css
+          test -f src/world-marks.js
+          test -f src/historian.css
+          test -f src/historian.js
+          test -f src/dynasty-saga.css
+          test -f src/dynasty-saga.js
           test -f patch-notes/v0.8.0.txt
           test -f patch-notes/v0.8.1.txt
           test -f patch-notes/v0.9.0.txt
@@ -299,6 +319,11 @@ jobs:
           test -f patch-notes/v1.4.0.txt
           test -f patch-notes/v1.5.0.txt
           test -f patch-notes/v1.5.1.txt
+          test -f patch-notes/v1.6.0.txt
+          test -f patch-notes/v1.7.0.txt
+          test -f patch-notes/v1.8.0.txt
+          test -f patch-notes/v1.9.0.txt
+          test -f patch-notes/v2.0.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -309,5 +334,8 @@ jobs:
       - name: Run campaign evolution regression
         run: node tests/campaign-evolution-regression.js
 
+      - name: Run legacy systems regression
+        run: node tests/legacy-systems-regression.js
+
       - name: Run release regression
-        run: EXPECTED_VERSION=1.5.1 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.0.0 node tests/release-regression.js

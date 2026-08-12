@@ -82,7 +82,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "1.5.1";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.0.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -95,7 +95,14 @@ assert.match(read("index.html"), /campaign-evolution\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /campaign-evolution-data\.js\?v=1\.5\.1/);
 assert.match(read("index.html"), /campaign-evolution\.js\?v=1\.5\.1/);
 assert.match(read("index.html"), /src\/ui\.css\?v=1\.5\.1/);
-assert.match(read("index.html"), /src\/ui\.js\?v=1\.5\.1/);
+assert.match(read("index.html"), /src\/ui\.js\?v=2\.0\.0/);
+for (const resource of [
+  "command-center.css?v=1.6.0", "command-center.js?v=1.6.0",
+  "character-memory.css?v=1.7.0", "character-memory.js?v=1.7.0",
+  "world-marks.css?v=1.8.0", "world-marks.js?v=1.8.0",
+  "historian.css?v=1.9.0", "historian.js?v=1.9.0",
+  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.0.0-r2",
+]) assert.ok(read("index.html").includes(resource), `${resource} should be referenced`);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
 assert.match(read("src/game.js"), /schemaVersion:\s*100/);
 assert.match(read("src/game.js"), /__xianFullSaveImporting\s*=\s*true/);
@@ -173,6 +180,13 @@ assert.equal(challengePass.completed, true, "meeting all late-scenario goals sho
 assert.equal(challengeFail.completed, false, "missing a late-scenario goal should fail its challenge");
 
 assert.match(read("src/game.js"), /xian_emperor_campaign_evolution_v150/, "full saves should include campaign evolution data");
+for (const key of [
+  "xian_emperor_command_center_v160",
+  "xian_emperor_character_memory_v170",
+  "xian_emperor_world_marks_v180",
+  "xian_emperor_historian_v190",
+  "xian_emperor_dynasty_saga_v200",
+]) assert.match(read("src/game.js"), new RegExp(key), `full saves should include ${key}`);
 
 const strategyApi = loadStrategyApi();
 assert.ok(strategyApi, "strategy network diagnostics API should load");

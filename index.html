@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17110e">
   <meta name="description" content="一款以建安元年许都朝廷为舞台的汉末政治策略模拟游戏。">
-  <title>天子蒙尘：献帝模拟器 v1.5.1</title>
+  <title>天子蒙尘：献帝模拟器 v2.0.0</title>
   <link rel="stylesheet" href="styles.css?v=1.5.1">
   <link rel="stylesheet" href="src/world.css?v=1.5.1">
   <link rel="stylesheet" href="src/decree-world.css?v=1.5.1">
@@ -19,6 +19,11 @@
   <link rel="stylesheet" href="src/imperial-progress.css?v=1.5.1">
   <link rel="stylesheet" href="src/grand-map.css?v=1.5.1">
   <link rel="stylesheet" href="src/campaign-evolution.css?v=1.5.1">
+  <link rel="stylesheet" href="src/command-center.css?v=1.6.0">
+  <link rel="stylesheet" href="src/character-memory.css?v=1.7.0">
+  <link rel="stylesheet" href="src/world-marks.css?v=1.8.0">
+  <link rel="stylesheet" href="src/historian.css?v=1.9.0">
+  <link rel="stylesheet" href="src/dynasty-saga.css?v=2.0.0">
   <link rel="stylesheet" href="src/ui.css?v=1.5.1">
 </head>
 <body>
@@ -27,7 +32,7 @@
   <section id="start-screen" class="start-screen" aria-label="开始游戏">
     <div class="start-emblem" aria-hidden="true"><span>汉</span></div>
     <div class="start-copy">
-      <p class="eyebrow">汉末政治策略模拟 · 正式版 v1.5.1</p>
+      <p class="eyebrow">汉末政治策略模拟 · 正式版 v2.0.0</p>
       <h1>天子蒙尘</h1>
       <h2>献帝模拟器</h2>
       <p class="start-intro">从中平六年的洛阳孤灯，到延康元年的禅代前夜。选择一段汉末危局，以诏书、官爵、军团与政治交易，为天子争取一条不由他人书写的道路。</p>
@@ -89,7 +94,7 @@
       </div>
     </main>
 
-    <footer class="game-footer"><span>v1.5.1 · 维护整理、军路识别与运行稳定性</span><span>Ctrl + S 手动保存</span></footer>
+    <footer class="game-footer"><span>v2.0.0 · 五章长卷、历史继承与连续战役</span><span>Ctrl + S 手动保存</span></footer>
   </div>
 
   <div id="modal-backdrop" class="modal-backdrop hidden" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><span class="modal-seal" aria-hidden="true">诏</span><h2 id="modal-title">御前处分</h2></header><div id="modal-body" class="modal-body"></div><footer><button id="modal-cancel" class="secondary-button" type="button">取消</button><button id="modal-confirm" class="primary-button" type="button">确定</button></footer></section></div>
@@ -98,7 +103,7 @@
 
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="src/data.js?v=1.5.1"></script>
+  <script src="src/data.js?v=2.0.0"></script>
   <script src="src/world-data.js?v=1.5.1"></script>
   <script src="src/strategy-network-data.js?v=1.5.1"></script>
   <script src="src/army-data.js?v=1.5.1"></script>
@@ -114,7 +119,7 @@
   <script src="src/portraits/yuan_shu.js?v=1.5.1"></script>
   <script src="src/portraits/liu_biao.js?v=1.5.1"></script>
   <script src="src/portraits/sun_ce.js?v=1.5.1"></script>
-  <script src="src/game.js?v=1.5.1"></script>
+  <script src="src/game.js?v=2.0.0"></script>
   <script src="src/monthly-report.js?v=1.5.1"></script>
   <script src="src/world-system.js?v=1.5.1"></script>
   <script src="src/decree-world.js?v=1.5.1"></script>
@@ -126,9 +131,14 @@
   <script src="src/imperial-progress-data.js?v=1.5.1"></script>
   <script src="src/imperial-progress.js?v=1.5.1"></script>
   <script src="src/campaign-evolution.js?v=1.5.1"></script>
+  <script src="src/command-center.js?v=1.6.0"></script>
+  <script src="src/character-memory.js?v=1.7.0"></script>
+  <script src="src/world-marks.js?v=1.8.0"></script>
+  <script src="src/historian.js?v=1.9.0"></script>
+  <script src="src/dynasty-saga.js?v=2.0.0-r2"></script>
   <script src="src/audio-data.js?v=1.5.1"></script>
   <script src="src/audio-tracks.js?v=1.5.1"></script>
   <script src="src/audio.js?v=1.5.1"></script>
-  <script src="src/ui.js?v=1.5.1"></script>
+  <script src="src/ui.js?v=2.0.0"></script>
 </body>
 </html>

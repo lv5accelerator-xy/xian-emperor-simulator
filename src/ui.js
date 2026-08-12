@@ -9,6 +9,7 @@
     "world-map-btn",
     "army-system-btn",
     "court-politics-btn",
+    "imperial-command-btn",
   ];
 
   const ICONS = {

@@ -386,7 +386,7 @@
   function renderOverlay() {
     if (!overlay || !state || !core) return;
     const tabs = [{ id: "objectives", name: "战役目标" }, { id: "assignments", name: "人物差遣" }, { id: "front", name: "动态战线" }];
-    overlay.innerHTML = `<section class="campaign-console" role="dialog" aria-modal="true" aria-label="战役台"><header><div><span class="section-kicker">v1.5.1 战役台</span><h2>一处处理目标、人物与战线</h2><p>所有主动操作均使用原有行动次数，不增加新货币。</p></div><button data-campaign-close class="campaign-close" type="button" aria-label="关闭">×</button></header><nav>${tabs.map(tab => `<button class="${activeTab === tab.id ? "active" : ""}" data-campaign-tab="${tab.id}" type="button">${tab.name}</button>`).join("")}</nav><main>${activeTab === "assignments" ? renderAssignments() : activeTab === "front" ? renderFront() : renderObjectives()}</main></section>`;
+    overlay.innerHTML = `<section class="campaign-console" role="dialog" aria-modal="true" aria-label="战役台"><header><div><span class="section-kicker">御前战役台</span><h2>一处处理目标、人物与战线</h2><p>所有主动操作均使用原有行动次数，不增加新货币。</p></div><button data-campaign-close class="campaign-close" type="button" aria-label="关闭">×</button></header><nav>${tabs.map(tab => `<button class="${activeTab === tab.id ? "active" : ""}" data-campaign-tab="${tab.id}" type="button">${tab.name}</button>`).join("")}</nav><main>${activeTab === "assignments" ? renderAssignments() : activeTab === "front" ? renderFront() : renderObjectives()}</main></section>`;
     if (activeTab === "assignments") renderAssignmentTargets(document.getElementById("assignment-role")?.value || DATA.assignments[0].id);
   }
 
