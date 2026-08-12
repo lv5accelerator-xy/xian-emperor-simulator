@@ -31,7 +31,7 @@ for (const file of ["src/strategy-network-data.js", "src/campaign-evolution-data
 const data = context.window.XIAN_CAMPAIGN_DATA;
 const api = context.window.XianCampaignEvolution;
 assert.ok(api, "campaign evolution API should load");
-assert.equal(data.version, "1.5.0");
+assert.equal(data.version, "1.5.1");
 assert.equal(Object.keys(data.scenarioStages).length, 5, "all five scenarios should have staged objectives");
 for (const [scenarioId, stages] of Object.entries(data.scenarioStages)) {
   assert.equal(stages.length, 4, `${scenarioId} should have exactly four readable stages`);

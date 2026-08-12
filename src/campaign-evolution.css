@@ -1,4 +1,4 @@
-/* 天子蒙尘：献帝模拟器 v1.5.0 · 一体化战役台 */
+/* 天子蒙尘：献帝模拟器 v1.5.1 · 一体化战役台 */
 .campaign-focus{width:min(1840px,calc(100% - 2rem));margin:.65rem auto 0;padding:.85rem 1rem;display:grid;grid-template-columns:minmax(220px,1.1fr) minmax(300px,1.5fr) minmax(190px,.7fr) auto;align-items:center;gap:.8rem;border:1px solid rgba(112,142,151,.32);border-radius:14px;background:linear-gradient(110deg,rgba(42,35,44,.96),rgba(28,44,49,.95) 58%,rgba(66,48,73,.82));box-shadow:0 12px 36px rgba(0,0,0,.22)}
 .campaign-focus-copy h2{margin:.16rem 0 .24rem;color:#eadcae;font-family:"Noto Serif SC","Songti SC",serif;font-size:1.02rem}.campaign-focus-copy p{margin:0;color:#a99e8f;font-size:.72rem;line-height:1.45}
 .campaign-focus-goals{display:grid;gap:.36rem}.goal-chip{display:flex;align-items:center;gap:.42rem;padding:.42rem .58rem;border:1px solid rgba(222,185,105,.16);border-radius:9px;background:rgba(8,13,16,.22);color:#c6bbad;font-size:.7rem}.goal-chip b{margin-left:auto;color:#8ea9b1;font-weight:600}.goal-chip.done{border-color:rgba(91,151,126,.34);color:#9ed0b9}.goal-chip.done b{color:#9ed0b9}

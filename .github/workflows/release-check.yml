@@ -18,25 +18,7 @@ jobs:
 
       - name: Check JavaScript syntax
         run: |
-          node --check src/audio.js
-          node --check src/audio-data.js
-          node --check src/audio-tracks.js
-          node --check src/world-hotfix.js
-          node --check src/world-system.js
-          node --check src/decree-world.js
-          node --check src/strategy-network-data.js
-          node --check src/strategy-network.js
-          node --check src/strategy-order-hotfix.js
-          node --check src/decree-confirmation.js
-          node --check src/army-data.js
-          node --check src/army-system.js
-          node --check src/court-politics.js
-          node --check src/imperial-progress-data.js
-          node --check src/imperial-progress.js
-          node --check src/grand-map.js
-          node --check src/campaign-evolution-data.js
-          node --check src/campaign-evolution.js
-          node --check src/ui-v110.js
+          find src -type f -name '*.js' -print0 | sort -z | xargs -0 -n1 node --check
 
       - name: Validate embedded audio
         run: |
@@ -209,7 +191,6 @@ jobs:
           for (const file of [
             'src/strategy-network-data.js',
             'src/strategy-network.js',
-            'src/strategy-order-hotfix.js',
             'src/decree-confirmation.js',
             'src/army-data.js',
             'src/army-system.js',
@@ -252,18 +233,16 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v1.5.0' index.html
+          grep -q 'v1.5.1' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
           grep -q 'src/audio.js' index.html
-          grep -q 'src/world-hotfix.js' index.html
           grep -q 'src/decree-world.css' index.html
           grep -q 'src/decree-world.js' index.html
           grep -q 'src/strategy-network.css' index.html
           grep -q 'src/strategy-network-data.js' index.html
           grep -q 'src/strategy-network.js' index.html
-          grep -q 'src/strategy-order-hotfix.js' index.html
           grep -q 'src/decree-confirmation.css' index.html
           grep -q 'src/decree-confirmation.js' index.html
           grep -q 'src/army-system.css' index.html
@@ -272,27 +251,25 @@ jobs:
           grep -q 'src/court-politics.css' index.html
           grep -q 'src/court-politics.js' index.html
           grep -q 'src/scenario-system.css' index.html
-          grep -q 'src/imperial-progress.css?v=1.5.0' index.html
-          grep -q 'src/imperial-progress-data.js?v=1.5.0' index.html
-          grep -q 'src/imperial-progress.js?v=1.5.0' index.html
-          grep -q 'src/grand-map.css?v=1.5.0' index.html
-          grep -q 'src/grand-map.js?v=1.5.0' index.html
-          grep -q 'src/campaign-evolution.css?v=1.5.0' index.html
-          grep -q 'src/campaign-evolution-data.js?v=1.5.0' index.html
-          grep -q 'src/campaign-evolution.js?v=1.5.0' index.html
-          grep -q 'src/ui-v110.css?v=1.5.0' index.html
-          grep -q 'src/ui-v110.js?v=1.5.0' index.html
+          grep -q 'src/imperial-progress.css?v=1.5.1' index.html
+          grep -q 'src/imperial-progress-data.js?v=1.5.1' index.html
+          grep -q 'src/imperial-progress.js?v=1.5.1' index.html
+          grep -q 'src/grand-map.css?v=1.5.1' index.html
+          grep -q 'src/grand-map.js?v=1.5.1' index.html
+          grep -q 'src/campaign-evolution.css?v=1.5.1' index.html
+          grep -q 'src/campaign-evolution-data.js?v=1.5.1' index.html
+          grep -q 'src/campaign-evolution.js?v=1.5.1' index.html
+          grep -q 'src/ui.css?v=1.5.1' index.html
+          grep -q 'src/ui.js?v=1.5.1' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio-tracks.js
           test -f src/audio.js
-          test -f src/world-hotfix.js
           test -f src/decree-world.css
           test -f src/decree-world.js
           test -f src/strategy-network.css
           test -f src/strategy-network-data.js
           test -f src/strategy-network.js
-          test -f src/strategy-order-hotfix.js
           test -f src/decree-confirmation.css
           test -f src/decree-confirmation.js
           test -f src/army-system.css
@@ -309,8 +286,8 @@ jobs:
           test -f src/campaign-evolution.css
           test -f src/campaign-evolution-data.js
           test -f src/campaign-evolution.js
-          test -f src/ui-v110.css
-          test -f src/ui-v110.js
+          test -f src/ui.css
+          test -f src/ui.js
           test -f patch-notes/v0.8.0.txt
           test -f patch-notes/v0.8.1.txt
           test -f patch-notes/v0.9.0.txt
@@ -321,6 +298,7 @@ jobs:
           test -f patch-notes/v1.3.0.txt
           test -f patch-notes/v1.4.0.txt
           test -f patch-notes/v1.5.0.txt
+          test -f patch-notes/v1.5.1.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -332,4 +310,4 @@ jobs:
         run: node tests/campaign-evolution-regression.js
 
       - name: Run release regression
-        run: EXPECTED_VERSION=1.5.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=1.5.1 node tests/release-regression.js

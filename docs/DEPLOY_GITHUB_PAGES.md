@@ -5,7 +5,7 @@
 解压后进入：
 
 ```text
-xian-emperor-simulator-v1.5.0
+xian-emperor-simulator-v1.5.1
 ```
 
 确认里面直接有：

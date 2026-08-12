@@ -560,7 +560,7 @@
 
   function installUiObservers() {
     const characterList = document.getElementById("character-list");
-    if (characterList) new MutationObserver(() => augmentCharacterCards()).observe(characterList, { childList: true, subtree: true });
+    if (characterList) new MutationObserver(() => augmentCharacterCards()).observe(characterList, { childList: true, subtree: false });
     const eventTitle = document.getElementById("event-title");
     if (eventTitle) new MutationObserver(() => updateEventSourceButton()).observe(eventTitle, { childList: true, characterData: true, subtree: true });
   }

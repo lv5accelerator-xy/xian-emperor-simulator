@@ -16,7 +16,7 @@
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STRATEGY_KEY = "xian_emperor_strategy_network_v040";
   const STORAGE_KEY = "xian_emperor_armies_v050";
-  const VERSION = "1.5.0";
+  const VERSION = "1.5.1";
   const MAX_REPORTS = 40;
   const MAX_ORDERS = 50;
   const MAX_LOG = 80;

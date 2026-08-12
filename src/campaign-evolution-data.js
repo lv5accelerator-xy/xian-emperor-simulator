@@ -1,6 +1,6 @@
-/* 天子蒙尘：献帝模拟器 v1.5.0 · 战役阶段、人物差遣与动态战线数据 */
+/* 天子蒙尘：献帝模拟器 v1.5.1 · 战役阶段、人物差遣与动态战线数据 */
 window.XIAN_CAMPAIGN_DATA = Object.freeze({
-  version: "1.5.0",
+  version: "1.5.1",
   scenarioStages: {
     zhongping_189: [
       { id: "189-palace", title: "保全宫禁", summary: "先让洛阳朝廷撑过最危险的混乱。", goals: [{ type: "statMin", key: "security", target: 35, label: "宫廷安全达到 35" }, { type: "statMin", key: "officials", target: 35, label: "百官支持达到 35" }], reward: { effects: { security: 2, prestige: 1 } } },

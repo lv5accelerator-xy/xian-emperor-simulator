@@ -63,20 +63,39 @@ function loadGameApi() {
   return { api: context.window.XianEmperorGame, data: context.window.GAME_DATA };
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "1.5.0";
+function loadStrategyApi() {
+  function StorageMock() {}
+  StorageMock.prototype.setItem = function setItem() {};
+  StorageMock.prototype.getItem = function getItem() { return null; };
+  const context = {
+    console,
+    setTimeout,
+    clearTimeout,
+    Storage: StorageMock,
+    localStorage: new StorageMock(),
+    document: { readyState: "loading", addEventListener() {} },
+    CustomEvent: function CustomEvent() {},
+    window: { setTimeout, clearTimeout },
+  };
+  vm.runInNewContext(read("src/strategy-network-data.js"), context, { filename: "strategy-network-data.js" });
+  vm.runInNewContext(read("src/strategy-network.js"), context, { filename: "strategy-network.js" });
+  return context.window.XianStrategyNetwork;
+}
+
+const expectedVersion = process.env.EXPECTED_VERSION || "1.5.1";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
-assert.match(read("index.html"), /imperial-progress\.css\?v=1\.5\.0/);
-assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.5\.0/);
-assert.match(read("index.html"), /imperial-progress\.js\?v=1\.5\.0/);
-assert.match(read("index.html"), /grand-map\.css\?v=1\.5\.0/);
-assert.match(read("index.html"), /grand-map\.js\?v=1\.5\.0/);
-assert.match(read("index.html"), /campaign-evolution\.css\?v=1\.5\.0/);
-assert.match(read("index.html"), /campaign-evolution-data\.js\?v=1\.5\.0/);
-assert.match(read("index.html"), /campaign-evolution\.js\?v=1\.5\.0/);
-assert.match(read("index.html"), /ui-v110\.css\?v=1\.5\.0/);
-assert.match(read("index.html"), /ui-v110\.js\?v=1\.5\.0/);
+assert.match(read("index.html"), /imperial-progress\.css\?v=1\.5\.1/);
+assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.5\.1/);
+assert.match(read("index.html"), /imperial-progress\.js\?v=1\.5\.1/);
+assert.match(read("index.html"), /grand-map\.css\?v=1\.5\.1/);
+assert.match(read("index.html"), /grand-map\.js\?v=1\.5\.1/);
+assert.match(read("index.html"), /campaign-evolution\.css\?v=1\.5\.1/);
+assert.match(read("index.html"), /campaign-evolution-data\.js\?v=1\.5\.1/);
+assert.match(read("index.html"), /campaign-evolution\.js\?v=1\.5\.1/);
+assert.match(read("index.html"), /src\/ui\.css\?v=1\.5\.1/);
+assert.match(read("index.html"), /src\/ui\.js\?v=1\.5\.1/);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
 assert.match(read("src/game.js"), /schemaVersion:\s*100/);
 assert.match(read("src/game.js"), /__xianFullSaveImporting\s*=\s*true/);
@@ -84,7 +103,6 @@ for (const file of [
   "world-system.js",
   "decree-world.js",
   "strategy-network.js",
-  "strategy-order-hotfix.js",
   "army-system.js",
   "court-politics.js",
   "imperial-progress.js",
@@ -155,5 +173,16 @@ assert.equal(challengePass.completed, true, "meeting all late-scenario goals sho
 assert.equal(challengeFail.completed, false, "missing a late-scenario goal should fail its challenge");
 
 assert.match(read("src/game.js"), /xian_emperor_campaign_evolution_v150/, "full saves should include campaign evolution data");
+
+const strategyApi = loadStrategyApi();
+assert.ok(strategyApi, "strategy network diagnostics API should load");
+const orderedCities = Array.from(strategyApi.detectCityTargets("命荆州牧刘表自襄阳出兵，经宛城驰援许都"));
+assert.deepEqual(orderedCities, ["xiangyang", "wan", "xudu"], "edict cities should follow written order");
+assert.deepEqual(
+  Array.from(strategyApi.resolveOrderedPath(orderedCities, ["liu_biao"])),
+  ["wan_xiangyang", "xudu_wan"],
+  "ordered cities should resolve to the intended route",
+);
+assert.equal(strategyApi.choosePrimaryOrder(["supply", "support"]), "support", "military support should outrank supply");
 
 console.log(`release regression ok: v${expectedVersion}`);

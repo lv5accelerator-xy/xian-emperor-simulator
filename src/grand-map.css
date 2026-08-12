@@ -1,4 +1,4 @@
-/* 天子蒙尘：献帝模拟器 v1.5.0 · 九州军令舆图 */
+/* 天子蒙尘：献帝模拟器 v1.5.1 · 九州军令舆图 */
 .xian-world-window{width:min(1780px,calc(100vw - 1rem));height:min(96vh,1080px)}
 .xian-world-content:has(.grand-map-shell){padding:.7rem;overflow:hidden}
 .grand-map-shell{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;border:1px solid rgba(126,180,159,.2);border-radius:14px;overflow:hidden;background:#0b100f;box-shadow:inset 0 0 80px rgba(0,0,0,.45)}

@@ -14,7 +14,7 @@
   const GAME_SAVE_KEY = "xian_emperor_simulator_v01";
   const WORLD_SAVE_KEY = "xian_emperor_world_v020";
   const STORAGE_KEY = "xian_emperor_strategy_network_v040";
-  const VERSION = "1.5.0";
+  const VERSION = "1.5.1";
   const MAX_LOG = 60;
   const MAX_PROMISES = 40;
 
@@ -66,12 +66,14 @@
     const loaded = loadState();
     if (!loaded || loaded.gameCreatedAt !== core.createdAt) {
       state = createState(core);
+      processNewReports(core);
       saveState();
       renderAll();
       return;
     }
 
     state = migrateState(loaded, core);
+    migrateLegacyOrderedRoutes(core);
     processNewReports(core);
     processElapsedTurns(core);
     state.updatedAt = new Date().toISOString();
@@ -148,7 +150,8 @@
     return {
       version: VERSION,
       gameCreatedAt: core.createdAt,
-      lastReportTimestamp: latestTimestamp(core.reports),
+      lastReportTimestamp: 0,
+      v041LastCorrectedTimestamp: 0,
       lastProcessedTurn: core.turn,
       cities,
       routes,
@@ -170,6 +173,7 @@
       promises: Array.isArray(current.promises) ? current.promises : [],
       log: Array.isArray(current.log) ? current.log : [],
       lastReportTimestamp: Number(current.lastReportTimestamp) || 0,
+      v041LastCorrectedTimestamp: Number(current.v041LastCorrectedTimestamp) || 0,
       lastProcessedTurn: Number.isFinite(current.lastProcessedTurn) ? current.lastProcessedTurn : core.turn,
     };
 
@@ -224,6 +228,45 @@
     state.lastReportTimestamp = Math.max(state.lastReportTimestamp || 0, latestTimestamp(reports));
   }
 
+  function migrateLegacyOrderedRoutes(core) {
+    if (state.v041LastCorrectedTimestamp > 0) return;
+    const alreadyProcessed = Number(state.lastReportTimestamp) || 0;
+    const reports = (Array.isArray(core.reports) ? core.reports : [])
+      .filter(report => /^圣旨·/.test(report.title || ""))
+      .filter(report => (Number(report.timestamp) || 0) <= alreadyProcessed)
+      .sort((a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0));
+
+    reports.forEach(report => {
+      const text = extractEdictText(report.text || "");
+      const cityIds = detectCityTargets(text);
+      const lordIds = detectLordTargets(text);
+      const order = choosePrimaryOrder(detectOrders(text));
+      const routeIds = resolveOrderRoute(cityIds, lordIds);
+      const targets = lordIds.length ? lordIds : ["court"];
+
+      targets.forEach(lordId => {
+        const strategy = state.strategies[lordId];
+        if (!strategy) return;
+        strategy.order = order;
+        strategy.targetCities = cityIds.length
+          ? [...cityIds]
+          : [lordDef(lordId)?.seatCity || "xudu"];
+        strategy.routeIds = [...routeIds];
+        strategy.objective = buildObjective(lordId, order, strategy.targetCities);
+        strategy.lastChange = `已按诏书文字顺序校正：${shortText(text)}`;
+      });
+
+      state.v041LastCorrectedTimestamp = Math.max(
+        Number(state.v041LastCorrectedTimestamp) || 0,
+        Number(report.timestamp) || 0,
+      );
+    });
+
+    if (!reports.length) {
+      state.v041LastCorrectedTimestamp = Math.max(1, alreadyProcessed);
+    }
+  }
+
   function processEdictReport(report, core) {
     const text = extractEdictText(report.text || "");
     if (!text) return;
@@ -232,13 +275,17 @@
     const orders = detectOrders(text);
     const promiseTypes = detectPromises(text);
     const execution = extractExecution(report.text || "");
-    const primaryOrder = orders[0] || "administration";
+    const primaryOrder = choosePrimaryOrder(orders);
     const routeIds = resolveOrderRoute(cityIds, lordIds);
 
     applyEdictToCities(cityIds, primaryOrder, execution, text);
     applyEdictToRoutes(routeIds, primaryOrder, execution, text);
     applyEdictToStrategies(lordIds, cityIds, routeIds, primaryOrder, execution, text, core.turn);
     createPromises(promiseTypes, lordIds, cityIds, routeIds, execution, text, core);
+    state.v041LastCorrectedTimestamp = Math.max(
+      Number(state.v041LastCorrectedTimestamp) || 0,
+      Number(report.timestamp) || 0,
+    );
 
     const targetNames = [
       ...cityIds.map(id => cityDef(id)?.name).filter(Boolean),
@@ -263,12 +310,27 @@
     return clamp(Number(match?.[1]) || 58, 20, 100);
   }
 
+  function orderedMatches(text, records) {
+    return records
+      .map(record => {
+        const positions = record.aliases
+          .map(alias => text.indexOf(alias))
+          .filter(position => position >= 0);
+        return positions.length
+          ? { id: record.id, position: Math.min(...positions) }
+          : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.position - b.position)
+      .map(item => item.id);
+  }
+
   function detectCityTargets(text) {
-    return DATA.cities.filter(city => city.aliases.some(alias => text.includes(alias))).map(city => city.id);
+    return orderedMatches(String(text || ""), DATA.cities);
   }
 
   function detectLordTargets(text) {
-    return DATA.lords.filter(lord => lord.aliases.some(alias => text.includes(alias))).map(lord => lord.id);
+    return orderedMatches(String(text || ""), DATA.lords);
   }
 
   function detectOrders(text) {
@@ -281,6 +343,11 @@
     return [...new Set(found)];
   }
 
+  function choosePrimaryOrder(orders) {
+    const priority = ["attack", "support", "advance", "defend", "supply", "ceasefire", "trade"];
+    return priority.find(order => orders.includes(order)) || orders[0] || "administration";
+  }
+
   function resolveOrderRoute(cityIds, lordIds) {
     let from = null;
     let to = null;
@@ -290,13 +357,14 @@
     } else if (cityIds.length === 1 && lordIds.length > 0) {
       from = lordDef(lordIds[0])?.seatCity || "xudu";
       [to] = cityIds;
-      if (from === to) from = "xudu";
+      if (from === to) return [];
     } else if (cityIds.length === 1) {
       from = "xudu";
       [to] = cityIds;
     } else if (lordIds.length > 0) {
-      from = "xudu";
-      to = lordDef(lordIds[0])?.seatCity;
+      from = lordDef(lordIds[0])?.seatCity || "xudu";
+      to = "xudu";
+      if (from === to) return [];
     }
     return from && to ? findRoutePath(from, to) : [];
   }
@@ -751,6 +819,8 @@
     detectOrders,
     detectPromises,
     findRoutePath,
+    resolveOrderedPath: resolveOrderRoute,
+    choosePrimaryOrder,
     extractEdictText,
     applyCampaignEffects,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
