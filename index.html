@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17110e">
   <meta name="description" content="一款以建安元年许都朝廷为舞台的汉末政治策略模拟游戏。">
-  <title>天子蒙尘：献帝模拟器 v2.6.1</title>
+  <title>天子蒙尘：献帝模拟器 v2.7.0</title>
   <link rel="stylesheet" href="styles.css?v=1.5.1">
   <link rel="stylesheet" href="src/world.css?v=1.5.1">
   <link rel="stylesheet" href="src/decree-world.css?v=1.5.1">
@@ -30,14 +30,18 @@
   <link rel="stylesheet" href="src/weekly-challenge.css?v=2.4.0">
   <link rel="stylesheet" href="src/final-verdict.css?v=2.5.0">
   <link rel="stylesheet" href="src/ui.css?v=1.5.1">
+  <link rel="stylesheet" href="src/visual-refresh.css?v=2.7.0">
 </head>
 <body>
   <noscript><div class="noscript">本游戏需要启用 JavaScript。</div></noscript>
 
   <section id="start-screen" class="start-screen" aria-label="开始游戏">
-    <div class="start-emblem" aria-hidden="true"><span>汉</span></div>
+    <figure class="start-visual">
+      <img src="assets/images/illustrations/opening-palace.webp" alt="暮色宫殿中，少年天子独立于阶前" width="1672" height="941" fetchpriority="high">
+      <span class="start-emblem" aria-hidden="true"><span>汉</span></span>
+    </figure>
     <div class="start-copy">
-        <p class="eyebrow">汉末政治策略模拟 · 正式版 v2.6.1</p>
+        <p class="eyebrow">汉末政治策略模拟 · 正式版 v2.7.0</p>
       <h1>天子蒙尘</h1>
       <h2>献帝模拟器</h2>
       <p class="start-intro">从中平六年的洛阳孤灯，到延康元年的禅代前夜。选择一段汉末危局，以诏书、官爵、军团与政治交易，为天子争取一条不由他人书写的道路。</p>
@@ -83,6 +87,10 @@
         <section class="center-column">
           <article class="panel event-panel">
             <div class="event-ornament" aria-hidden="true"></div>
+            <figure class="event-illustration">
+              <img id="event-illustration-image" src="assets/images/illustrations/court-memorial.webp" alt="汉廷朝议中，大臣向天子呈递奏疏" width="1672" height="941">
+              <figcaption id="event-illustration-caption">御前月报 · 朝议</figcaption>
+            </figure>
             <div class="event-head"><span id="event-category" class="category-chip">朝政</span><span class="memorial-label">本月奏报</span></div>
             <h2 id="event-title">许都新廷</h2><p id="event-text" class="event-text"></p><div id="event-choices" class="event-choices"></div><div id="event-resolved" class="event-resolved hidden">此奏报已经裁决，可继续施行政令。</div>
           </article>
@@ -99,16 +107,16 @@
       </div>
     </main>
 
-    <footer class="game-footer"><span>v2.6.1 · 郡国全图与全屏战略舆图</span><span>Ctrl + S 手动保存</span></footer>
+    <footer class="game-footer"><span>v2.7.0 · 丹青入卷与全局字体焕新</span><span>Ctrl + S 手动保存</span></footer>
   </div>
 
   <div id="modal-backdrop" class="modal-backdrop hidden" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><span class="modal-seal" aria-hidden="true">诏</span><h2 id="modal-title">御前处分</h2></header><div id="modal-body" class="modal-body"></div><footer><button id="modal-cancel" class="secondary-button" type="button">取消</button><button id="modal-confirm" class="primary-button" type="button">确定</button></footer></section></div>
 
-  <section id="end-screen" class="end-screen hidden" aria-label="终局"><div class="ending-scroll"><p class="eyebrow">建安实录 · 本局终卷</p><h1 id="ending-title">风雨续祚</h1><p id="ending-text" class="ending-text"></p><div id="ending-stats" class="ending-stats"></div><div id="ending-chronicle" class="ending-chronicle"></div><div class="ending-actions"><button id="ending-export" class="secondary-button" type="button">导出本局实录</button><button id="ending-restart" class="primary-button" type="button">返回开局</button></div></div></section>
+  <section id="end-screen" class="end-screen hidden" aria-label="终局"><div class="ending-scroll"><figure class="ending-illustration"><img src="assets/images/illustrations/ending-river-mountains.webp" alt="汉宫空台远眺山河，案上留有冠服与印玺" width="1672" height="941" loading="lazy"></figure><div class="ending-copy"><p class="eyebrow">建安实录 · 本局终卷</p><h1 id="ending-title">风雨续祚</h1><p id="ending-text" class="ending-text"></p><div id="ending-stats" class="ending-stats"></div><div id="ending-chronicle" class="ending-chronicle"></div><div class="ending-actions"><button id="ending-export" class="secondary-button" type="button">导出本局实录</button><button id="ending-restart" class="primary-button" type="button">返回开局</button></div></div></div></section>
 
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
-  <script src="src/data.js?v=2.6.1"></script>
+  <script src="src/data.js?v=2.7.0"></script>
   <script src="src/world-data.js?v=1.5.1"></script>
   <script src="src/strategy-network-data.js?v=1.5.1"></script>
   <script src="src/army-data.js?v=1.5.1"></script>
@@ -125,13 +133,13 @@
   <script src="src/portraits/yuan_shu.js?v=1.5.1"></script>
   <script src="src/portraits/liu_biao.js?v=1.5.1"></script>
   <script src="src/portraits/sun_ce.js?v=1.5.1"></script>
-  <script src="src/game.js?v=2.6.1"></script>
+  <script src="src/game.js?v=2.7.0"></script>
   <script src="src/monthly-report.js?v=1.5.1"></script>
   <script src="src/world-system.js?v=2.6.1"></script>
   <script src="src/decree-world.js?v=1.5.1"></script>
   <script src="src/strategy-network.js?v=1.5.1"></script>
   <script src="src/decree-confirmation.js?v=1.5.1"></script>
-  <script src="src/army-system.js?v=1.5.1"></script>
+  <script src="src/army-system.js?v=2.7.0"></script>
   <script src="src/court-politics.js?v=1.5.1"></script>
   <script src="src/portraits.js?v=1.5.1"></script>
   <script src="src/imperial-progress-data.js?v=1.5.1"></script>

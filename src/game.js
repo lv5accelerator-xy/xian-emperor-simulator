@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.6.1
+ * 天子蒙尘：献帝模拟器 v2.7.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -84,6 +84,8 @@
       "faction-list",
       "character-list",
       "event-category",
+      "event-illustration-image",
+      "event-illustration-caption",
       "event-title",
       "event-text",
       "event-choices",
@@ -440,6 +442,7 @@
     if (!event) return;
 
     el["event-category"].textContent = event.category;
+    renderEventIllustration(event);
     el["event-title"].textContent = event.title;
     el["event-text"].textContent = event.text;
     el["event-resolved"].classList.toggle("hidden", !state.eventResolved);
@@ -1405,6 +1408,23 @@
     } }));
     saveGame(true);
     displayEnding(ending);
+  }
+
+  function renderEventIllustration(event) {
+    const searchText = `${event.category || ""} ${event.title || ""} ${event.text || ""}`;
+    const isMilitary = /军|战|兵|征|叛|围|边|烽|粮道|行营|武备/.test(searchText);
+    const image = el["event-illustration-image"];
+    const caption = el["event-illustration-caption"];
+    if (!image || !caption) return;
+
+    image.src = isMilitary
+      ? "assets/images/illustrations/army-crossing.webp"
+      : "assets/images/illustrations/court-memorial.webp";
+    image.alt = isMilitary
+      ? "汉末军团渡河行进，远山关隘烽燧明灭"
+      : "汉廷朝议中，大臣向天子呈递奏疏";
+    caption.textContent = `御前月报 · ${event.category || (isMilitary ? "军情" : "朝议")}`;
+    image.closest(".event-illustration")?.classList.toggle("is-military", isMilitary);
   }
 
   function displayEnding(ending) {

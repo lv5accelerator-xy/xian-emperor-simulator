@@ -1,0 +1,320 @@
+/* 天子蒙尘：献帝模拟器 v2.7.0 · 丹青入卷 */
+:root {
+  --font-display: "FZKai-Z03", "STKaiti", "KaiTi", "KaiTi_GB2312", "Noto Serif CJK SC", "Songti SC", serif;
+  --font-serif: "Source Han Serif SC", "Noto Serif CJK SC", "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  --font-ui: "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --font-numeric: "Bahnschrift", "DIN Alternate", "Segoe UI Variable", "Arial", sans-serif;
+  --serif: var(--font-serif);
+  --sans: var(--font-ui);
+}
+
+html {
+  font-size: clamp(16px, calc(13px + .27vw), 18px);
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body,
+button,
+select,
+textarea,
+input {
+  font-family: var(--font-ui);
+  font-kerning: normal;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+:where(h1, h2, h3, h4, .brand-lockup, .panel-heading, .event-panel, .ending-scroll) {
+  text-wrap: balance;
+}
+
+:where(p, li, blockquote, .event-text, .strategic-guidance) {
+  text-wrap: pretty;
+}
+
+:where(.start-copy h1, .start-copy h2, .ending-scroll h1) {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+:where(.stat-heading strong, .turn-summary, .ap-badge, .relation-number, .army-summary strong, .army-troops strong, .ending-stats strong) {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: .01em;
+}
+
+.eyebrow,
+.section-kicker {
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+.start-screen {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 100svh;
+  padding: clamp(1.25rem, 5vw, 5rem);
+  isolation: isolate;
+}
+
+.start-visual {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  margin: 0;
+  overflow: hidden;
+  background: #070a0a;
+}
+
+.start-visual > img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: 43% center;
+  filter: saturate(.88) contrast(1.04) brightness(.78);
+  transform: scale(1.015);
+  animation: opening-breath 18s ease-in-out infinite alternate;
+}
+
+.start-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(4, 7, 7, .08) 0%, rgba(5, 8, 8, .22) 38%, rgba(5, 8, 8, .78) 67%, rgba(5, 8, 8, .96) 100%),
+    linear-gradient(0deg, rgba(3, 5, 5, .82), transparent 38%, rgba(3, 5, 5, .2));
+}
+
+.start-visual > .start-emblem {
+  position: absolute;
+  z-index: 2;
+  left: clamp(1.3rem, 7vw, 7rem);
+  bottom: clamp(1.3rem, 6vw, 5rem);
+  width: clamp(105px, 10vw, 168px);
+  opacity: .78;
+  justify-self: auto;
+  box-shadow: inset 0 0 55px rgba(0, 0, 0, .85), 0 0 70px rgba(143, 48, 45, .16);
+}
+
+.start-visual > .start-emblem span {
+  font-size: clamp(2.6rem, 5vw, 4.8rem);
+}
+
+.start-copy {
+  width: min(690px, 48vw);
+  margin-left: auto;
+  padding: clamp(1.15rem, 2.5vw, 2.2rem);
+  border: 1px solid rgba(213, 182, 113, .23);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(10, 15, 14, .72), rgba(9, 12, 11, .9));
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .5);
+  backdrop-filter: blur(15px) saturate(.85);
+}
+
+.start-copy h1 {
+  font-size: clamp(3.3rem, 6.5vw, 6.7rem);
+  letter-spacing: .16em;
+  text-shadow: 0 3px 28px rgba(0, 0, 0, .8);
+}
+
+.start-copy h2 {
+  letter-spacing: .2em;
+}
+
+.start-intro {
+  font-family: var(--font-serif);
+  font-size: clamp(1rem, .9vw + .4rem, 1.18rem);
+  line-height: 2;
+}
+
+.event-illustration,
+.ending-illustration,
+.army-system-illustration {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  background: #0a0f0e;
+}
+
+.event-illustration img,
+.ending-illustration img,
+.army-system-illustration img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  filter: saturate(.82) contrast(1.04) brightness(.86);
+}
+
+.event-illustration::after,
+.ending-illustration::after,
+.army-system-illustration::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(0deg, rgba(9, 14, 12, .93), transparent 54%);
+}
+
+.event-illustration {
+  height: clamp(155px, 20vw, 265px);
+  margin: -1.1rem -1.1rem 1rem;
+  border-bottom: 1px solid rgba(212, 173, 93, .22);
+}
+
+.event-illustration img {
+  object-position: center 46%;
+  transition: opacity .2s ease, transform .8s ease;
+}
+
+.event-illustration.is-military img {
+  object-position: center 58%;
+}
+
+.event-illustration figcaption,
+.army-system-illustration figcaption {
+  position: absolute;
+  z-index: 2;
+  left: 1rem;
+  bottom: .7rem;
+  color: rgba(239, 218, 164, .84);
+  font-family: var(--font-serif);
+  font-size: .68rem;
+  letter-spacing: .14em;
+}
+
+.event-panel h2 {
+  letter-spacing: .045em;
+}
+
+.event-text,
+.ending-text,
+.chronicle-entry p,
+.decree-panel textarea {
+  font-family: var(--font-serif);
+}
+
+.army-system-window {
+  grid-template-rows: auto clamp(100px, 17vh, 170px) auto minmax(0, 1fr);
+}
+
+.army-system-illustration {
+  border-bottom: 1px solid rgba(222, 185, 105, .12);
+}
+
+.army-system-illustration img {
+  object-position: center 58%;
+}
+
+.ending-scroll {
+  width: min(1080px, 100%);
+  padding: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #302219, #1b1410);
+}
+
+.ending-illustration {
+  height: clamp(210px, 33vh, 360px);
+  border-bottom: 1px solid rgba(232, 195, 105, .28);
+}
+
+.ending-illustration img {
+  object-position: center 56%;
+}
+
+.ending-copy {
+  padding: clamp(1.3rem, 3vw, 2.6rem);
+}
+
+.ending-scroll h1 {
+  letter-spacing: .1em;
+}
+
+@keyframes opening-breath {
+  from { transform: scale(1.015); }
+  to { transform: scale(1.045); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .start-visual > img { animation: none; transform: none; }
+}
+
+@media (max-width: 980px) {
+  .start-screen {
+    align-items: flex-end;
+    padding: min(36vh, 19rem) 1rem calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .start-visual > img {
+    object-position: 35% center;
+  }
+
+  .start-visual::after {
+    background:
+      linear-gradient(0deg, rgba(4, 7, 7, .98) 0%, rgba(4, 7, 7, .92) 38%, rgba(4, 7, 7, .12) 76%),
+      linear-gradient(90deg, rgba(4, 7, 7, .08), rgba(4, 7, 7, .48));
+  }
+
+  .start-copy {
+    width: 100%;
+    padding: 1.15rem;
+    border-radius: 15px;
+    background: rgba(8, 12, 11, .82);
+  }
+
+  .start-copy h1 {
+    font-size: clamp(2.8rem, 12vw, 5.2rem);
+  }
+
+  .start-visual > .start-emblem {
+    top: 1rem;
+    right: 1rem;
+    bottom: auto;
+    left: auto;
+    width: 88px;
+    opacity: .64;
+  }
+}
+
+@media (max-width: 620px) {
+  html { font-size: 16px; }
+
+  .start-screen {
+    padding-top: min(31vh, 13rem);
+  }
+
+  .start-copy h1 { letter-spacing: .1em; }
+  .start-copy h2 { letter-spacing: .12em; }
+  .start-intro { margin-block: 1rem; line-height: 1.8; }
+  .scenario-card { grid-template-columns: 1fr; }
+
+  .event-illustration {
+    height: 145px;
+  }
+
+  .event-illustration figcaption,
+  .army-system-illustration figcaption {
+    left: .8rem;
+    bottom: .5rem;
+    font-size: .62rem;
+  }
+
+  .army-system-overlay { padding: .45rem; }
+  .army-system-window { height: 96svh; grid-template-rows: auto 105px auto minmax(0, 1fr); }
+  .ending-illustration { height: 190px; }
+  .ending-copy { padding: 1.1rem; }
+}
+
+@media (max-width: 430px) {
+  .start-screen { padding-inline: .65rem; }
+  .start-copy { padding: 1rem .9rem; }
+  .start-copy .eyebrow { font-size: .66rem; }
+  .start-copy h1 { font-size: 2.75rem; }
+  .start-copy h2 { font-size: 1.4rem; }
+  .start-visual > .start-emblem { width: 72px; }
+  .event-illustration { height: 128px; }
+  .ending-illustration { height: 160px; }
+}
