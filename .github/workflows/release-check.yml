@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.6.1' index.html
+          grep -q 'v2.7.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -283,6 +283,7 @@ jobs:
           grep -q 'src/weekly-challenge.js?v=2.4.0' index.html
           grep -q 'src/final-verdict.css?v=2.5.0' index.html
           grep -q 'src/final-verdict.js?v=2.5.0' index.html
+          grep -q 'src/visual-refresh.css?v=2.7.0' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio-tracks.js
@@ -331,6 +332,11 @@ jobs:
           test -f src/weekly-challenge.js
           test -f src/final-verdict.css
           test -f src/final-verdict.js
+          test -f src/visual-refresh.css
+          test -f assets/images/illustrations/opening-palace.webp
+          test -f assets/images/illustrations/court-memorial.webp
+          test -f assets/images/illustrations/army-crossing.webp
+          test -f assets/images/illustrations/ending-river-mountains.webp
           test -f patch-notes/v0.8.0.txt
           test -f patch-notes/v0.8.1.txt
           test -f patch-notes/v0.9.0.txt
@@ -354,6 +360,7 @@ jobs:
           test -f patch-notes/v2.5.0.txt
           test -f patch-notes/v2.6.0.txt
           test -f patch-notes/v2.6.1.txt
+          test -f patch-notes/v2.7.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -371,4 +378,4 @@ jobs:
         run: node tests/post-v2-systems-regression.js
 
       - name: Run release regression
-        run: EXPECTED_VERSION=2.6.1 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.7.0 node tests/release-regression.js
