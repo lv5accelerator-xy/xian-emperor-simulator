@@ -1,9 +1,33 @@
-/* 天子蒙尘：献帝模拟器 v2.7.0 · 丹青入卷 */
+/* 天子蒙尘：献帝模拟器 v2.7.1 · 汉字风骨 */
+@font-face {
+  font-family: "Xian Display";
+  src: url("../assets/fonts/zcool-xiaowei-game.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Xian Serif SC";
+  src: url("../assets/fonts/noto-serif-sc-game.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Xian Sans SC";
+  src: url("../assets/fonts/noto-sans-sc-game.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
-  --font-display: "FZKai-Z03", "STKaiti", "KaiTi", "KaiTi_GB2312", "Noto Serif CJK SC", "Songti SC", serif;
-  --font-serif: "Source Han Serif SC", "Noto Serif CJK SC", "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
-  --font-ui: "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
-  --font-numeric: "Bahnschrift", "DIN Alternate", "Segoe UI Variable", "Arial", sans-serif;
+  --font-display: "Xian Display", "FZKai-Z03", "STKaiti", "KaiTi", "KaiTi_GB2312", serif;
+  --font-serif: "Xian Serif SC", "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "STSong", "SimSun", serif;
+  --font-ui: "Xian Sans SC", "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --font-numeric: "Xian Sans SC", "Bahnschrift", "DIN Alternate", "Segoe UI Variable", "Arial", sans-serif;
   --serif: var(--font-serif);
   --sans: var(--font-ui);
 }
@@ -33,15 +57,30 @@ input {
   text-wrap: pretty;
 }
 
-:where(.start-copy h1, .start-copy h2, .ending-scroll h1) {
+.start-copy h1,
+.start-copy h2,
+.ending-scroll h1 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 400;
 }
 
 :where(.stat-heading strong, .turn-summary, .ap-badge, .relation-number, .army-summary strong, .army-troops strong, .ending-stats strong) {
   font-family: var(--font-numeric);
   font-variant-numeric: tabular-nums lining-nums;
   letter-spacing: .01em;
+}
+
+/* Older feature modules used direct system-serif fallbacks. Keep them inside the
+   self-hosted family so every visible game surface has the same typographic voice. */
+.campaign-focus-copy h2,
+.campaign-console > header h2,
+.season-banner > span,
+.command-guide-seal,
+.memory-avatar,
+.verdict-current strong,
+.final-verdict-card strong,
+.mark-icon {
+  font-family: var(--font-serif);
 }
 
 .eyebrow,

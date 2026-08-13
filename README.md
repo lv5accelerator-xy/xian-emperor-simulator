@@ -43,8 +43,9 @@
 
 ## 当前版本
 
-当前版本为 **v2.7.0「丹青入卷」**。
+当前版本为 **v2.7.1「汉字风骨」**。
 
+- **v2.7.1**：站酷小薇体、Noto Serif SC 与 Noto Sans SC 本地化，统一题名、史书正文和操作界面的字体表现。
 - **v2.7.0**：原创开场、朝议、行军与终局插图，全局中文字体层级和移动端阅读体验焕新。
 - **v2.6.1**：舆图升级为全屏工作台，加入大号州名、郡国治所、地形纹理、悬浮军情与情报抽屉。
 - **v2.6.0**：离线真实地理骨架、经纬度城池、山川标注与移动端地图交互。
@@ -90,7 +91,9 @@ xian-emperor-simulator/
 ├─ index.html                 # 游戏入口与模块加载顺序
 ├─ styles.css                 # 全局基础样式
 ├─ assets/images/illustrations # 本地 WebP 历史场景插图
-├─ src/visual-refresh.css     # v2.7.0 字体与插图适配
+├─ assets/fonts/              # 本地 WOFF2 字体与 OFL 许可证
+├─ src/visual-refresh.css     # v2.7.x 字体与插图适配
+├─ scripts/                   # 字体子集等维护脚本
 ├─ src/                       # 游戏数据、系统模块与模块样式
 │  └─ portraits/             # 原创人物立绘数据
 ├─ assets/audio/bgm/          # 场景音乐与未启用备选曲
