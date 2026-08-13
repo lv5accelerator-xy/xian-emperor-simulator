@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.7.1
+ * 天子蒙尘：献帝模拟器 v2.7.2
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -604,7 +604,7 @@
     if (state.stats.caoAlert >= 85) warnings.push("曹氏警戒已进入危险区：减少密令与扩权，先安抚外府");
     if (state.stats.security <= 20) warnings.push("宫廷安全濒临崩溃：优先整饬宫门与宿卫");
     if (state.hidden.leakRisk >= 75) warnings.push("密线极可能泄露：暂停联络并清理耳目");
-    if (state.stats.treasury <= 12) warnings.push("国库将尽：避免赏赐、赈济与高消耗行动");
+    if (state.stats.treasury <= 12) warnings.push("国库将尽：可在常用行动中筹措钱粮，避免继续赏赐与赈济");
     if (state.stats.prestige <= 15) warnings.push("天下将弃汉廷：通过朝仪、赈济或外交恢复威望");
 
     if (warnings.length === 0) {
@@ -633,6 +633,7 @@
       audience: openAudienceModal,
       appointment: openAppointmentModal,
       secret: openSecretModal,
+      revenue: openRevenueModal,
       relief: openReliefModal,
       ritual: openRitualModal,
       appease: openAppeaseModal,
@@ -824,6 +825,73 @@
       text: `一封不署名的密令经数重转手送往${character.name}处。宫中没有留下正式文书，但耳目未必全无所觉。`,
       chronicle: `宫中暗中联络${character.name}，所议不载于尚书台。`,
       ...base,
+    });
+    closeModal();
+  }
+
+  function buildTreasuryActionPackage(method, currentTreasury = 50) {
+    const emergencyBonus = Number(currentTreasury || 0) <= 18 ? 2 : 0;
+    const packages = {
+      audit: {
+        label: "核减宫中冗费",
+        summary: "少办非急仪典，清点重复支给，以节流补充国库。",
+        effects: { treasury: 4 + emergencyBonus, officials: -2 },
+        hidden: {},
+      },
+      tribute: {
+        label: "催办州郡贡赋",
+        summary: "命尚书台催收拖欠贡赋，钱粮较多，却会加重地方负担。",
+        effects: { treasury: 7 + emergencyBonus, prestige: -3, officials: -1, caoAlert: 1 },
+        hidden: { peopleStability: -4 },
+      },
+      borrow: {
+        label: "向司空府借调",
+        summary: "由司空府先拨粮帛解急，朝廷因此更加依赖外府。",
+        effects: { treasury: 10 + emergencyBonus, authority: -5, officials: -2, caoAlert: -5 },
+        hidden: { externalBalance: -3 },
+      },
+    };
+    const pkg = packages[method] || packages.audit;
+    return {
+      method: packages[method] ? method : "audit",
+      emergencyBonus,
+      label: pkg.label,
+      summary: pkg.summary,
+      effects: { ...pkg.effects },
+      hidden: { ...pkg.hidden },
+    };
+  }
+
+  function openRevenueModal() {
+    const emergency = state.stats.treasury <= 18;
+    const bonusText = emergency ? '<p class="modal-note">国库已经告急，本次各方案额外获得 <strong>国库 +2</strong> 的救急清算收益。</p>' : "";
+    openModal({
+      title: "筹措钱粮",
+      body: `
+        <p class="modal-note">朝廷没有无代价的钱粮。选择一条筹措路线，本次会消耗一次御前行动。</p>
+        ${bonusText}
+        <div class="option-cards">
+          <label><input type="radio" name="revenue-method" value="audit" checked><span><strong>核减宫中冗费</strong><small>国库 +${4 + (emergency ? 2 : 0)}，百官支持 -2</small></span></label>
+          <label><input type="radio" name="revenue-method" value="tribute"><span><strong>催办州郡贡赋</strong><small>国库 +${7 + (emergency ? 2 : 0)}，威望与民间稳定下降</small></span></label>
+          <label><input type="radio" name="revenue-method" value="borrow"><span><strong>向司空府借调</strong><small>国库 +${10 + (emergency ? 2 : 0)}，皇权 -5、外部制衡下降</small></span></label>
+        </div>
+      `,
+      confirmText: "施行筹措",
+      onConfirm: () => {
+        const method = document.querySelector('input[name="revenue-method"]:checked').value;
+        performRevenue(method);
+      },
+    });
+  }
+
+  function performRevenue(method) {
+    const pkg = buildTreasuryActionPackage(method, state.stats.treasury);
+    completeAction({
+      title: pkg.label,
+      text: `${pkg.summary}${pkg.emergencyBonus ? " 国库告急，尚书台同时变卖闲置器物，补足部分缺口。" : ""}`,
+      chronicle: `朝廷${pkg.label}，以济当月用度。`,
+      effects: pkg.effects,
+      hidden: pkg.hidden,
     });
     closeModal();
   }
@@ -1961,6 +2029,7 @@
     },
     getScenarioById: (id) => JSON.parse(JSON.stringify(getScenarioById(id))),
     calculateScenarioChallenge: (scenario, gameState) => calculateScenarioChallenge(scenario, gameState),
+    buildTreasuryActionPackage: (method, currentTreasury) => buildTreasuryActionPackage(method, currentTreasury),
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
   });
 })();

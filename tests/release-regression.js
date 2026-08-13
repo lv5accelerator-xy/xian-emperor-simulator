@@ -82,7 +82,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.7.1";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.7.2";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -189,6 +189,15 @@ assert.ok(courtApi.petitions.some(item => item.type === "negotiation"), "dynamic
 
 const game = loadGameApi();
 assert.equal(game.data.version, expectedVersion, "game data version should match the release");
+assert.ok(game.data.actionCatalog.some(item => item.id === "revenue"), "common actions should include treasury fundraising");
+const auditRevenue = game.api.buildTreasuryActionPackage("audit", 40);
+const emergencyRevenue = game.api.buildTreasuryActionPackage("tribute", 12);
+const borrowedRevenue = game.api.buildTreasuryActionPackage("borrow", 30);
+assert.equal(auditRevenue.effects.treasury, 4, "expense auditing should provide a modest safe treasury gain");
+assert.equal(emergencyRevenue.effects.treasury, 9, "low treasury should receive the two-point emergency bonus");
+assert.ok(emergencyRevenue.hidden.peopleStability < 0, "collecting tribute should carry a public-stability cost");
+assert.ok(borrowedRevenue.effects.authority < 0, "borrowing from Cao's office should reduce imperial autonomy");
+assert.ok(borrowedRevenue.hidden.externalBalance < 0, "borrowing should weaken external balance");
 assert.equal(game.data.scenarios.length, 5, "five historical scenarios should be available");
 assert.deepEqual(Array.from(game.data.scenarios, item => item.startYear), [189, 195, 196, 200, 220]);
 const lateScenario = game.api.getScenarioById("yankang_220");

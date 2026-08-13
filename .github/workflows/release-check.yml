@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.7.1' index.html
+          grep -q 'v2.7.2' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -369,6 +369,7 @@ jobs:
           test -f patch-notes/v2.6.1.txt
           test -f patch-notes/v2.7.0.txt
           test -f patch-notes/v2.7.1.txt
+          test -f patch-notes/v2.7.2.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -386,4 +387,4 @@ jobs:
         run: node tests/post-v2-systems-regression.js
 
       - name: Run release regression
-        run: EXPECTED_VERSION=2.7.1 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.7.2 node tests/release-regression.js

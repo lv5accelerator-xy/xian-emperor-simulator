@@ -481,7 +481,7 @@
     const hidden = state.hidden || {};
     if (Number(stats.caoAlert || 0) >= 82) return "司空府戒备已近极限，宜先降温、清理密线或提高宫廷安全。";
     if (Number(stats.security || 0) <= 28) return "宫禁松动，任何秘密行动都可能反噬，应先处理宿卫与内廷。";
-    if (Number(stats.treasury || 0) <= 22) return "国库难以支撑赏赐和赈济，可寻求贡赋或削减仪典。";
+    if (Number(stats.treasury || 0) <= 22) return "国库难以支撑赏赐和赈济，可从常用行动筹措钱粮，并选择节流、催贡或借调。";
     if (Number(stats.authority || 0) <= 28) return "诏令执行力不足，可整顿尚书台、举行朝会或以官爵换取支持。";
     if (Number(hidden.leakRisk || 0) >= 65) return "宫中耳目复杂，密诏与联络行动极易泄露。";
     if (Number(stats.prestige || 0) >= 75 && Number(hidden.externalBalance || 0) >= 45) {

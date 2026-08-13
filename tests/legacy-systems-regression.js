@@ -49,6 +49,7 @@ for (const file of ["src/data.js", "src/command-center.js", "src/character-memor
 const command = context.window.XianCommandCenter;
 assert.ok(command, "command center API should load");
 assert.equal(command.recommendAction(JSON.parse(localStorage.getItem("xian_emperor_simulator_v01"))).actionId, "appease", "high Cao alert should recommend appeasement");
+assert.equal(command.recommendAction({ eventResolved: true, stats: { caoAlert: 35, treasury: 20 }, hidden: {} }).actionId, "revenue", "low treasury should recommend fundraising");
 assert.equal(command.collectWarnings({ stats: { caoAlert: 80, security: 25, treasury: 20 }, hidden: {} }).length, 3, "brief should remain limited to three warnings");
 
 const memory = context.window.XianCharacterMemory;

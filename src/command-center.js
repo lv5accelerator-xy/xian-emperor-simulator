@@ -8,6 +8,7 @@
     audience: ["改善一名人物的态度", "适合修补关键关系"],
     appointment: ["以官爵换取支持", "皇权上升，但会刺激曹氏"],
     secret: ["扩大忠汉网络", "高收益，同时增加泄密风险"],
+    revenue: ["补充国库钱粮", "节流、催贡或借调都伴随政治代价"],
     relief: ["用国库换民心与威望", "国库紧张时应谨慎"],
     ritual: ["恢复朝廷名分", "适合威望或皇权不足时"],
     appease: ["降低曹氏警戒", "安全增加，但独立形象受损"],
@@ -196,7 +197,7 @@
     const hidden = state?.hidden || {};
     if (!state?.eventResolved) return { actionId: "event", label: "裁决奏报", reason: "所有行动都要在本月奏报裁决后进行。" };
     if ((stats.caoAlert || 0) >= 72) return { actionId: "appease", label: "安抚曹氏", reason: "曹氏警戒已接近危险线，先换取政治空间。" };
-    if ((stats.treasury || 0) <= 24) return { actionId: "ritual", label: "整饬朝仪", reason: "国库紧张，优先采用较少消耗财政的礼制行动。" };
+    if ((stats.treasury || 0) <= 24) return { actionId: "revenue", label: "筹措钱粮", reason: "国库已经偏低，可用一次御前行动换取钱粮，并选择能够承受的政治代价。" };
     if ((hidden.peopleStability || 0) <= 35 && (stats.treasury || 0) >= 28) return { actionId: "relief", label: "赈济减赋", reason: "民间稳定偏低，继续拖延会反噬威望与宫廷安全。" };
     if ((hidden.leakRisk || 0) >= 55) return { actionId: "audience", label: "召见人物", reason: "泄密风险偏高，暂缓密令并修补关键关系。" };
     if ((hidden.externalBalance || 0) <= 35) return { actionId: "regional", label: "结交外镇", reason: "朝廷缺少外部制衡，地方承认能牵制一方独大。" };
