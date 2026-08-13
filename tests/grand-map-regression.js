@@ -22,7 +22,7 @@ const context = {
   window: {},
 };
 
-for (const file of ["src/world-data.js", "src/strategy-network-data.js", "src/army-data.js", "src/grand-map.js"]) {
+for (const file of ["src/world-data.js", "src/strategy-network-data.js", "src/army-data.js", "src/historical-geography-data.js", "src/grand-map.js"]) {
   vm.runInNewContext(read(file), context, { filename: file });
 }
 
@@ -39,6 +39,11 @@ localStorage.setItem("xian_emperor_armies_v050", JSON.stringify({
 const api = context.window.XianGrandMap;
 assert.ok(api, "grand map API should load");
 assert.equal(Object.keys(api.positions).length, 16, "all sixteen strategic cities need map coordinates");
+assert.equal(api.geography.version, "2.6.0", "real geography data should match the map release");
+assert.match(api.geography.source, /Natural Earth/);
+assert.ok(api.positions.wuwei[0] < api.positions.changan[0], "Wuwei should be west of Chang'an");
+assert.ok(api.positions.ji[1] < api.positions.xudu[1], "Ji should be north of Xudu");
+assert.ok(api.positions.wujun[0] > api.positions.xiangyang[0], "Wu commandery should be east of Xiangyang");
 
 const html = api.render({ regions: {} }, { turn: 3, maxTurns: 24, scenarioName: "建安元年·许都" });
 assert.equal((html.match(/class="grand-city(?: |")/g) || []).length, 16, "map should render sixteen city buttons");
@@ -47,8 +52,12 @@ assert.equal((html.match(/data-map-layer=/g) || []).length, 6, "map shell and fi
 assert.match(html, /data-grand-viewport/);
 assert.match(html, /测试勤王军|1支军团/);
 assert.match(html, /军压 86/);
-assert.match(html, /九州军政总览/);
-assert.match(html, /拖动画面平移/);
+assert.match(html, /山河真形/);
+assert.match(html, /汉末山河军政图/);
+assert.match(html, /geography-land/);
+assert.match(html, /黄河/);
+assert.match(html, /长江/);
+assert.match(html, /地图归中/);
 assert.match(html, /本月关键警讯 · 最多三条/);
 assert.match(html, /选择军团后可直接在地图下令/);
 assert.match(html, /舆图指引/);
@@ -60,4 +69,4 @@ for (const route of context.window.XIAN_STRATEGY_DATA.routes) {
   assert.match(html, new RegExp(`data-grand-route="${route.id}"`), `missing route ${route.id}`);
 }
 
-console.log("grand map regression ok: 16 cities, 18 routes, layers and armies");
+console.log("grand map regression ok: real geography, 16 cities, 18 routes, layers and armies");

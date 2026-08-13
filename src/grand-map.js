@@ -1,40 +1,20 @@
-/* 天子蒙尘：献帝模拟器 v1.5.1 · 九州军令舆图 */
+/* 天子蒙尘：献帝模拟器 v2.6.0 · 山河真形 */
 (() => {
   "use strict";
 
   const STRATEGY_KEY = "xian_emperor_strategy_network_v040";
   const ARMY_KEY = "xian_emperor_armies_v050";
   const PROGRESSION_KEY = "xian_emperor_progression_v100";
-  const GUIDE_KEY = "xian_emperor_map_guide_v120";
-  const WIDTH = 1200;
-  const HEIGHT = 720;
+  const GUIDE_KEY = "xian_emperor_map_guide_v260";
+  const GEO = window.XIAN_HISTORICAL_GEOGRAPHY || {};
+  const WIDTH = GEO.width || 1200;
+  const HEIGHT = GEO.height || 720;
   const ZOOMS = [0.72, 0.88, 1, 1.18, 1.38, 1.62];
 
-  const CITY_POSITIONS = {
-    wuwei: [105, 215], changan: [305, 315], luoyang: [485, 300], xudu: [600, 350],
-    nanzheng: [335, 435], chengdu: [185, 555], xiangyang: [535, 515], wan: [535, 420],
-    shouchun: [755, 470], wujun: [955, 570], xiapi: [855, 365], linzi: [925, 255],
-    ye: [730, 210], jinyang: [495, 160], ji: [885, 105], guangxin: [555, 660],
-  };
+  const CITY_POSITIONS = GEO.cityPositions || {};
+  const REGION_SHAPES = GEO.regionPaths || {};
 
-  const REGION_SHAPES = {
-    liangzhou: "M32 140 L235 130 L278 230 L208 294 L48 270 Z",
-    guanzhong: "M218 246 L390 238 L452 318 L386 394 L236 374 L182 300 Z",
-    yizhou: "M70 405 L300 390 L360 492 L310 656 L122 680 L48 555 Z",
-    hanzhong: "M278 365 L450 360 L494 452 L390 492 L300 448 Z",
-    jingzhou: "M430 392 L644 380 L706 522 L620 612 L425 570 L385 480 Z",
-    jiaozhou: "M310 570 L688 580 L700 708 L284 708 Z",
-    jiangdong: "M756 488 L1110 448 L1168 596 L1020 674 L770 610 Z",
-    huainan: "M650 386 L838 375 L892 488 L748 540 L650 500 Z",
-    sili_yuzhou: "M424 245 L674 245 L700 388 L620 430 L450 390 L390 310 Z",
-    xuzhou: "M794 298 L1042 292 L1060 440 L890 490 L790 408 Z",
-    qingzhou: "M820 188 L1090 170 L1124 310 L1010 346 L812 298 Z",
-    jizhou: "M620 120 L842 112 L876 245 L792 304 L640 268 L584 185 Z",
-    bingzhou: "M390 80 L632 72 L638 225 L540 274 L382 218 Z",
-    youzhou: "M790 34 L1138 28 L1148 180 L900 224 L810 158 Z",
-  };
-
-  let state = { zoomIndex: 2, layer: "all", selectedType: null, selectedId: null, command: null, guideStep: 0 };
+  let state = { zoomIndex: 2, layer: "all", selectedType: null, selectedId: null, command: null, guideStep: 0, justDragged: false };
 
   function safeParse(raw) {
     if (!raw) return null;
@@ -99,7 +79,7 @@
     return `
       <section class="grand-map-shell${isFocusMode() ? " focus-map" : ""}${state.command ? " commanding" : ""}" data-map-layer="${state.layer}">
         <header class="grand-map-toolbar">
-          <div><span class="section-kicker">九州军政总览</span><h3>汉末天下大地图</h3><p>势力、城池、军路、军团与战线汇于一图</p></div>
+          <div><span class="section-kicker">v2.6.0 · 山河真形</span><h3>汉末山河军政图</h3><p>真实地理骨架、州郡态势、城池军路与军团战线汇于一图</p></div>
           <div class="grand-map-actions" aria-label="地图图层">
             ${layerButton("all", "全局")}${layerButton("politics", "势力")}${layerButton("routes", "军路")}${layerButton("armies", "军团")}${layerButton("pressure", "战线")}
           </div>
@@ -107,6 +87,7 @@
             <button type="button" data-map-zoom="out" aria-label="缩小地图">−</button>
             <button type="button" data-map-zoom="reset" class="zoom-readout">${Math.round(ZOOMS[state.zoomIndex] * 100)}%</button>
             <button type="button" data-map-zoom="in" aria-label="放大地图">＋</button>
+            <button type="button" data-map-home aria-label="地图归中">归中</button>
           </div>
         </header>
         <div class="grand-map-layout">
@@ -115,14 +96,18 @@
               <div class="grand-map-stage" data-map-stage style="--map-width:${WIDTH}px;--map-height:${HEIGHT}px">
                 <svg class="grand-map-terrain" viewBox="0 0 ${WIDTH} ${HEIGHT}" aria-hidden="true">
                   <defs>
-                    <linearGradient id="mapPaper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#17201d"/><stop offset=".5" stop-color="#101715"/><stop offset="1" stop-color="#171310"/></linearGradient>
+                    <linearGradient id="mapSea" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071622"/><stop offset=".55" stop-color="#0b1b25"/><stop offset="1" stop-color="#111923"/></linearGradient>
+                    <linearGradient id="mapLand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1c2d27"/><stop offset=".58" stop-color="#17231f"/><stop offset="1" stop-color="#2a241a"/></linearGradient>
                     <filter id="mapGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-                    <pattern id="mapGrid" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M42 0H0V42" fill="none" stroke="rgba(214,188,128,.055)" stroke-width="1"/></pattern>
+                    <pattern id="mapGrid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="rgba(151,187,181,.055)" stroke-width="1"/></pattern>
+                    <clipPath id="mapLandClip">${renderLandPaths()}</clipPath>
                   </defs>
-                  <rect width="1200" height="720" fill="url(#mapPaper)"/><rect width="1200" height="720" fill="url(#mapGrid)"/>
-                  <g class="terrain-ridges"><path d="M60 365Q210 310 330 350T590 305T850 330T1140 285"/><path d="M280 85Q330 160 420 190T575 310"/><path d="M100 520Q230 470 345 525T600 570"/></g>
-                  <g class="terrain-rivers"><path d="M250 360Q450 335 610 365T930 430T1160 530"/><path d="M505 210Q620 270 690 390T840 610"/></g>
-                  <g class="grand-regions">${worldData.regions.map(region => renderRegion(region, regionStates[region.id])).join("")}</g>
+                  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapSea)"/><rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapGrid)"/>
+                  <g class="geography-land">${renderLandPaths("land")}</g>
+                  <g class="grand-regions" clip-path="url(#mapLandClip)">${worldData.regions.map(region => renderRegion(region, regionStates[region.id])).join("")}</g>
+                  <g class="terrain-ridges">${renderTerrainLines(GEO.ranges, "ridge")}</g>
+                  <g class="terrain-rivers">${renderTerrainLines(GEO.rivers, "river")}</g>
+                  <g class="geography-labels">${renderGeographyLabels()}</g>
                   <g class="grand-routes">${strategyData.routes.map(route => renderRoute(route, runtime.strategy)).join("")}</g>
                 </svg>
                 <div class="grand-city-layer">${strategyData.cities.map(city => renderCity(city, runtime.strategy, cityArmies[city.id] || [])).join("")}</div>
@@ -134,10 +119,25 @@
           <aside class="grand-map-inspector" data-map-inspector>${renderOverviewInspector(coreState, activeArmies, criticalRoutes, weakCities)}</aside>
         </div>
         <footer class="grand-map-legend">
-          <span><i class="legend-city"></i>城池</span><span><i class="legend-route"></i>军路</span><span><i class="legend-hot"></i>高压战线</span><span><i class="legend-army"></i>军团</span>
-          <p>拖动画面平移；点击城池、军路或军团查看详情。地图为策略示意，不代表精确古代疆界。</p>
+          <span><i class="legend-river"></i>山河</span><span><i class="legend-city"></i>城池</span><span><i class="legend-route"></i>军路</span><span><i class="legend-hot"></i>高压战线</span><span><i class="legend-army"></i>军团</span>
+          <p>${escapeHtml(GEO.disclaimer || "海岸山河按真实方位简化；汉末州郡与势力范围为策略近似。")}</p>
         </footer>${renderMapGuide()}
       </section>`;
+  }
+
+  function renderLandPaths(mode = "clip") {
+    return (GEO.landPaths || []).map(item => `<path d="${item.d}"${mode === "land" ? ` data-land="${item.id}"` : ""}/>`).join("");
+  }
+
+  function renderTerrainLines(items = [], kind) {
+    return items.map(item => `<path class="terrain-${kind}" data-feature="${item.id}" d="${GEO.path?.(item.points, false) || ""}"/><text class="terrain-name" x="${GEO.project?.(item.points[Math.floor(item.points.length / 2)])?.[0] || 0}" y="${(GEO.project?.(item.points[Math.floor(item.points.length / 2)])?.[1] || 0) - 8}">${escapeHtml(item.name)}</text>`).join("");
+  }
+
+  function renderGeographyLabels() {
+    return (GEO.labels || []).map(item => {
+      const [x, y] = GEO.project?.(item.point) || [0, 0];
+      return `<text class="geography-label ${item.kind || "region"}" x="${x}" y="${y}">${escapeHtml(item.text)}</text>`;
+    }).join("");
   }
 
   function layerButton(id, label) {
@@ -198,9 +198,9 @@
   function renderMapGuide() {
     if (localStorage.getItem(GUIDE_KEY) === "seen") return "";
     const steps = [
-      ["先看三条警讯", "右侧只保留本月最值得处理的缺粮、薄弱城池和高压战线。"],
-      ["选择军团再选城池", "点击地图上的军团标记，选择进攻、驰援、驻防、补给或撤退，然后点击目标城池。"],
-      ["确认路线才会下令", "预览会显示军路、耗时、粮秣和风险；确认后才消耗一次现有行动。"],
+      ["先认山河，再看战线", "海岸、黄河、长江、秦岭与城池位置按真实方位简化；彩色州郡是汉末策略近似，不是现代行政边界。"],
+      ["拖动与归中", "拖动地图查看各地，使用加减号缩放；迷失位置时点击“归中”。手机端可直接单指平移。"],
+      ["选择军团再选城池", "点击军团标记，选择进攻、驰援、驻防、补给或撤退，再点目标城池；确认路线后才会消耗行动。"],
     ];
     const step = steps[state.guideStep] || steps[0];
     return `<div class="map-guide-backdrop" data-map-guide><article><span>舆图指引 · ${state.guideStep + 1}/3</span><h4>${step[0]}</h4><p>${step[1]}</p><div><button type="button" data-map-guide-skip>跳过</button><button type="button" data-map-guide-next>${state.guideStep >= 2 ? "开始使用" : "下一步"}</button></div></article></div>`;
@@ -222,16 +222,18 @@
       const command = button.dataset.mapZoom;
       state.zoomIndex = command === "reset" ? 2 : clamp(state.zoomIndex + (command === "in" ? 1 : -1), 0, ZOOMS.length - 1);
       applyZoom(shell);
+      if (command === "reset") centerMap(viewport);
     }));
+    shell.querySelector("[data-map-home]")?.addEventListener("click", () => centerMap(viewport));
 
     shell.querySelectorAll("[data-grand-city]").forEach(button => button.addEventListener("click", () => state.command ? previewCommand(shell, button.dataset.grandCity) : inspectCity(shell, button.dataset.grandCity, onRegion)));
     shell.querySelectorAll("[data-grand-route]").forEach(button => {
-      const open = () => inspectRoute(shell, button.dataset.grandRoute);
+      const open = () => { if (!state.justDragged) inspectRoute(shell, button.dataset.grandRoute); };
       button.addEventListener("click", open);
       button.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } });
     });
     shell.querySelectorAll("[data-grand-region]").forEach(region => {
-      const open = () => inspectRegion(shell, region.dataset.grandRegion, onRegion);
+      const open = () => { if (!state.justDragged) inspectRegion(shell, region.dataset.grandRegion, onRegion); };
       region.addEventListener("click", open);
       region.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } });
     });
@@ -249,10 +251,7 @@
       }
     });
     bindDrag(viewport);
-    requestAnimationFrame(() => {
-      viewport.scrollLeft = Math.max(0, (viewport.scrollWidth - viewport.clientWidth) * .45);
-      viewport.scrollTop = Math.max(0, (viewport.scrollHeight - viewport.clientHeight) * .38);
-    });
+    requestAnimationFrame(() => centerMap(viewport));
   }
 
   function bindGuide(shell) {
@@ -277,27 +276,47 @@
     const space = shell.querySelector("[data-map-space]");
     if (!stage || !space) return;
     stage.style.transform = `scale(${scale})`;
+    stage.dataset.mapDetail = scale < .9 ? "overview" : scale >= 1.18 ? "detail" : "standard";
     space.style.width = `${WIDTH * scale}px`;
     space.style.height = `${HEIGHT * scale}px`;
     const readout = shell.querySelector('[data-map-zoom="reset"]');
     if (readout) readout.textContent = `${Math.round(scale * 100)}%`;
   }
 
+  function centerMap(viewport) {
+    if (!viewport) return;
+    const scale = ZOOMS[state.zoomIndex];
+    const focus = CITY_POSITIONS.xudu || [WIDTH * .64, HEIGHT * .42];
+    viewport.scrollTo?.({
+      left: Math.max(0, focus[0] * scale - viewport.clientWidth * .52),
+      top: Math.max(0, focus[1] * scale - viewport.clientHeight * .48),
+      behavior: "smooth",
+    });
+  }
+
   function bindDrag(viewport) {
     if (!viewport) return;
     let drag = null;
     viewport.addEventListener("pointerdown", event => {
-      if (event.target.closest("button,[role=button]")) return;
-      drag = { x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
+      if (event.target.closest("button")) return;
+      drag = { x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop, moved: false };
+      state.justDragged = false;
       viewport.classList.add("dragging");
       viewport.setPointerCapture?.(event.pointerId);
     });
     viewport.addEventListener("pointermove", event => {
       if (!drag) return;
+      event.preventDefault();
+      if (Math.abs(event.clientX - drag.x) + Math.abs(event.clientY - drag.y) > 5) drag.moved = true;
       viewport.scrollLeft = drag.left - (event.clientX - drag.x);
       viewport.scrollTop = drag.top - (event.clientY - drag.y);
     });
-    const stop = () => { drag = null; viewport.classList.remove("dragging"); };
+    const stop = () => {
+      state.justDragged = Boolean(drag?.moved);
+      drag = null;
+      viewport.classList.remove("dragging");
+      setTimeout(() => { state.justDragged = false; }, 0);
+    };
     viewport.addEventListener("pointerup", stop);
     viewport.addEventListener("pointercancel", stop);
   }
@@ -418,5 +437,5 @@
     return `<div class="map-inspector-gauge${dangerHigh ? " danger-high" : ""}"><div><span>${label}</span><strong>${Math.round(safe)}</strong></div><i><b style="width:${safe}%"></b></i></div>`;
   }
 
-  window.XianGrandMap = Object.freeze({ render, bind, positions: CITY_POSITIONS });
+  window.XianGrandMap = Object.freeze({ render, bind, positions: CITY_POSITIONS, geography: GEO });
 })();

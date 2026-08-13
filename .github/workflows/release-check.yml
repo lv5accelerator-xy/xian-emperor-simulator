@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.5.0' index.html
+          grep -q 'v2.6.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -254,13 +254,14 @@ jobs:
           grep -q 'src/imperial-progress.css?v=1.5.1' index.html
           grep -q 'src/imperial-progress-data.js?v=1.5.1' index.html
           grep -q 'src/imperial-progress.js?v=1.5.1' index.html
-          grep -q 'src/grand-map.css?v=1.5.1' index.html
-          grep -q 'src/grand-map.js?v=1.5.1' index.html
+          grep -q 'src/grand-map.css?v=2.6.0' index.html
+          grep -q 'src/historical-geography-data.js?v=2.6.0' index.html
+          grep -q 'src/grand-map.js?v=2.6.0' index.html
           grep -q 'src/campaign-evolution.css?v=1.5.1' index.html
           grep -q 'src/campaign-evolution-data.js?v=1.5.1' index.html
           grep -q 'src/campaign-evolution.js?v=1.5.1' index.html
           grep -q 'src/ui.css?v=1.5.1' index.html
-          grep -q 'src/ui.js?v=2.5.0' index.html
+          grep -q 'src/ui.js?v=2.6.0' index.html
           grep -q 'src/command-center.css?v=2.5.0-r2' index.html
           grep -q 'src/command-center.js?v=2.5.0-r2' index.html
           grep -q 'src/character-memory.css?v=1.7.0' index.html
@@ -302,6 +303,7 @@ jobs:
           test -f src/imperial-progress-data.js
           test -f src/imperial-progress.js
           test -f src/grand-map.css
+          test -f src/historical-geography-data.js
           test -f src/grand-map.js
           test -f src/campaign-evolution.css
           test -f src/campaign-evolution-data.js
@@ -349,6 +351,7 @@ jobs:
           test -f patch-notes/v2.3.0.txt
           test -f patch-notes/v2.4.0.txt
           test -f patch-notes/v2.5.0.txt
+          test -f patch-notes/v2.6.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -366,4 +369,4 @@ jobs:
         run: node tests/post-v2-systems-regression.js
 
       - name: Run release regression
-        run: EXPECTED_VERSION=2.5.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.6.0 node tests/release-regression.js
