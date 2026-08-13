@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.0.0' index.html
+          grep -q 'v2.5.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -260,9 +260,9 @@ jobs:
           grep -q 'src/campaign-evolution-data.js?v=1.5.1' index.html
           grep -q 'src/campaign-evolution.js?v=1.5.1' index.html
           grep -q 'src/ui.css?v=1.5.1' index.html
-          grep -q 'src/ui.js?v=2.0.0' index.html
-          grep -q 'src/command-center.css?v=1.6.0' index.html
-          grep -q 'src/command-center.js?v=1.6.0' index.html
+          grep -q 'src/ui.js?v=2.5.0' index.html
+          grep -q 'src/command-center.css?v=2.5.0-r2' index.html
+          grep -q 'src/command-center.js?v=2.5.0-r2' index.html
           grep -q 'src/character-memory.css?v=1.7.0' index.html
           grep -q 'src/character-memory.js?v=1.7.0' index.html
           grep -q 'src/world-marks.css?v=1.8.0' index.html
@@ -271,6 +271,16 @@ jobs:
           grep -q 'src/historian.js?v=1.9.0' index.html
           grep -q 'src/dynasty-saga.css?v=2.0.0' index.html
           grep -q 'src/dynasty-saga.js?v=2.0.0-r2' index.html
+          grep -q 'src/monthly-flow.css?v=2.1.0' index.html
+          grep -q 'src/monthly-flow.js?v=2.1.0' index.html
+          grep -q 'src/consequence-echoes.css?v=2.2.0' index.html
+          grep -q 'src/consequence-echoes.js?v=2.2.0' index.html
+          grep -q 'src/short-challenges.css?v=2.3.0' index.html
+          grep -q 'src/short-challenges.js?v=2.3.0' index.html
+          grep -q 'src/weekly-challenge.css?v=2.4.0' index.html
+          grep -q 'src/weekly-challenge.js?v=2.4.0' index.html
+          grep -q 'src/final-verdict.css?v=2.5.0' index.html
+          grep -q 'src/final-verdict.js?v=2.5.0' index.html
           test -f src/audio.css
           test -f src/audio-data.js
           test -f src/audio-tracks.js
@@ -308,6 +318,16 @@ jobs:
           test -f src/historian.js
           test -f src/dynasty-saga.css
           test -f src/dynasty-saga.js
+          test -f src/monthly-flow.css
+          test -f src/monthly-flow.js
+          test -f src/consequence-echoes.css
+          test -f src/consequence-echoes.js
+          test -f src/short-challenges.css
+          test -f src/short-challenges.js
+          test -f src/weekly-challenge.css
+          test -f src/weekly-challenge.js
+          test -f src/final-verdict.css
+          test -f src/final-verdict.js
           test -f patch-notes/v0.8.0.txt
           test -f patch-notes/v0.8.1.txt
           test -f patch-notes/v0.9.0.txt
@@ -324,6 +344,11 @@ jobs:
           test -f patch-notes/v1.8.0.txt
           test -f patch-notes/v1.9.0.txt
           test -f patch-notes/v2.0.0.txt
+          test -f patch-notes/v2.1.0.txt
+          test -f patch-notes/v2.2.0.txt
+          test -f patch-notes/v2.3.0.txt
+          test -f patch-notes/v2.4.0.txt
+          test -f patch-notes/v2.5.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -337,5 +362,8 @@ jobs:
       - name: Run legacy systems regression
         run: node tests/legacy-systems-regression.js
 
+      - name: Run post-v2 systems regression
+        run: node tests/post-v2-systems-regression.js
+
       - name: Run release regression
-        run: EXPECTED_VERSION=2.0.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.5.0 node tests/release-regression.js

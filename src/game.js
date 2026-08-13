@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.0.0
+ * 天子蒙尘：献帝模拟器 v2.5.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -27,6 +27,11 @@
     "xian_emperor_world_marks_v180",
     "xian_emperor_historian_v190",
     "xian_emperor_dynasty_saga_v200",
+    "xian_emperor_monthly_flow_v210",
+    "xian_emperor_consequence_echoes_v220",
+    "xian_emperor_short_challenges_v230",
+    "xian_emperor_weekly_challenge_v240",
+    "xian_emperor_final_verdict_v250",
   ];
   const MAX_REPORTS = 10;
 
@@ -300,6 +305,14 @@
 
   function selectEventForTurn() {
     const scenarioId = state.scenarioId || "jianan_196";
+    const directedEventId = window.XianShortChallenges?.selectEventId?.({
+      turn: state.turn,
+      scenarioId,
+      createdAt: state.createdAt,
+    });
+    const directedEvent = [...DATA.fixedEvents, ...DATA.randomEvents, ...Object.values(DATA.scenarioEvents || {})]
+      .find(event => event.id === directedEventId);
+    if (directedEvent) return directedEvent;
     const scenarioOpening = state.turn === 1 ? DATA.scenarioEvents?.[scenarioId] : null;
     if (scenarioOpening) return scenarioOpening;
     const fixed = scenarioId === "jianan_196" ? DATA.fixedEvents.find((event) => event.fixedTurn === state.turn) : null;
@@ -469,6 +482,8 @@
       choiceLabel: choice.label,
       chronicle: choice.chronicle,
       relations: { ...(choice.relations || {}) },
+      effects: { ...(choice.effects || {}) },
+      hidden: { ...(choice.hidden || {}) },
       turn: state.turn,
       date: formatReignDate(state.year, state.month),
       createdAt: state.createdAt,
@@ -1198,6 +1213,7 @@
     }
 
     document.dispatchEvent(new CustomEvent("xian:before-month-end", { detail: { turn: state.turn, createdAt: state.createdAt } }));
+    if (state.ended) return;
     applyMonthlyDynamics();
     if (checkImmediateEnding()) return;
 
@@ -1907,9 +1923,22 @@
     return true;
   }
 
+  function concludeExternalEnding(ending = {}) {
+    if (!state || state.ended || !ending.title || !ending.text) return false;
+    concludeGame({ title: String(ending.title), text: String(ending.text) });
+    return true;
+  }
+
   window.XianEmperorGame = Object.freeze({
     applyExternalPackage,
     performExternalAction,
+    concludeExternalEnding,
+    endTurn,
+    startNewGame,
+    getCurrentEvent: () => {
+      const event = getCurrentEvent();
+      return event ? JSON.parse(JSON.stringify(event)) : null;
+    },
     getScenarioById: (id) => JSON.parse(JSON.stringify(getScenarioById(id))),
     calculateScenarioChallenge: (scenario, gameState) => calculateScenarioChallenge(scenario, gameState),
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,

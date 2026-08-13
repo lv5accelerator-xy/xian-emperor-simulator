@@ -13,6 +13,12 @@
     appease: ["降低曹氏警戒", "安全增加，但独立形象受损"],
     regional: ["建立外部制衡", "适合曹氏警戒偏高时"],
   };
+  const TAB_GROUPS = [
+    { id: "month", label: "本月", tabs: ["brief", "monthly", "guide"] },
+    { id: "court", label: "朝局", tabs: ["people", "marks", "echoes"] },
+    { id: "challenge", label: "挑战", tabs: ["short-runs", "weekly"] },
+    { id: "history", label: "史册", tabs: ["historian", "saga", "verdict"] },
+  ];
 
   const tabs = new Map();
   let activeTab = "brief";
@@ -91,6 +97,14 @@
       const tabButton = event.target.closest("[data-command-tab]");
       if (tabButton) {
         activeTab = tabButton.dataset.commandTab;
+        renderOverlay();
+        return;
+      }
+      const groupButton = event.target.closest("[data-command-group]");
+      if (groupButton) {
+        const group = TAB_GROUPS.find(item => item.id === groupButton.dataset.commandGroup);
+        const nextTab = group?.tabs.find(id => tabs.has(id));
+        if (nextTab) activeTab = nextTab;
         renderOverlay();
         return;
       }
@@ -258,13 +272,20 @@
   function renderOverlay() {
     if (!overlay) return;
     const tab = tabs.get(activeTab) || tabs.get("brief");
+    const activeGroup = groupForTab(tab.id);
+    const groupTabs = activeGroup.tabs.map(id => tabs.get(id)).filter(Boolean);
     overlay.innerHTML = `
       <section class="command-center-window" role="dialog" aria-modal="true" aria-labelledby="command-center-title">
         <header><div><span>${escapeHtml(tab.kicker || "御前总览")}</span><h2 id="command-center-title">${escapeHtml(tab.title || tab.label)}</h2></div><button type="button" data-command-close aria-label="关闭">×</button></header>
-        <nav>${[...tabs.values()].map(item => `<button type="button" data-command-tab="${item.id}" class="${item.id === tab.id ? "active" : ""}">${escapeHtml(item.label)}</button>`).join("")}</nav>
+        <nav class="command-group-nav" aria-label="总览分组">${TAB_GROUPS.map(group => `<button type="button" data-command-group="${group.id}" class="${group.id === activeGroup.id ? "active" : ""}">${escapeHtml(group.label)}</button>`).join("")}</nav>
+        <nav class="command-tab-nav" aria-label="${escapeHtml(activeGroup.label)}栏目">${groupTabs.map(item => `<button type="button" data-command-tab="${item.id}" class="${item.id === tab.id ? "active" : ""}">${escapeHtml(item.label)}</button>`).join("")}</nav>
         <main>${tab.render({ core: clone(core), store: clone(store) })}</main>
       </section>`;
     tab.onMount?.(overlay.querySelector("main"), { core: clone(core), refresh });
+  }
+
+  function groupForTab(tabId) {
+    return TAB_GROUPS.find(group => group.tabs.includes(tabId)) || TAB_GROUPS[0];
   }
 
   function jumpTo(target) {
@@ -309,6 +330,7 @@
     getCore: () => clone(core),
     recommendAction: state => clone(recommendAction(state)),
     collectWarnings: state => clone(collectWarnings(state)),
+    groupForTab: tabId => clone(groupForTab(tabId)),
     escapeHtml,
   });
 })();
