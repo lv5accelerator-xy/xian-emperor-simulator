@@ -82,21 +82,21 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.6.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.6.1";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
 assert.match(read("index.html"), /imperial-progress\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.5\.1/);
 assert.match(read("index.html"), /imperial-progress\.js\?v=1\.5\.1/);
-assert.match(read("index.html"), /grand-map\.css\?v=2\.6\.0/);
-assert.match(read("index.html"), /historical-geography-data\.js\?v=2\.6\.0/);
-assert.match(read("index.html"), /grand-map\.js\?v=2\.6\.0/);
+assert.match(read("index.html"), /grand-map\.css\?v=2\.6\.1/);
+assert.match(read("index.html"), /historical-geography-data\.js\?v=2\.6\.1/);
+assert.match(read("index.html"), /grand-map\.js\?v=2\.6\.1/);
 assert.match(read("index.html"), /campaign-evolution\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /campaign-evolution-data\.js\?v=1\.5\.1/);
 assert.match(read("index.html"), /campaign-evolution\.js\?v=1\.5\.1/);
 assert.match(read("index.html"), /src\/ui\.css\?v=1\.5\.1/);
-assert.match(read("index.html"), /src\/ui\.js\?v=2\.6\.0/);
+assert.match(read("index.html"), /src\/ui\.js\?v=2\.6\.1/);
 for (const resource of [
   "command-center.css?v=2.5.0-r2", "command-center.js?v=2.5.0-r2",
   "character-memory.css?v=1.7.0", "character-memory.js?v=1.7.0",

@@ -1,4 +1,4 @@
-/* 天子蒙尘：献帝模拟器 v2.6.0 · 山河真形 */
+/* 天子蒙尘：献帝模拟器 v2.6.1 · 郡国全图 */
 .xian-world-window{width:min(1780px,calc(100vw - 1rem));height:min(96vh,1080px)}
 .xian-world-content:has(.grand-map-shell){padding:.7rem;overflow:hidden}
 .grand-map-shell{height:100%;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;border:1px solid rgba(126,180,159,.2);border-radius:14px;overflow:hidden;background:#0b100f;box-shadow:inset 0 0 80px rgba(0,0,0,.45)}
@@ -19,3 +19,83 @@
 .world-after-map-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:.7rem;margin-top:.7rem}.world-after-map-grid .lords-card{margin:0}.world-after-map-grid .world-log-list{max-height:360px}.world-after-map-grid .lord-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:1100px){.grand-map-toolbar{grid-template-columns:1fr auto}.grand-map-actions{grid-column:1/-1;grid-row:2}.grand-map-layout{grid-template-columns:1fr}.grand-map-inspector{max-height:230px;border-left:0;border-top:1px solid rgba(148,190,169,.16)}.world-after-map-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.xian-world-content:has(.grand-map-shell){padding:.25rem;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}.xian-world-content:has(.grand-map-shell) .world-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.grand-map-shell{border-radius:0}.grand-map-toolbar{grid-template-columns:minmax(0,1fr) auto;gap:.45rem;padding:.55rem}.grand-map-toolbar>div:first-child p{display:none}.grand-map-toolbar h3{font-size:.96rem}.grand-map-actions{overflow-x:auto;padding-bottom:.15rem;scrollbar-width:none}.grand-map-actions::-webkit-scrollbar{display:none}.grand-map-actions button{flex:0 0 auto;min-height:38px}.grand-map-zoom{gap:.2rem}.grand-map-zoom button{min-height:38px}.grand-map-zoom [data-map-home]{font-size:.58rem}.grand-map-layout{min-height:0;overflow:hidden;grid-template-rows:minmax(270px,1.55fr) minmax(190px,1fr)}.grand-map-viewport{min-height:0}.grand-map-inspector{position:relative;min-height:0;max-height:none;padding:1.2rem .7rem .7rem;border-top:1px solid rgba(129,183,170,.28);border-radius:15px 15px 0 0;box-shadow:0 -14px 38px rgba(0,0,0,.3)}.grand-map-inspector::before{content:"";position:absolute;top:.42rem;left:50%;width:44px;height:4px;border-radius:99px;background:rgba(177,201,191,.25);transform:translateX(-50%)}.map-army-actions{grid-template-columns:repeat(3,1fr)}.map-guide-backdrop{padding:.55rem}.map-guide-backdrop article{padding:1rem}.grand-map-legend{overflow-x:auto;padding:.42rem .55rem;scrollbar-width:none}.grand-map-legend::-webkit-scrollbar{display:none}.grand-map-legend p{display:none}.geography-label{font-size:15px}.terrain-name{font-size:11px}.world-after-map-grid .lord-grid{grid-template-columns:1fr}.xian-world-window{height:100dvh;width:100vw;border-radius:0}.xian-world-overlay{padding:0}}
+
+/* v2.6.1：参考古地图的信息层级，将地图提升为整页工作台。 */
+.xian-world-overlay:has(.xian-world-window.map-mode){place-items:stretch;padding:0}
+.xian-world-window.map-mode{position:relative;width:100vw;max-width:none;height:100dvh;max-height:none;display:block;border:0;border-radius:0;background:#153f4d}
+.map-mode .xian-world-header{position:absolute;z-index:62;top:.65rem;right:.7rem;width:auto;padding:0;border:0;background:transparent;pointer-events:none}
+.map-mode .xian-world-header>div{display:none}
+.map-mode .xian-world-close{width:44px;height:44px;border-color:rgba(255,241,200,.48);border-radius:10px;background:rgba(27,32,28,.82);color:#f3dfab;pointer-events:auto;box-shadow:0 8px 22px rgba(0,0,0,.32)}
+.map-mode .xian-world-tabs{position:absolute;z-index:61;top:.65rem;left:50%;width:max-content;max-width:calc(100vw - 8rem);padding:.28rem;border:1px solid rgba(241,222,170,.3);border-radius:11px;background:rgba(25,29,25,.82);box-shadow:0 8px 30px rgba(0,0,0,.28);backdrop-filter:blur(12px);transform:translateX(-50%)}
+.map-mode .xian-world-tabs button{padding:.48rem .76rem;color:#c7b995}
+.map-mode .xian-world-content{position:absolute;inset:0;padding:0!important;overflow:hidden!important}
+.world-map-page{position:relative;width:100%;height:100%;overflow:hidden;background:#1d5969}
+.world-map-page>.grand-map-shell{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:0;display:block;background:#1d5969}
+.world-map-page .grand-map-layout{position:absolute;inset:0;display:block;overflow:hidden}
+.world-map-page .grand-map-viewport{position:absolute;inset:0;min-height:0;background:linear-gradient(155deg,#1a5265,#397f8a 58%,#91b8b4)}
+.world-map-page .grand-map-toolbar{position:absolute;z-index:45;top:4.65rem;left:.8rem;right:.8rem;display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:.75rem;padding:.58rem .68rem;border:1px solid rgba(241,222,170,.3);border-radius:11px;background:linear-gradient(90deg,rgba(39,37,29,.92),rgba(27,36,33,.84));box-shadow:0 10px 32px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
+.world-map-page .grand-map-toolbar h3{color:#f0dca1}
+.world-map-page .grand-map-toolbar p{color:#b6b69f}
+.world-map-page .grand-map-inspector{position:absolute;z-index:44;top:8.7rem;right:.8rem;bottom:2.65rem;width:320px;min-height:0;padding:.85rem;border:1px solid rgba(239,219,164,.3);border-radius:12px;background:linear-gradient(180deg,rgba(34,36,30,.94),rgba(25,31,28,.92));box-shadow:0 18px 50px rgba(0,0,0,.34);backdrop-filter:blur(14px);transition:transform .22s ease,opacity .22s ease}
+.world-map-page .grand-map-shell.inspector-collapsed .grand-map-inspector{opacity:0;pointer-events:none;transform:translateX(calc(100% + 1.5rem))}
+.world-map-page .grand-map-legend{position:absolute;z-index:43;left:.8rem;right:.8rem;bottom:.65rem;width:auto;padding:.38rem .6rem;border:1px solid rgba(242,224,176,.25);border-radius:9px;background:rgba(31,34,29,.84);box-shadow:0 8px 24px rgba(0,0,0,.25);backdrop-filter:blur(10px)}
+.world-map-page .map-guide-backdrop{z-index:80}
+.world-map-status-rail{position:absolute;z-index:44;top:8.7rem;left:.8rem;width:174px;display:grid;gap:.36rem;padding:.45rem;border:1px solid rgba(242,224,176,.28);border-radius:11px;background:rgba(35,35,28,.82);box-shadow:0 14px 42px rgba(0,0,0,.3);backdrop-filter:blur(12px)}
+.world-map-status-rail article{padding:.42rem .5rem;border-bottom:1px solid rgba(237,215,158,.13)}
+.world-map-status-rail span,.world-map-status-rail small{display:block;color:#aca88f;font-size:.53rem}
+.world-map-status-rail strong{display:block;margin:.1rem 0;color:#f0d899;font:600 .82rem var(--serif)}
+.world-map-status-rail>button{padding:.5rem;border:1px solid rgba(232,205,133,.34);border-radius:7px;background:rgba(161,110,52,.19);color:#efd697;font-size:.62rem;cursor:pointer}
+.world-map-intel-drawer{position:absolute;z-index:70;top:3.9rem;right:0;bottom:0;width:min(720px,100vw);padding:.75rem;border-left:1px solid rgba(238,215,158,.28);background:rgba(19,22,19,.97);box-shadow:-24px 0 70px rgba(0,0,0,.46);visibility:hidden;pointer-events:none;transform:translateX(105%);transition:transform .25s ease,visibility 0s linear .25s;overflow:hidden}
+.world-map-intel-drawer.open{visibility:visible;pointer-events:auto;transform:translateX(0);transition-delay:0s}
+.world-map-intel-drawer>header{display:flex;align-items:center;justify-content:space-between;padding:.3rem .25rem .7rem}
+.world-map-intel-drawer h3{margin:.1rem 0;color:#ead598;font:600 1.25rem var(--serif)}
+.world-map-intel-drawer>header button{width:38px;height:38px;border:1px solid rgba(238,215,158,.25);border-radius:8px;background:transparent;color:#e8d49c;font-size:1.25rem}
+.world-map-intel-content{height:calc(100% - 58px);overflow:auto}
+.world-map-intel-content .world-dynamics-card,.world-map-intel-content .lords-card{margin:0 0 .65rem}
+.world-map-intel-content .lord-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.geography-relief rect{fill:#d2b376;opacity:.34;mix-blend-mode:soft-light}
+.geography-land path{stroke:rgba(244,233,192,.7);stroke-width:2.2;filter:drop-shadow(0 4px 10px rgba(24,30,24,.3))}
+.grand-region{fill:color-mix(in srgb,var(--region-color) 48%,#a86d45 52%);stroke:color-mix(in srgb,var(--region-color) 45%,#f5e5b9 55%);stroke-width:1.45;opacity:.7;mix-blend-mode:multiply}
+.grand-region:hover,.grand-region:focus{opacity:.93;mix-blend-mode:normal}
+.terrain-ridges .terrain-ridge{stroke:rgba(67,51,34,.36);stroke-width:10}
+.terrain-rivers .terrain-river{stroke:rgba(55,146,176,.84);stroke-width:3.2}
+.terrain-name{fill:rgba(44,38,28,.72);stroke:rgba(231,209,159,.7);stroke-width:3}
+.terrain-rivers .terrain-name{fill:#184f68;stroke:rgba(193,226,218,.74)}
+.geography-label.region{opacity:.18}
+.geography-label.sea{fill:rgba(224,245,235,.62);stroke:rgba(25,74,87,.72)}
+.region-name-label{fill:rgba(47,25,16,.84);font:800 25px var(--serif);letter-spacing:.32em;text-anchor:middle;paint-order:stroke;stroke:rgba(232,199,134,.64);stroke-width:5;pointer-events:none}
+.minor-place circle{fill:#2e231b;stroke:rgba(246,224,174,.9);stroke-width:1.2}
+.minor-place text{fill:rgba(38,28,20,.88);font:600 9px var(--serif);paint-order:stroke;stroke:rgba(226,197,143,.74);stroke-width:2.4;pointer-events:none}
+.grand-map-stage[data-map-detail="overview"] .minor-place-labels{display:none}
+.grand-map-stage[data-map-detail="detail"] .minor-place text{font-size:10px}
+.grand-city strong{padding:2px 4px;border-radius:3px;background:rgba(43,29,20,.72);color:#fff0c8;text-shadow:none}
+.grand-city small{color:#f1dfb3;text-shadow:0 1px 3px #241b14}
+.grand-map-zoom [data-map-inspector-toggle]{width:auto;min-width:74px;color:#e0c982}
+
+@media(max-width:1100px){
+  .world-map-page .grand-map-toolbar{grid-template-columns:minmax(190px,1fr) auto;top:4.45rem}
+  .world-map-page .grand-map-actions{grid-column:1/-1;grid-row:2}
+  .world-map-page .grand-map-inspector{top:11.55rem}
+  .world-map-status-rail{top:11.55rem}
+}
+@media(max-width:760px){
+  .map-mode .xian-world-tabs{top:.45rem;left:.45rem;right:3.45rem;width:auto;max-width:none;transform:none;overflow-x:auto}
+  .map-mode .xian-world-header{top:.45rem;right:.45rem}
+  .map-mode .xian-world-close{width:42px;height:42px}
+  .world-map-page .grand-map-toolbar{top:3.75rem;left:.4rem;right:.4rem;display:grid;grid-template-columns:1fr auto;padding:.45rem}
+  .world-map-page .grand-map-toolbar>div:first-child{display:none}
+  .world-map-page .grand-map-actions{grid-column:1/-1;grid-row:2;order:3;overflow-x:auto}
+  .world-map-page .grand-map-zoom{justify-content:flex-end}
+  .world-map-page .grand-map-inspector{top:auto;left:.4rem;right:.4rem;bottom:2.7rem;width:auto;max-height:37dvh;padding:1.05rem .65rem .65rem;border-radius:14px;transform:translateY(0)}
+  .world-map-page .grand-map-shell.inspector-collapsed .grand-map-inspector{transform:translateY(calc(100% + 3.5rem))}
+  .world-map-page .grand-map-inspector::before{content:"";position:absolute;top:.38rem;left:50%;width:42px;height:4px;border-radius:99px;background:rgba(238,221,174,.26);transform:translateX(-50%)}
+  .world-map-page .grand-map-legend{left:.4rem;right:.4rem;bottom:.35rem}
+  .world-map-status-rail{top:8.55rem;left:.4rem;right:.4rem;width:auto;display:flex;gap:.25rem;padding:.3rem;overflow-x:auto}
+  .world-map-status-rail article{flex:0 0 106px;padding:.35rem;border:0;border-right:1px solid rgba(237,215,158,.13)}
+  .world-map-status-rail>button{flex:0 0 112px}
+  .world-map-intel-drawer{top:3.35rem;padding:.55rem}
+  .world-map-intel-content .lord-grid{grid-template-columns:1fr}
+  .grand-map-compass{right:16px;bottom:64px}
+  .region-name-label{font-size:22px}
+  .minor-place text{font-size:10px}
+}

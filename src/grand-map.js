@@ -1,11 +1,11 @@
-/* 天子蒙尘：献帝模拟器 v2.6.0 · 山河真形 */
+/* 天子蒙尘：献帝模拟器 v2.6.1 · 郡国全图 */
 (() => {
   "use strict";
 
   const STRATEGY_KEY = "xian_emperor_strategy_network_v040";
   const ARMY_KEY = "xian_emperor_armies_v050";
   const PROGRESSION_KEY = "xian_emperor_progression_v100";
-  const GUIDE_KEY = "xian_emperor_map_guide_v260";
+  const GUIDE_KEY = "xian_emperor_map_guide_v261";
   const GEO = window.XIAN_HISTORICAL_GEOGRAPHY || {};
   const WIDTH = GEO.width || 1200;
   const HEIGHT = GEO.height || 720;
@@ -14,7 +14,7 @@
   const CITY_POSITIONS = GEO.cityPositions || {};
   const REGION_SHAPES = GEO.regionPaths || {};
 
-  let state = { zoomIndex: 2, layer: "all", selectedType: null, selectedId: null, command: null, guideStep: 0, justDragged: false };
+  let state = { zoomIndex: 2, layer: "all", selectedType: null, selectedId: null, command: null, guideStep: 0, justDragged: false, inspectorCollapsed: false };
 
   function safeParse(raw) {
     if (!raw) return null;
@@ -77,9 +77,9 @@
     const regionStates = worldState?.regions || Object.fromEntries(worldData.regions.map(region => [region.id, region]));
 
     return `
-      <section class="grand-map-shell${isFocusMode() ? " focus-map" : ""}${state.command ? " commanding" : ""}" data-map-layer="${state.layer}">
+      <section class="grand-map-shell${isFocusMode() ? " focus-map" : ""}${state.command ? " commanding" : ""}${state.inspectorCollapsed ? " inspector-collapsed" : ""}" data-map-layer="${state.layer}">
         <header class="grand-map-toolbar">
-          <div><span class="section-kicker">v2.6.0 · 山河真形</span><h3>汉末山河军政图</h3><p>真实地理骨架、州郡态势、城池军路与军团战线汇于一图</p></div>
+          <div><span class="section-kicker">v2.6.1 · 郡国全图</span><h3>汉末山河军政图</h3><p>全屏舆图 · 州名、郡国治所、山川与军路同图推演</p></div>
           <div class="grand-map-actions" aria-label="地图图层">
             ${layerButton("all", "全局")}${layerButton("politics", "势力")}${layerButton("routes", "军路")}${layerButton("armies", "军团")}${layerButton("pressure", "战线")}
           </div>
@@ -88,6 +88,7 @@
             <button type="button" data-map-zoom="reset" class="zoom-readout">${Math.round(ZOOMS[state.zoomIndex] * 100)}%</button>
             <button type="button" data-map-zoom="in" aria-label="放大地图">＋</button>
             <button type="button" data-map-home aria-label="地图归中">归中</button>
+            <button type="button" data-map-inspector-toggle aria-expanded="${String(!state.inspectorCollapsed)}">${state.inspectorCollapsed ? "展开军情" : "收起军情"}</button>
           </div>
         </header>
         <div class="grand-map-layout">
@@ -96,18 +97,22 @@
               <div class="grand-map-stage" data-map-stage style="--map-width:${WIDTH}px;--map-height:${HEIGHT}px">
                 <svg class="grand-map-terrain" viewBox="0 0 ${WIDTH} ${HEIGHT}" aria-hidden="true">
                   <defs>
-                    <linearGradient id="mapSea" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071622"/><stop offset=".55" stop-color="#0b1b25"/><stop offset="1" stop-color="#111923"/></linearGradient>
-                    <linearGradient id="mapLand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1c2d27"/><stop offset=".58" stop-color="#17231f"/><stop offset="1" stop-color="#2a241a"/></linearGradient>
+                    <linearGradient id="mapSea" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#174d62"/><stop offset=".52" stop-color="#2b7180"/><stop offset="1" stop-color="#8ab7b5"/></linearGradient>
+                    <linearGradient id="mapLand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9b7a52"/><stop offset=".5" stop-color="#785f42"/><stop offset="1" stop-color="#4d4638"/></linearGradient>
                     <filter id="mapGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-                    <pattern id="mapGrid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="rgba(151,187,181,.055)" stroke-width="1"/></pattern>
+                    <filter id="mapRelief" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".009 .018" numOctaves="4" seed="196" result="noise"/><feColorMatrix in="noise" type="matrix" values=".58 0 0 0 .08 0 .42 0 0 .06 0 0 .22 0 .02 0 0 0 .55 0"/></filter>
+                    <pattern id="mapGrid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="rgba(235,246,239,.055)" stroke-width="1"/></pattern>
                     <clipPath id="mapLandClip">${renderLandPaths()}</clipPath>
                   </defs>
                   <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapSea)"/><rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapGrid)"/>
                   <g class="geography-land">${renderLandPaths("land")}</g>
+                  <g class="geography-relief" clip-path="url(#mapLandClip)"><rect width="${WIDTH}" height="${HEIGHT}" filter="url(#mapRelief)"/></g>
                   <g class="grand-regions" clip-path="url(#mapLandClip)">${worldData.regions.map(region => renderRegion(region, regionStates[region.id])).join("")}</g>
                   <g class="terrain-ridges">${renderTerrainLines(GEO.ranges, "ridge")}</g>
                   <g class="terrain-rivers">${renderTerrainLines(GEO.rivers, "river")}</g>
                   <g class="geography-labels">${renderGeographyLabels()}</g>
+                  <g class="region-name-labels">${renderRegionLabels(worldData.regions)}</g>
+                  <g class="minor-place-labels">${renderMinorPlaces()}</g>
                   <g class="grand-routes">${strategyData.routes.map(route => renderRoute(route, runtime.strategy)).join("")}</g>
                 </svg>
                 <div class="grand-city-layer">${strategyData.cities.map(city => renderCity(city, runtime.strategy, cityArmies[city.id] || [])).join("")}</div>
@@ -137,6 +142,21 @@
     return (GEO.labels || []).map(item => {
       const [x, y] = GEO.project?.(item.point) || [0, 0];
       return `<text class="geography-label ${item.kind || "region"}" x="${x}" y="${y}">${escapeHtml(item.text)}</text>`;
+    }).join("");
+  }
+
+  function renderRegionLabels(regions = []) {
+    const names = Object.fromEntries(regions.map(region => [region.id, region.short || region.name]));
+    return (GEO.regionLabels || []).map(item => {
+      const [x, y] = GEO.project?.(item.point) || [0, 0];
+      return `<text class="region-name-label" x="${x}" y="${y}">${escapeHtml(item.text || names[item.id] || "")}</text>`;
+    }).join("");
+  }
+
+  function renderMinorPlaces() {
+    return (GEO.minorPlaces || []).map(item => {
+      const [x, y] = GEO.project?.(item.point) || [0, 0];
+      return `<g class="minor-place"><circle cx="${x}" cy="${y}" r="2.5"/><text x="${x + (item.dx || 6)}" y="${y + (item.dy || -5)}">${escapeHtml(item.name)}</text></g>`;
     }).join("");
   }
 
@@ -225,6 +245,13 @@
       if (command === "reset") centerMap(viewport);
     }));
     shell.querySelector("[data-map-home]")?.addEventListener("click", () => centerMap(viewport));
+    shell.querySelector("[data-map-inspector-toggle]")?.addEventListener("click", event => {
+      state.inspectorCollapsed = !state.inspectorCollapsed;
+      shell.classList.toggle("inspector-collapsed", state.inspectorCollapsed);
+      event.currentTarget.setAttribute("aria-expanded", String(!state.inspectorCollapsed));
+      event.currentTarget.textContent = state.inspectorCollapsed ? "展开军情" : "收起军情";
+      requestAnimationFrame(() => { applyZoom(shell); centerMap(viewport, false); });
+    });
 
     shell.querySelectorAll("[data-grand-city]").forEach(button => button.addEventListener("click", () => state.command ? previewCommand(shell, button.dataset.grandCity) : inspectCity(shell, button.dataset.grandCity, onRegion)));
     shell.querySelectorAll("[data-grand-route]").forEach(button => {
@@ -251,7 +278,18 @@
       }
     });
     bindDrag(viewport);
-    requestAnimationFrame(() => centerMap(viewport));
+    if (typeof window.ResizeObserver === "function" && viewport) {
+      let resizeFrame = 0;
+      const observer = new window.ResizeObserver(() => {
+        cancelAnimationFrame?.(resizeFrame);
+        resizeFrame = requestAnimationFrame(() => {
+          if (!shell.isConnected) return observer.disconnect();
+          applyZoom(shell);
+        });
+      });
+      observer.observe(viewport);
+    }
+    requestAnimationFrame(() => { applyZoom(shell); centerMap(viewport, false); });
   }
 
   function bindGuide(shell) {
@@ -271,26 +309,33 @@
   }
 
   function applyZoom(shell) {
-    const scale = ZOOMS[state.zoomIndex];
+    const viewport = shell.querySelector("[data-grand-viewport]");
+    const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
     const stage = shell.querySelector("[data-map-stage]");
     const space = shell.querySelector("[data-map-space]");
     if (!stage || !space) return;
     stage.style.transform = `scale(${scale})`;
-    stage.dataset.mapDetail = scale < .9 ? "overview" : scale >= 1.18 ? "detail" : "standard";
+    stage.dataset.mapDetail = ZOOMS[state.zoomIndex] < .9 ? "overview" : ZOOMS[state.zoomIndex] >= 1.18 ? "detail" : "standard";
     space.style.width = `${WIDTH * scale}px`;
     space.style.height = `${HEIGHT * scale}px`;
     const readout = shell.querySelector('[data-map-zoom="reset"]');
-    if (readout) readout.textContent = `${Math.round(scale * 100)}%`;
+    if (readout) readout.textContent = `${Math.round(ZOOMS[state.zoomIndex] * 100)}%`;
   }
 
-  function centerMap(viewport) {
+  function fitScale(viewport) {
+    if (!viewport?.clientWidth || !viewport?.clientHeight) return 1;
+    if (viewport.clientWidth < 760) return Math.max(.68, Math.min(1, (viewport.clientHeight / HEIGHT) * .82));
+    return Math.max(viewport.clientWidth / WIDTH, viewport.clientHeight / HEIGHT);
+  }
+
+  function centerMap(viewport, smooth = true) {
     if (!viewport) return;
-    const scale = ZOOMS[state.zoomIndex];
+    const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
     const focus = CITY_POSITIONS.xudu || [WIDTH * .64, HEIGHT * .42];
     viewport.scrollTo?.({
       left: Math.max(0, focus[0] * scale - viewport.clientWidth * .52),
       top: Math.max(0, focus[1] * scale - viewport.clientHeight * .48),
-      behavior: "smooth",
+      behavior: smooth ? "smooth" : "auto",
     });
   }
 
@@ -327,7 +372,7 @@
     const viewport = shell.querySelector("[data-grand-viewport]");
     const pos = CITY_POSITIONS[id];
     if (viewport && pos) {
-      const scale = ZOOMS[state.zoomIndex];
+      const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
       viewport.scrollTo?.({ left: Math.max(0, pos[0] * scale - viewport.clientWidth / 2), top: Math.max(0, pos[1] * scale - viewport.clientHeight / 2), behavior: "smooth" });
     }
     inspectCity(shell, id, onRegion);
@@ -340,7 +385,7 @@
     const to = CITY_POSITIONS[route.to];
     const viewport = shell.querySelector("[data-grand-viewport]");
     if (viewport && from && to) {
-      const scale = ZOOMS[state.zoomIndex];
+      const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
       viewport.scrollTo?.({ left: Math.max(0, ((from[0] + to[0]) / 2) * scale - viewport.clientWidth / 2), top: Math.max(0, ((from[1] + to[1]) / 2) * scale - viewport.clientHeight / 2), behavior: "smooth" });
     }
     inspectRoute(shell, id);

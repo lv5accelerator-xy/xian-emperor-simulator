@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.6.0 · 山河真形
+ * 天子蒙尘：献帝模拟器 v2.6.1 · 郡国全图
  *
  * 海岸线轮廓由 Natural Earth 1:110m 公有领域数据简化、裁切并投影而来。
  * 汉末州郡范围、山川线位与文字标注服务于策略阅读，不构成精确历史测绘。
@@ -105,8 +105,44 @@
     { text: "南 海", point: [116, 20.2], kind: "sea" },
   ]);
 
+  const regionLabels = Object.freeze([
+    { id: "liangzhou", text: "凉 州", point: [96.3, 39.4] },
+    { id: "guanzhong", text: "雍 州", point: [106.8, 35.8] },
+    { id: "yizhou", text: "益 州", point: [101.1, 27.2] },
+    { id: "hanzhong", text: "汉 中", point: [106.6, 32.1] },
+    { id: "jingzhou", text: "荆 州", point: [111.2, 28.3] },
+    { id: "jiaozhou", text: "交 州", point: [107.3, 21.9] },
+    { id: "jiangdong", text: "扬 州", point: [119.6, 27.2] },
+    { id: "huainan", text: "淮 南", point: [117.2, 30.8] },
+    { id: "sili_yuzhou", text: "司 隶 · 豫 州", point: [113.6, 33.8] },
+    { id: "xuzhou", text: "徐 州", point: [119.6, 33.3] },
+    { id: "qingzhou", text: "青 州", point: [120.2, 37.1] },
+    { id: "jizhou", text: "冀 州", point: [116.2, 38.1] },
+    { id: "bingzhou", text: "并 州", point: [111.2, 39.2] },
+    { id: "youzhou", text: "幽 州", point: [120.5, 40.9] },
+  ]);
+
+  const minorPlaces = Object.freeze([
+    { name: "敦煌", point: [94.66, 40.14] }, { name: "张掖", point: [100.45, 38.93] },
+    { name: "金城", point: [103.83, 36.06] }, { name: "天水", point: [105.72, 34.58] },
+    { name: "安定", point: [106.68, 35.55] }, { name: "弘农", point: [110.88, 34.52] },
+    { name: "河内", point: [113.80, 35.45] }, { name: "陈留", point: [114.35, 34.80] },
+    { name: "汝南", point: [114.35, 33.00] }, { name: "谯", point: [115.78, 33.85] },
+    { name: "河东", point: [110.98, 35.03] }, { name: "上党", point: [113.10, 36.20] },
+    { name: "常山", point: [114.56, 38.05] }, { name: "渤海", point: [117.48, 38.32] },
+    { name: "辽西", point: [119.55, 40.05] }, { name: "辽东", point: [123.25, 41.25] },
+    { name: "平原", point: [116.43, 37.17] }, { name: "北海", point: [119.10, 36.70] },
+    { name: "彭城", point: [117.18, 34.26] }, { name: "广陵", point: [119.42, 32.39] },
+    { name: "庐江", point: [117.28, 31.25] }, { name: "丹阳", point: [118.75, 31.95] },
+    { name: "会稽", point: [120.58, 29.99] }, { name: "豫章", point: [115.86, 28.68] },
+    { name: "江夏", point: [114.30, 30.58] }, { name: "江陵", point: [112.24, 30.34] },
+    { name: "长沙", point: [112.94, 28.23] }, { name: "零陵", point: [111.61, 26.42] },
+    { name: "巴郡", point: [106.55, 29.57] }, { name: "梓潼", point: [105.17, 31.64] },
+    { name: "南海", point: [113.27, 23.13] }, { name: "合浦", point: [109.12, 21.48] },
+  ]);
+
   window.XIAN_HISTORICAL_GEOGRAPHY = Object.freeze({
-    version: "2.6.0",
+    version: "2.6.1",
     width: WIDTH,
     height: HEIGHT,
     source: "Natural Earth 1:110m · public domain",
@@ -121,5 +157,7 @@
     rivers,
     ranges,
     labels,
+    regionLabels,
+    minorPlaces,
   });
 })();

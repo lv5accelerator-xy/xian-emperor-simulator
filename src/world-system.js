@@ -687,6 +687,8 @@
     const title = document.getElementById("xian-world-title");
     const date = document.getElementById("xian-world-date");
     if (!content || !title || !date) return;
+    const windowElement = content.closest(".xian-world-window");
+    windowElement?.classList.toggle("map-mode", overlayState.tab === "world");
     document.querySelectorAll("[data-world-panel]").forEach((button) => button.classList.toggle("active", button.dataset.worldPanel === overlayState.tab));
     date.textContent = lastCoreState ? `${formatTurnDate(lastCoreState.turn)} · 第 ${lastCoreState.turn}/${lastCoreState.maxTurns || 24} 月` : "尚未载入本局；以下为汉末历史基础态势";
     const renderers = { world: renderWorldPanel, people: renderPeoplePanel, timeline: renderTimelinePanel, sources: renderSourcesPanel };
@@ -704,7 +706,7 @@
     const latest = worldState?.worldLog?.slice(0, 12) || [];
     const fallbackMap = `<div class="schematic-map-card"><div class="world-section-head"><div><span class="section-kicker">政治态势示意</span><h3>全国局势地图</h3></div><small>点击地区审阅详情</small></div><div class="schematic-map" aria-label="汉末全国局势示意图">${DATA.regions.map((region) => renderRegionTile(region, regions[region.id])).join("")}</div><p class="map-disclaimer">注：本图用于表现势力与局势，不代表精确疆界、比例或古代行政区测绘。</p></div>`;
     const grandMap = window.XianGrandMap?.render?.(worldState, lastCoreState) || fallbackMap;
-    return `<section class="world-summary-grid"><article><span>朝廷辐射</span><strong>${escapeHtml(calculateCourtReach(lastCoreState))}</strong><small>由皇权、威望与外部制衡综合计算</small></article><article><span>最强诸侯</span><strong>${escapeHtml(strongestLord?.name || "未定")}</strong><small>综合军政实力 ${Math.round(strongestLord?.runtime?.power || 0)}</small></article><article><span>最不稳定地区</span><strong>${escapeHtml(unstable?.name || "未定")}</strong><small>稳定 ${Math.round(unstable?.runtime?.stability || 0)}</small></article><article><span>天下总趋势</span><strong>${escapeHtml(buildWorldTrend())}</strong><small>所有结果均为本局动态推演</small></article></section>${grandMap}<section class="world-after-map-grid"><div class="world-dynamics-card"><div class="world-section-head"><div><span class="section-kicker">月度急递</span><h3>诸侯动态</h3></div><small>${latest.length} 条</small></div><div class="world-log-list">${latest.length ? latest.map(renderWorldLogEntry).join("") : '<p class="empty-state">结束一个月份后，各镇动态将在此汇总。</p>'}</div></div><section class="lords-card"><div class="world-section-head"><div><span class="section-kicker">外镇评估</span><h3>主要诸侯</h3></div><small>实力 · 对朝廷需求 · 扩张倾向</small></div><div class="lord-grid">${DATA.lords.map(renderLordCard).join("")}</div></section></section>`;
+    return `<div class="world-map-page">${grandMap}<aside class="world-map-status-rail" aria-label="天下态势摘要"><article><span>朝廷辐射</span><strong>${escapeHtml(calculateCourtReach(lastCoreState))}</strong><small>皇权与威望</small></article><article><span>最强诸侯</span><strong>${escapeHtml(strongestLord?.name || "未定")}</strong><small>实力 ${Math.round(strongestLord?.runtime?.power || 0)}</small></article><article><span>动荡之地</span><strong>${escapeHtml(unstable?.name || "未定")}</strong><small>稳定 ${Math.round(unstable?.runtime?.stability || 0)}</small></article><article><span>天下趋势</span><strong>${escapeHtml(buildWorldTrend())}</strong><small>本局动态推演</small></article><button type="button" data-world-intel-toggle aria-expanded="false">展开天下情报</button></aside><section class="world-map-intel-drawer" data-world-intel-drawer aria-hidden="true"><header><div><span class="section-kicker">御前案牍</span><h3>天下情报</h3></div><button type="button" data-world-intel-close aria-label="收起天下情报">×</button></header><div class="world-map-intel-content"><div class="world-dynamics-card"><div class="world-section-head"><div><span class="section-kicker">月度急递</span><h3>诸侯动态</h3></div><small>${latest.length} 条</small></div><div class="world-log-list">${latest.length ? latest.map(renderWorldLogEntry).join("") : '<p class="empty-state">结束一个月份后，各镇动态将在此汇总。</p>'}</div></div><section class="lords-card"><div class="world-section-head"><div><span class="section-kicker">外镇评估</span><h3>主要诸侯</h3></div><small>实力 · 对朝廷需求 · 扩张倾向</small></div><div class="lord-grid">${DATA.lords.map(renderLordCard).join("")}</div></section></div></section></div>`;
   }
 
   function renderRegionTile(region, runtime) {
@@ -755,6 +757,16 @@
     document.querySelectorAll("[data-world-character]").forEach((button) => button.addEventListener("click", () => showWorldCharacterDetail(button.dataset.worldCharacter)));
     document.querySelectorAll("[data-timeline-sources]").forEach((button) => button.addEventListener("click", () => { const item = DATA.timeline.find((entry) => entry.id === button.dataset.timelineSources); openOverlay("sources", { sourceFilter: item?.sourceIds || [] }); }));
     document.querySelector("[data-clear-source-filter]")?.addEventListener("click", () => openOverlay("sources"));
+    const intelDrawer = document.querySelector("[data-world-intel-drawer]");
+    const intelToggle = document.querySelector("[data-world-intel-toggle]");
+    const setIntelOpen = (open) => {
+      intelDrawer?.classList.toggle("open", open);
+      intelDrawer?.setAttribute("aria-hidden", String(!open));
+      intelToggle?.setAttribute("aria-expanded", String(open));
+      if (intelToggle) intelToggle.textContent = open ? "收起天下情报" : "展开天下情报";
+    };
+    intelToggle?.addEventListener("click", () => setIntelOpen(!intelDrawer?.classList.contains("open")));
+    document.querySelector("[data-world-intel-close]")?.addEventListener("click", () => setIntelOpen(false));
     window.XianGrandMap?.bind?.(document.getElementById("xian-world-content"), showRegionDetail);
   }
 
@@ -766,6 +778,7 @@
     const relatedLogs = worldState?.worldLog?.filter((entry) => entry.regionId === regionId).slice(0, 6) || [];
     const content = document.getElementById("xian-world-content");
     if (!content) return;
+    content.closest(".xian-world-window")?.classList.remove("map-mode");
     content.innerHTML = `<button class="world-back-button" type="button" data-world-back>← 返回全国舆图</button><section class="region-detail-card" style="--controller:${controller.color}"><header><span>${region.short}</span><div><p>${escapeHtml(region.importance)}</p><h3>${escapeHtml(region.name)}</h3><small>${escapeHtml(region.capital)} · ${escapeHtml(controller.name)}</small></div></header><p class="region-summary">${escapeHtml(region.summary)}</p><div class="region-metrics">${renderRegionGauge("地方稳定", runtime.stability)}${renderRegionGauge("军事压力", runtime.military)}${renderRegionGauge("对朝廷态度", runtime.courtAttitude)}</div><div class="region-last-change"><strong>最近变化</strong><p>${escapeHtml(runtime.lastChange || "暂无")}</p></div></section><section class="region-log-card"><div class="world-section-head"><div><span class="section-kicker">地方档案</span><h3>近期急递</h3></div></div>${relatedLogs.length ? relatedLogs.map(renderWorldLogEntry).join("") : '<p class="empty-state">暂无该地区动态。</p>'}</section><section class="region-source-card"><button type="button" data-region-sources>查阅此地区史料依据</button></section>`;
     content.querySelector("[data-world-back]")?.addEventListener("click", () => openOverlay("world"));
     content.querySelector("[data-region-sources]")?.addEventListener("click", () => openOverlay("sources", { sourceFilter: region.sourceIds || [] }));

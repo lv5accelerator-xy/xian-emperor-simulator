@@ -37,9 +37,10 @@ localStorage.setItem("xian_emperor_armies_v050", JSON.stringify({
 }));
 
 const api = context.window.XianGrandMap;
+const worldSystemCode = read("src/world-system.js");
 assert.ok(api, "grand map API should load");
 assert.equal(Object.keys(api.positions).length, 16, "all sixteen strategic cities need map coordinates");
-assert.equal(api.geography.version, "2.6.0", "real geography data should match the map release");
+assert.equal(api.geography.version, "2.6.1", "real geography data should match the map release");
 assert.match(api.geography.source, /Natural Earth/);
 assert.ok(api.positions.wuwei[0] < api.positions.changan[0], "Wuwei should be west of Chang'an");
 assert.ok(api.positions.ji[1] < api.positions.xudu[1], "Ji should be north of Xudu");
@@ -52,7 +53,7 @@ assert.equal((html.match(/data-map-layer=/g) || []).length, 6, "map shell and fi
 assert.match(html, /data-grand-viewport/);
 assert.match(html, /测试勤王军|1支军团/);
 assert.match(html, /军压 86/);
-assert.match(html, /山河真形/);
+assert.match(html, /郡国全图/);
 assert.match(html, /汉末山河军政图/);
 assert.match(html, /geography-land/);
 assert.match(html, /黄河/);
@@ -61,6 +62,12 @@ assert.match(html, /地图归中/);
 assert.match(html, /本月关键警讯 · 最多三条/);
 assert.match(html, /选择军团后可直接在地图下令/);
 assert.match(html, /舆图指引/);
+assert.equal((html.match(/class="region-name-label"/g) || []).length, 14, "all fourteen strategic regions need large map labels");
+assert.equal((html.match(/class="minor-place"/g) || []).length, 32, "commandery and county-seat labels should enrich the historical map");
+assert.match(html, /data-map-inspector-toggle/);
+assert.match(worldSystemCode, /world-map-page/);
+assert.match(worldSystemCode, /map-mode/);
+assert.match(worldSystemCode, /data-world-intel-toggle/);
 
 for (const city of context.window.XIAN_STRATEGY_DATA.cities) {
   assert.match(html, new RegExp(`data-grand-city="${city.id}"`), `missing city ${city.id}`);
