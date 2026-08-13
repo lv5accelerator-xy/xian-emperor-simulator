@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.7.2' index.html
+          grep -q 'v2.8.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -284,6 +284,8 @@ jobs:
           grep -q 'src/final-verdict.css?v=2.5.0' index.html
           grep -q 'src/final-verdict.js?v=2.5.0' index.html
           grep -q 'src/visual-refresh.css?v=2.7.1' index.html
+          grep -q 'src/ui-refresh-v280.css?v=2.8.0' index.html
+          grep -q 'src/ui-refresh-v280.js?v=2.8.0' index.html
           grep -q 'assets/fonts/zcool-xiaowei-game.woff2' index.html
           test -f src/audio.css
           test -f src/audio-data.js
@@ -334,10 +336,18 @@ jobs:
           test -f src/final-verdict.css
           test -f src/final-verdict.js
           test -f src/visual-refresh.css
+          test -f src/ui-refresh-v280.css
+          test -f src/ui-refresh-v280.js
           test -f assets/images/illustrations/opening-palace.webp
           test -f assets/images/illustrations/court-memorial.webp
           test -f assets/images/illustrations/army-crossing.webp
           test -f assets/images/illustrations/ending-river-mountains.webp
+          test -f assets/images/illustrations/treasury-crisis.webp
+          test -f assets/images/illustrations/granary-relief.webp
+          test -f assets/images/illustrations/secret-edict.webp
+          test -f assets/images/illustrations/regional-envoys.webp
+          test -f assets/images/illustrations/palace-guard.webp
+          test -f assets/images/illustrations/military-dispatch.webp
           test -f assets/fonts/zcool-xiaowei-game.woff2
           test -f assets/fonts/noto-serif-sc-game.woff2
           test -f assets/fonts/noto-sans-sc-game.woff2
@@ -370,6 +380,7 @@ jobs:
           test -f patch-notes/v2.7.0.txt
           test -f patch-notes/v2.7.1.txt
           test -f patch-notes/v2.7.2.txt
+          test -f patch-notes/v2.8.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -387,4 +398,4 @@ jobs:
         run: node tests/post-v2-systems-regression.js
 
       - name: Run release regression
-        run: EXPECTED_VERSION=2.7.2 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.8.0 node tests/release-regression.js

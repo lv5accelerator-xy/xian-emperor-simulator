@@ -115,7 +115,7 @@
     const event = window.XianEmperorGame?.getCurrentEvent?.();
     if (!core || core.eventResolved || !event) return;
     document.querySelectorAll("#event-choices [data-choice-index]").forEach(button => {
-      if (button.querySelector(".monthly-choice-impact")) return;
+      if (button.querySelector(".monthly-choice-impact, .outcome-preview")) return;
       const choice = event.choices?.[Number(button.dataset.choiceIndex)];
       const impact = buildChoiceImpact(choice);
       if (!impact.length) return;

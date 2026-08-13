@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.7.2
+ * 天子蒙尘：献帝模拟器 v2.8.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -34,6 +34,28 @@
     "xian_emperor_final_verdict_v250",
   ];
   const MAX_REPORTS = 10;
+  const ACTION_CATEGORIES = [
+    { id: "finance", name: "财政", icon: "帑", note: "国库、贡赋与民生" },
+    { id: "domestic", name: "内政", icon: "廷", note: "人物、官爵与朝仪" },
+    { id: "intrigue", name: "权谋", icon: "密", note: "密线、退路与风险" },
+    { id: "diplomacy", name: "外交", icon: "使", note: "曹氏与地方外镇" },
+  ];
+  const HIDDEN_STAT_NAMES = {
+    loyalNetwork: "忠汉网络",
+    leakRisk: "泄密风险",
+    peopleStability: "民间稳定",
+    externalBalance: "外部制衡",
+    escapeRoute: "安全退路",
+  };
+  const EVENT_ILLUSTRATIONS = {
+    relief: { file: "granary-relief.webp", alt: "汉末官署开仓放粮，官吏为灾民量取谷物", label: "民生赈济" },
+    treasury: { file: "treasury-crisis.webp", alt: "汉廷库房钱粮稀少，官员查阅度支簿册", label: "度支钱粮" },
+    secret: { file: "secret-edict.webp", alt: "深夜内廷灯下密封诏令，近侍静候传递", label: "宫中密议" },
+    envoy: { file: "regional-envoys.webp", alt: "外镇使者携贡物与奏疏进入汉廷朝堂", label: "外镇来使" },
+    guard: { file: "palace-guard.webp", alt: "暮色宫门加强戒备，宿卫查验来往使者", label: "宫禁警讯" },
+    military: { file: "military-dispatch.webp", alt: "风尘仆仆的军使在城门递交紧急军报", label: "军情飞报" },
+    court: { file: "court-memorial.webp", alt: "汉廷朝议中，大臣向天子呈递奏疏", label: "朝议奏报" },
+  };
 
   const STARTING_STATS = {
     authority: 34,
@@ -54,6 +76,8 @@
 
   let state = null;
   let modalConfirmHandler = null;
+  let activeActionCategory = null;
+  let actionCategoryPinned = false;
 
   const el = {};
 
@@ -201,23 +225,44 @@
       button.addEventListener("click", () => showFaction(button.dataset.factionId));
     });
 
-    el["action-grid"].innerHTML = DATA.actionCatalog
-      .filter((action) => action.id !== "edict")
-      .map(
-        (action) => `
-          <button class="action-button" type="button" data-action-id="${action.id}">
-            <span class="action-seal">${action.icon}</span>
-            <span>
-              <strong>${action.name}</strong>
-              <small>${action.description}</small>
-            </span>
-          </button>
-        `
-      )
-      .join("");
+    const commonActions = DATA.actionCatalog.filter((action) => action.id !== "edict");
+    el["action-grid"].innerHTML = `
+      <button class="action-recommendation" type="button" data-action-recommend>
+        <span>当前建议</span><strong>裁决奏报后生成</strong><small>系统会根据国库、宫禁与警戒推荐一项行动。</small>
+      </button>
+      <div class="action-category-tabs" role="tablist" aria-label="常用行动分类">
+        ${ACTION_CATEGORIES.map(category => `<button type="button" role="tab" data-action-category-tab="${category.id}" aria-selected="false"><i>${category.icon}</i><span>${category.name}</span></button>`).join("")}
+      </div>
+      <div class="action-category-groups">
+        ${ACTION_CATEGORIES.map(category => `
+          <section class="action-category-group" data-action-category-group="${category.id}" aria-label="${category.name}行动">
+            <header><strong>${category.name}</strong><small>${category.note}</small></header>
+            <div class="action-category-grid">
+              ${commonActions.filter(action => action.category === category.id).map(action => `
+                <button class="action-button" type="button" data-action-id="${action.id}">
+                  <span class="action-seal">${action.icon}</span>
+                  <span><strong>${action.name}</strong><small>${action.description}</small></span>
+                </button>`).join("")}
+            </div>
+          </section>`).join("")}
+      </div>`;
 
     el["action-grid"].querySelectorAll("[data-action-id]").forEach((button) => {
       button.addEventListener("click", () => openAction(button.dataset.actionId));
+    });
+    el["action-grid"].querySelectorAll("[data-action-category-tab]").forEach(button => {
+      button.addEventListener("click", () => {
+        activeActionCategory = button.dataset.actionCategoryTab;
+        actionCategoryPinned = true;
+        updateActionWorkspace();
+      });
+    });
+    el["action-grid"].querySelector("[data-action-recommend]")?.addEventListener("click", () => {
+      const recommendation = getRecommendedCommonAction();
+      activeActionCategory = getActionCategory(recommendation.actionId);
+      actionCategoryPinned = false;
+      updateActionWorkspace();
+      el["action-grid"].querySelector(`[data-action-id="${recommendation.actionId}"]`)?.focus();
     });
   }
 
@@ -361,6 +406,7 @@
     renderChroniclePreview();
     updateControls();
     renderDangerBanner();
+    updateActionWorkspace();
   }
 
   function renderHeader() {
@@ -378,7 +424,7 @@
         const value = state.stats[key];
         const status = getStatStatus(key, value);
         return `
-          <article class="stat-card ${status.className}" title="${meta.description}">
+          <article class="stat-card ${status.className}" title="${meta.description}" data-stat-key="${key}">
             <div class="stat-heading">
               <span class="stat-seal">${meta.icon}</span>
               <span>${meta.name}</span>
@@ -389,11 +435,42 @@
         )}">
               <span style="width:${clamp(value, 0, 100)}%"></span>
             </div>
-            <small>${status.label}</small>
+            <div class="stat-footer"><small>${status.label}</small>${renderStatRemedy(key, value)}</div>
           </article>
         `;
       })
       .join("");
+    el["stats-grid"].querySelectorAll("[data-stat-remedy]").forEach(button => {
+      button.addEventListener("click", () => goToStatRemedy(button.dataset.statRemedy));
+    });
+  }
+
+  function getStatRemedy(key, value) {
+    if (key === "treasury" && value <= 32) return { actionId: "revenue", label: "筹措钱粮" };
+    if (key === "security" && value <= 32) return { actionId: "appease", label: "稳住宫禁" };
+    if (key === "prestige" && value <= 32) return { actionId: "ritual", label: "重张汉仪" };
+    if (key === "officials" && value <= 32) return { actionId: "audience", label: "召见百官" };
+    if (key === "authority" && value <= 32) return { actionId: "appointment", label: "整顿中枢" };
+    if (key === "caoAlert" && value >= 68) return { actionId: "appease", label: "降低警戒" };
+    return null;
+  }
+
+  function renderStatRemedy(key, value) {
+    const remedy = getStatRemedy(key, value);
+    return remedy ? `<button type="button" data-stat-remedy="${remedy.actionId}" title="前往常用行动处理${DATA.statMeta[key]?.name || key}">${remedy.label}<span aria-hidden="true">→</span></button>` : "";
+  }
+
+  function goToStatRemedy(actionId) {
+    if (!state.eventResolved) {
+      document.querySelector(".event-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      showToast("请先裁决本月奏报，再处理数值危机。", "warning");
+      return;
+    }
+    activeActionCategory = getActionCategory(actionId);
+    actionCategoryPinned = true;
+    updateActionWorkspace();
+    document.querySelector(".action-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => openAction(actionId), 180);
   }
 
   function getStatStatus(key, value) {
@@ -410,6 +487,45 @@
     if (value <= 60) return { className: "balanced", label: "勉强维持" };
     if (value <= 82) return { className: "good", label: "局势有利" };
     return { className: "excellent", label: "根基稳固" };
+  }
+
+  function getActionCategory(actionId) {
+    return DATA.actionCatalog.find(action => action.id === actionId)?.category || "domestic";
+  }
+
+  function getRecommendedCommonAction() {
+    const stats = state?.stats || {};
+    const hidden = state?.hidden || {};
+    if ((stats.caoAlert || 0) >= 72) return { actionId: "appease", label: "安抚曹氏", reason: "曹氏警戒已接近危险线，先换取政治空间。" };
+    if ((stats.treasury || 0) <= 24) return { actionId: "revenue", label: "筹措钱粮", reason: "国库偏低，先补足维持朝廷运转的钱粮。" };
+    if ((stats.security || 0) <= 28) return { actionId: "appease", label: "安抚曹氏", reason: "宫禁已经松动，先以让步争取宿卫与整顿时间。" };
+    if ((hidden.peopleStability || 0) <= 35 && (stats.treasury || 0) >= 28) return { actionId: "relief", label: "赈济减赋", reason: "民间稳定偏低，继续拖延会反噬威望与宫廷安全。" };
+    if ((hidden.leakRisk || 0) >= 55) return { actionId: "audience", label: "召见人物", reason: "泄密风险偏高，暂缓密令并修补关键关系。" };
+    if ((hidden.externalBalance || 0) <= 35) return { actionId: "regional", label: "结交外镇", reason: "朝廷缺少外部制衡，可借地方承认牵制一方独大。" };
+    if ((stats.authority || 0) <= 45) return { actionId: "appointment", label: "任免封赏", reason: "皇权偏弱，可借官爵重新建立中枢存在感。" };
+    return { actionId: "audience", label: "召见人物", reason: "当前没有迫近危机，适合经营关键人物关系。" };
+  }
+
+  function updateActionWorkspace() {
+    if (!el["action-grid"] || !state) return;
+    const recommendation = getRecommendedCommonAction();
+    const recommendationCategory = getActionCategory(recommendation.actionId);
+    if (!activeActionCategory || (!actionCategoryPinned && activeActionCategory !== recommendationCategory)) {
+      activeActionCategory = recommendationCategory;
+    }
+    el["action-grid"].querySelectorAll("[data-action-category-tab]").forEach(button => {
+      const active = button.dataset.actionCategoryTab === activeActionCategory;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    el["action-grid"].querySelectorAll("[data-action-category-group]").forEach(group => {
+      group.hidden = group.dataset.actionCategoryGroup !== activeActionCategory;
+    });
+    el["action-grid"].querySelectorAll("[data-action-id]").forEach(button => {
+      button.classList.toggle("recommended-action", button.dataset.actionId === recommendation.actionId);
+    });
+    const banner = el["action-grid"].querySelector("[data-action-recommend]");
+    if (banner) banner.innerHTML = `<span>当前建议 · ${ACTION_CATEGORIES.find(item => item.id === recommendationCategory)?.name || "御前"}</span><strong>${recommendation.label}</strong><small>${recommendation.reason}</small>`;
   }
 
   function renderCharacters() {
@@ -460,6 +576,7 @@
             <span>
               <strong>${choice.label}</strong>
               <small>${choice.hint}</small>
+              ${renderOutcomePreview(choice)}
             </span>
           </button>
         `
@@ -620,7 +737,7 @@
     const noActions = state.actionPoints <= 0 || state.ended;
     el["issue-decree-btn"].disabled = noActions || !state.eventResolved;
     el["decree-input"].disabled = noActions || !state.eventResolved;
-    el["action-grid"].querySelectorAll("button").forEach((button) => {
+    el["action-grid"].querySelectorAll(".action-button").forEach((button) => {
       button.disabled = noActions || !state.eventResolved;
     });
     el["end-turn-btn"].disabled = !state.eventResolved || state.ended;
@@ -666,9 +783,9 @@
           ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">召见方式</label>
-        <div class="radio-row">
-          <label><input type="radio" name="audience-mode" value="public" checked> 公开召见</label>
-          <label><input type="radio" name="audience-mode" value="private"> 私下召见</label>
+        <div class="option-cards">
+          <label><input type="radio" name="audience-mode" value="public" checked><span><strong>公开召见</strong>${renderOutcomePreview({ effects: { authority: 2, officials: 2 } }, ["关系 +4", "对象身份会调整结果"])}</span></label>
+          <label><input type="radio" name="audience-mode" value="private"><span><strong>私下召见</strong>${renderOutcomePreview({ effects: { security: -1, caoAlert: 2 }, hidden: { leakRisk: 2 } }, ["关系 +7", "对象身份会调整结果"])}</span></label>
         </div>
       `,
       confirmText: "下令召见",
@@ -726,6 +843,11 @@
           <option value="office">加授官职（强化关系）</option>
           <option value="title">赐爵增秩（影响最大）</option>
         </select>
+        <div class="outcome-summary-list">
+          <p><strong>下诏褒奖</strong>${renderOutcomePreview({ effects: { authority: 2, prestige: 2, treasury: -1, caoAlert: 1 } }, ["关系 +5"])}</p>
+          <p><strong>加授官职</strong>${renderOutcomePreview({ effects: { authority: 4, officials: 2, treasury: -3, caoAlert: 4 } }, ["关系 +9"])}</p>
+          <p><strong>赐爵增秩</strong>${renderOutcomePreview({ effects: { prestige: 4, authority: 3, treasury: -5, caoAlert: 6 } }, ["关系 +13", "对象身份会调整警戒"])}</p>
+        </div>
       `,
       confirmText: "颁下任命",
       onConfirm: () => {
@@ -782,6 +904,11 @@
           <option value="support">争取关键时刻支持</option>
           <option value="escape">筹备安全退路</option>
         </select>
+        <div class="outcome-summary-list danger-list">
+          <p><strong>建立情报线</strong>${renderOutcomePreview({ effects: { security: -3, caoAlert: 7 }, hidden: { loyalNetwork: 9, leakRisk: 9 } }, ["关系 +7"])}</p>
+          <p><strong>争取支持</strong>${renderOutcomePreview({ effects: { security: -3, caoAlert: 7, authority: 2 }, hidden: { loyalNetwork: 11, leakRisk: 11 } }, ["关系 +7"])}</p>
+          <p><strong>筹备退路</strong>${renderOutcomePreview({ effects: { security: -4, caoAlert: 7 }, hidden: { loyalNetwork: 7, leakRisk: 8, escapeRoute: 9, externalBalance: 3 } }, ["关系 +7", "外镇对象会额外提高制衡与警戒"])}</p>
+        </div>
       `,
       confirmText: "发出密令",
       onConfirm: () => {
@@ -871,9 +998,9 @@
         <p class="modal-note">朝廷没有无代价的钱粮。选择一条筹措路线，本次会消耗一次御前行动。</p>
         ${bonusText}
         <div class="option-cards">
-          <label><input type="radio" name="revenue-method" value="audit" checked><span><strong>核减宫中冗费</strong><small>国库 +${4 + (emergency ? 2 : 0)}，百官支持 -2</small></span></label>
-          <label><input type="radio" name="revenue-method" value="tribute"><span><strong>催办州郡贡赋</strong><small>国库 +${7 + (emergency ? 2 : 0)}，威望与民间稳定下降</small></span></label>
-          <label><input type="radio" name="revenue-method" value="borrow"><span><strong>向司空府借调</strong><small>国库 +${10 + (emergency ? 2 : 0)}，皇权 -5、外部制衡下降</small></span></label>
+          <label><input type="radio" name="revenue-method" value="audit" checked><span><strong>核减宫中冗费</strong>${renderOutcomePreview(buildTreasuryActionPackage("audit", state.stats.treasury))}</span></label>
+          <label><input type="radio" name="revenue-method" value="tribute"><span><strong>催办州郡贡赋</strong>${renderOutcomePreview(buildTreasuryActionPackage("tribute", state.stats.treasury))}</span></label>
+          <label><input type="radio" name="revenue-method" value="borrow"><span><strong>向司空府借调</strong>${renderOutcomePreview(buildTreasuryActionPackage("borrow", state.stats.treasury))}</span></label>
         </div>
       `,
       confirmText: "施行筹措",
@@ -897,14 +1024,15 @@
   }
 
   function openReliefModal() {
+    const efficiency = clamp((state.stats.authority + state.stats.officials) / 160, 0.45, 1.15);
     openModal({
       title: "赈济减赋",
       body: `
         <p class="modal-note">选择赈济规模。执行率会受到当前皇权与百官支持影响。</p>
         <div class="option-cards">
-          <label><input type="radio" name="relief-level" value="small" checked><span><strong>局部赈济</strong><small>国库 -4，风险较低</small></span></label>
-          <label><input type="radio" name="relief-level" value="medium"><span><strong>州郡减赋</strong><small>国库 -8，威望提升明显</small></span></label>
-          <label><input type="radio" name="relief-level" value="large"><span><strong>大开仓廪</strong><small>国库 -13，强力收拢民心</small></span></label>
+          <label><input type="radio" name="relief-level" value="small" checked><span><strong>局部赈济</strong>${renderOutcomePreview({ effects: { treasury: -4, prestige: Math.round(3 * efficiency), officials: 1, caoAlert: 1 }, hidden: { peopleStability: Math.round(4 * efficiency) } })}</span></label>
+          <label><input type="radio" name="relief-level" value="medium"><span><strong>州郡减赋</strong>${renderOutcomePreview({ effects: { treasury: -8, prestige: Math.round(6 * efficiency), officials: 3, caoAlert: 1 }, hidden: { peopleStability: Math.round(8 * efficiency) } })}</span></label>
+          <label><input type="radio" name="relief-level" value="large"><span><strong>大开仓廪</strong>${renderOutcomePreview({ effects: { treasury: -13, prestige: Math.round(10 * efficiency), officials: 4, caoAlert: 3 }, hidden: { peopleStability: Math.round(13 * efficiency) } })}</span></label>
         </div>
       `,
       confirmText: "施行赈济",
@@ -948,14 +1076,14 @@
       title: "整饬朝仪",
       body: `
         <p class="modal-note">礼制不会直接产生军队，却能提醒天下：官爵、讨伐与秩序仍需来自汉廷。</p>
-        <select id="modal-ritual-type" class="modal-select">
-          <option value="court">恢复大朝会</option>
-          <option value="temple">祭告宗庙</option>
-          <option value="lecture">开设经筵</option>
-        </select>
+        <div class="option-cards">
+          <label><input type="radio" name="ritual-type" value="court" checked><span><strong>恢复大朝会</strong>${renderOutcomePreview({ effects: { authority: 5, officials: 4, treasury: -4, caoAlert: 3 } })}</span></label>
+          <label><input type="radio" name="ritual-type" value="temple"><span><strong>祭告宗庙</strong>${renderOutcomePreview({ effects: { prestige: 7, authority: 3, treasury: -5, caoAlert: 2 } })}</span></label>
+          <label><input type="radio" name="ritual-type" value="lecture"><span><strong>开设经筵</strong>${renderOutcomePreview({ effects: { officials: 6, authority: 3, treasury: -3, caoAlert: 2 } })}</span></label>
+        </div>
       `,
       confirmText: "举行仪典",
-      onConfirm: () => performRitual(document.getElementById("modal-ritual-type").value),
+      onConfirm: () => performRitual(document.querySelector('input[name="ritual-type"]:checked').value),
     });
   }
 
@@ -994,9 +1122,9 @@
       body: `
         <p class="modal-note">降低曹氏警戒能换取时间，但让步太多会削弱皇权。</p>
         <div class="option-cards">
-          <label><input type="radio" name="appease-type" value="praise" checked><span><strong>公开褒奖</strong><small>小幅降警戒</small></span></label>
-          <label><input type="radio" name="appease-type" value="military"><span><strong>暂授军务便宜</strong><small>安全提高，皇权下降</small></span></label>
-          <label><input type="radio" name="appease-type" value="banquet"><span><strong>赐宴修好</strong><small>消耗国库，改善关系</small></span></label>
+          <label><input type="radio" name="appease-type" value="praise" checked><span><strong>公开褒奖</strong>${renderOutcomePreview({ effects: { caoAlert: -7, prestige: 1, authority: -1 } }, ["曹操关系 +6"])}</span></label>
+          <label><input type="radio" name="appease-type" value="military"><span><strong>暂授军务便宜</strong>${renderOutcomePreview({ effects: { caoAlert: -11, security: 6, authority: -6 } }, ["曹操关系 +8"])}</span></label>
+          <label><input type="radio" name="appease-type" value="banquet"><span><strong>赐宴修好</strong>${renderOutcomePreview({ effects: { caoAlert: -8, security: 3, treasury: -5, officials: 1 } }, ["曹操关系 +7"])}</span></label>
         </div>
       `,
       confirmText: "施行安抚",
@@ -1048,16 +1176,16 @@
           ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">交涉方式</label>
-        <select id="modal-regional-type" class="modal-select">
-          <option value="edict">颁诏慰劳</option>
-          <option value="envoy">派遣密使</option>
-          <option value="tribute">以官爵换取贡赋</option>
-        </select>
+        <div class="option-cards">
+          <label><input type="radio" name="regional-type" value="edict" checked><span><strong>颁诏慰劳</strong>${renderOutcomePreview({ effects: { prestige: 3, authority: 1, caoAlert: 3, treasury: -1 }, hidden: { externalBalance: 4 } }, ["关系 +6"])}</span></label>
+          <label><input type="radio" name="regional-type" value="envoy"><span><strong>派遣密使</strong>${renderOutcomePreview({ effects: { security: -2, caoAlert: 7, treasury: -3 }, hidden: { externalBalance: 8, leakRisk: 5 } }, ["关系 +9"])}</span></label>
+          <label><input type="radio" name="regional-type" value="tribute"><span><strong>以官爵换取贡赋</strong>${renderOutcomePreview({ effects: { treasury: 7, authority: -1, prestige: 2, caoAlert: 5 }, hidden: { externalBalance: 5 } }, ["关系 +7"])}</span></label>
+        </div>
       `,
       confirmText: "派出使者",
       onConfirm: () => {
         const targetId = document.getElementById("modal-character-select").value;
-        const type = document.getElementById("modal-regional-type").value;
+        const type = document.querySelector('input[name="regional-type"]:checked').value;
         performRegional(targetId, type);
       },
     });
@@ -1479,20 +1607,28 @@
   }
 
   function renderEventIllustration(event) {
-    const searchText = `${event.category || ""} ${event.title || ""} ${event.text || ""}`;
-    const isMilitary = /军|战|兵|征|叛|围|边|烽|粮道|行营|武备/.test(searchText);
     const image = el["event-illustration-image"];
     const caption = el["event-illustration-caption"];
     if (!image || !caption) return;
+    const scene = chooseEventIllustration(event);
+    const nextSrc = `assets/images/illustrations/${scene.file}`;
+    if (!image.src.endsWith(nextSrc)) image.src = nextSrc;
+    image.alt = scene.alt;
+    caption.textContent = `御前月报 · ${scene.label}`;
+    const figure = image.closest(".event-illustration");
+    if (figure) figure.dataset.scene = scene.id;
+  }
 
-    image.src = isMilitary
-      ? "assets/images/illustrations/army-crossing.webp"
-      : "assets/images/illustrations/court-memorial.webp";
-    image.alt = isMilitary
-      ? "汉末军团渡河行进，远山关隘烽燧明灭"
-      : "汉廷朝议中，大臣向天子呈递奏疏";
-    caption.textContent = `御前月报 · ${event.category || (isMilitary ? "军情" : "朝议")}`;
-    image.closest(".event-illustration")?.classList.toggle("is-military", isMilitary);
+  function chooseEventIllustration(event = {}) {
+    const searchText = `${event.category || ""} ${event.title || ""} ${event.text || ""}`;
+    const id = /赈|灾民|流民|饥|减赋|开仓|救济|民变/.test(searchText) ? "relief"
+      : /国库|钱粮|贡赋|赋税|粮价|仓廪|俸粮|度支|腐败/.test(searchText) ? "treasury"
+      : /密诏|密令|伪诏|泄密|耳目|密谋|内应|暗中|私信/.test(searchText) ? "secret"
+      : /使者|外镇|江东|河北|荆州|袁绍|刘表|孙策|贡物|外交/.test(searchText) ? "envoy"
+      : /宫门|宿卫|宫禁|禁军|软禁|刺客|宫廷安全|换防/.test(searchText) ? "guard"
+      : /军|战|兵|征|叛|围|边|烽|粮道|行营|武备|捷报|盗贼/.test(searchText) ? "military"
+      : "court";
+    return { id, ...EVENT_ILLUSTRATIONS[id] };
   }
 
   function displayEnding(ending) {
@@ -1968,6 +2104,22 @@
     return value > 0 ? `+${value}` : String(value);
   }
 
+  function renderOutcomePreview(pkg = {}, extras = []) {
+    const parts = [];
+    Object.entries(pkg.effects || {}).forEach(([key, delta]) => {
+      if (!Number(delta)) return;
+      const unfavorable = key === "caoAlert" ? delta > 0 : delta < 0;
+      parts.push(`<span class="${unfavorable ? "cost" : "gain"}">${DATA.statMeta[key]?.name || key} ${formatSigned(delta)}</span>`);
+    });
+    Object.entries(pkg.hidden || {}).forEach(([key, delta]) => {
+      if (!Number(delta)) return;
+      const unfavorable = key === "leakRisk" ? delta > 0 : delta < 0;
+      parts.push(`<span class="${unfavorable ? "cost" : "gain"}">${HIDDEN_STAT_NAMES[key] || key} ${formatSigned(delta)}</span>`);
+    });
+    extras.filter(Boolean).forEach(text => parts.push(`<span class="neutral">${escapeHtml(text)}</span>`));
+    return parts.length ? `<small class="outcome-preview">${parts.join("")}</small>` : "";
+  }
+
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, Number(value) || 0));
   }
@@ -2030,6 +2182,7 @@
     getScenarioById: (id) => JSON.parse(JSON.stringify(getScenarioById(id))),
     calculateScenarioChallenge: (scenario, gameState) => calculateScenarioChallenge(scenario, gameState),
     buildTreasuryActionPackage: (method, currentTreasury) => buildTreasuryActionPackage(method, currentTreasury),
+    chooseEventIllustration: event => ({ ...chooseEventIllustration(event) }),
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
   });
 })();

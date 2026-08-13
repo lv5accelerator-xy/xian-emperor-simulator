@@ -1,4 +1,4 @@
-"""Build the self-hosted v2.7.1 game font subsets.
+"""Build the self-hosted game font subsets.
 
 The source fonts are intentionally not committed because they are large. Download the
 official OFL files described in assets/fonts/README.md, then pass their paths here.

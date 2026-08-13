@@ -1,11 +1,11 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.7.2
+ * 天子蒙尘：献帝模拟器 v2.8.0
  * 游戏数据：人物、势力、事件与行动说明
  * 本作是历史题材架空模拟，数值与事件均经过游戏化处理。
  */
 
 window.GAME_DATA = {
-  version: "2.7.2",
+  version: "2.8.0",
   title: "天子蒙尘：献帝模拟器",
   scenarios: [
     {
@@ -316,54 +316,63 @@ window.GAME_DATA = {
       id: "edict",
       name: "拟写圣旨",
       icon: "诏",
+      category: "statecraft",
       description: "自由输入命令，由本地规则解析为赈济、任官、外交、调查、整军或礼制行动。",
     },
     {
       id: "audience",
       name: "召见人物",
       icon: "召",
+      category: "domestic",
       description: "选择一名人物私下或公开召见，改善关系并获取政治反馈。",
     },
     {
       id: "appointment",
       name: "任免封赏",
       icon: "官",
+      category: "domestic",
       description: "以官职和爵位交换支持。可提升皇权，但容易引发曹氏警戒。",
     },
     {
       id: "secret",
       name: "密令联络",
       icon: "密",
+      category: "intrigue",
       description: "扩大忠汉网络，代价是增加泄密风险与宫廷危险。",
     },
     {
       id: "revenue",
       name: "筹措钱粮",
       icon: "计",
+      category: "finance",
       description: "补充国库。可核减冗费、催办贡赋或向司空府借调，各有政治代价。",
     },
     {
       id: "relief",
       name: "赈济减赋",
       icon: "民",
+      category: "finance",
       description: "消耗国库换取威望与民间稳定，执行效果受皇权影响。",
     },
     {
       id: "ritual",
       name: "整饬朝仪",
       icon: "礼",
+      category: "domestic",
       description: "利用礼制、祭祀与朝会强化汉廷存在感。",
     },
     {
       id: "appease",
       name: "安抚曹氏",
       icon: "和",
+      category: "diplomacy",
       description: "降低警戒、换取安全与资源，但可能削弱你的独立形象。",
     },
     {
       id: "regional",
       name: "结交外镇",
       icon: "使",
+      category: "diplomacy",
       description: "联络地方诸侯，以朝廷名义制造外部制衡。",
     },
   ],

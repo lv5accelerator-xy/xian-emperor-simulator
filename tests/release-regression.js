@@ -82,7 +82,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.7.2";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.8.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -98,6 +98,11 @@ assert.match(read("index.html"), /campaign-evolution\.js\?v=1\.5\.1/);
 assert.match(read("index.html"), /src\/ui\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /src\/ui\.js\?v=2\.6\.1/);
 assert.match(read("index.html"), /src\/visual-refresh\.css\?v=2\.7\.1/);
+assert.match(read("index.html"), /src\/ui-refresh-v280\.css\?v=2\.8\.0/);
+assert.match(read("index.html"), /src\/ui-refresh-v280\.js\?v=2\.8\.0/);
+assert.match(read("src/ui-refresh-v280.css"), /@media \(max-width: 820px\)[\s\S]+\.mobile-imperial-nav/);
+assert.match(read("src/ui-refresh-v280.css"), /\.topbar-v110 \.utility-nav-upgraded\s*{\s*display:\s*none/);
+assert.match(read("src/ui-refresh-v280.js"), /data-mobile-destination="month"[\s\S]+data-mobile-destination="actions"[\s\S]+data-mobile-destination="map"[\s\S]+data-mobile-destination="archive"/);
 assert.match(read("index.html"), /preload[^>]+zcool-xiaowei-game\.woff2/);
 for (const font of ["zcool-xiaowei-game.woff2", "noto-serif-sc-game.woff2", "noto-sans-sc-game.woff2"]) {
   const file = path.join(root, "assets", "fonts", font);
@@ -107,8 +112,13 @@ for (const font of ["zcool-xiaowei-game.woff2", "noto-serif-sc-game.woff2", "not
 for (const license of ["ZCOOL-XiaoWei-OFL.txt", "Noto-Serif-SC-OFL.txt", "Noto-Sans-SC-OFL.txt"]) {
   assert.ok(fs.existsSync(path.join(root, "assets", "fonts", "licenses", license)), `${license} should be included`);
 }
-for (const illustration of ["opening-palace.webp", "court-memorial.webp", "army-crossing.webp", "ending-river-mountains.webp"]) {
+for (const illustration of [
+  "opening-palace.webp", "court-memorial.webp", "army-crossing.webp", "ending-river-mountains.webp",
+  "treasury-crisis.webp", "granary-relief.webp", "secret-edict.webp", "regional-envoys.webp",
+  "palace-guard.webp", "military-dispatch.webp",
+]) {
   assert.ok(fs.existsSync(path.join(root, "assets", "images", "illustrations", illustration)), `${illustration} should be included`);
+  assert.ok(fs.statSync(path.join(root, "assets", "images", "illustrations", illustration)).size > 40000, `${illustration} should contain a real WebP illustration`);
 }
 for (const resource of [
   "command-center.css?v=2.5.0-r2", "command-center.js?v=2.5.0-r2",
@@ -190,6 +200,21 @@ assert.ok(courtApi.petitions.some(item => item.type === "negotiation"), "dynamic
 const game = loadGameApi();
 assert.equal(game.data.version, expectedVersion, "game data version should match the release");
 assert.ok(game.data.actionCatalog.some(item => item.id === "revenue"), "common actions should include treasury fundraising");
+assert.deepEqual(
+  Array.from(new Set(game.data.actionCatalog.filter(item => item.id !== "edict").map(item => item.category))).sort(),
+  ["diplomacy", "domestic", "finance", "intrigue"],
+  "common actions should be divided into four readable categories",
+);
+for (const [title, expectedFile] of [
+  ["国库告急", "treasury-crisis.webp"],
+  ["开仓赈济", "granary-relief.webp"],
+  ["深夜密诏", "secret-edict.webp"],
+  ["江东使者入朝", "regional-envoys.webp"],
+  ["宫门换防", "palace-guard.webp"],
+  ["边郡军报", "military-dispatch.webp"],
+]) {
+  assert.equal(game.api.chooseEventIllustration({ title, text: title }).file, expectedFile, `${title} should use ${expectedFile}`);
+}
 const auditRevenue = game.api.buildTreasuryActionPackage("audit", 40);
 const emergencyRevenue = game.api.buildTreasuryActionPackage("tribute", 12);
 const borrowedRevenue = game.api.buildTreasuryActionPackage("borrow", 30);
