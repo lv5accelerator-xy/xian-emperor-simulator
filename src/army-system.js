@@ -317,7 +317,12 @@
     const relation = Number(coreState.relations?.[army.commander] ?? 55);
     const ownerTrust = Number(strategyState?.strategies?.[army.owner]?.trust ?? 50);
     const courtBonus = army.owner === "court" ? 20 : 0;
-    const execution = clamp(18 + Number(coreState.stats.authority || 0) * .32 + Number(coreState.stats.prestige || 0) * .2 + relation * .12 + ownerTrust * .1 + courtBonus, 25, 96);
+    const treasury = Number(coreState.stats.treasury || 0);
+    const courtFactions = Object.values(window.XianCourtPolitics?.diagnostics?.()?.factions || {});
+    const factionTension = courtFactions.length ? Math.max(...courtFactions.map(item => Number(item.tension || 0))) : 45;
+    const treasuryModifier = clamp((treasury - 45) * .14, -9, 6);
+    const politicsModifier = clamp((55 - factionTension) * .1, -7, 3);
+    const execution = clamp(18 + Number(coreState.stats.authority || 0) * .32 + Number(coreState.stats.prestige || 0) * .2 + relation * .12 + ownerTrust * .1 + courtBonus + treasuryModifier + politicsModifier, 25, 96);
     const estimatedSupplyCost = routeIds.reduce((sum, id) => {
       const def = STRATEGY_DATA.routes.find(route => route.id === id);
       const current = strategyState?.routes?.[id] || {};
@@ -326,6 +331,8 @@
       return sum + (/栈道|山道|关道|远道/.test(def?.type || "") ? 8 : /水路/.test(def?.type || "") ? 6 : 5) + blockedCost + weatherCost;
     }, task === "supply" ? 2 : 0);
     const warnings = [];
+    if (treasury < 25) warnings.push("国库不足会削弱军令执行与沿途转运");
+    if (factionTension >= 72) warnings.push("朝中派系张力过高，军令可能遭遇封驳");
     if (routeStates.some(route => Number(route.blockadedUntil || 0) >= Number(coreState.turn || 0))) warnings.push("沿途存在道路封锁，军团可能停滞");
     if (maxPressure >= 75) warnings.push("沿途存在高压战线");
     if (minSupply <= 28) warnings.push("至少一段军路补给困难");
@@ -1342,6 +1349,24 @@
   function logIcon(type) { return { attack: "攻", support: "援", advance: "调", defend: "守", supply: "粮", ceasefire: "和", retreat: "退", battle: "战", siege: "围", capture: "城", warning: "警", system: "籍" }[type] || "军"; }
   function formatNumber(value) { return Math.max(0, Math.round(Number(value) || 0)).toLocaleString("zh-CN"); }
 
+  function applyCausalEffects(pkg = {}) {
+    if (!state?.armies) return 0;
+    const owners = Array.isArray(pkg.owners) && pkg.owners.length ? pkg.owners : ["court"];
+    const armies = Object.values(state.armies).filter(army => owners.includes(army.owner) && army.status !== "destroyed");
+    armies.forEach(army => {
+      ["morale", "supply", "training", "loyalty", "fatigue"].forEach(key => {
+        if (Number.isFinite(Number(pkg[key]))) army[key] = clamp(Number(army[key] || 0) + Number(pkg[key]), 0, 100);
+      });
+      army.lastChange = pkg.reason || "朝局处置影响军中";
+    });
+    if (armies.length) {
+      addLog(Number(coreState?.turn || state.lastProcessedTurn || 1), "system", `${pkg.reason || "朝局处置"}，影响${armies.length}支军团。`);
+      saveState();
+      renderAll();
+    }
+    return armies.length;
+  }
+
   window.XianArmySystem = Object.freeze({
     choosePrimaryOrder,
     calculateCombatPower,
@@ -1352,6 +1377,7 @@
     previewMapOrder,
     issueMapOrder,
     applyCampaignAssignment,
+    applyCausalEffects,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
     open: openOverlay,
   });

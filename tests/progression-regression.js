@@ -94,6 +94,6 @@ assert.equal(loadEndingApi("guard").getPathEnding({
 const gameSource = read("src/game.js");
 assert.match(gameSource, /xian-emperor-full-save/, "v1.0 should export a full save envelope");
 assert.match(gameSource, /performExternalAction/, "path actions should use the core action economy");
-assert.match(gameSource, /schemaVersion:\s*100/, "old saves should migrate to schema 100");
+assert.match(gameSource, /schemaVersion:\s*101/, "old saves should migrate to schema 101");
 
 console.log("imperial progression regression ok");

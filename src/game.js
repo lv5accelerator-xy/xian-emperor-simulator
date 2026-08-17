@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.8.0
+ * 天子蒙尘：献帝模拟器 v2.9.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -73,6 +73,49 @@
     externalBalance: 18,
     escapeRoute: 0,
   };
+
+  function createInitialCausality() {
+    return {
+      version: 290,
+      pending: [],
+      history: [],
+      processedEventIds: [],
+      metrics: {
+        battles: 0,
+        courtVictories: 0,
+        courtDefeats: 0,
+        citiesTaken: 0,
+        citiesLost: 0,
+        lastBattleTurn: 0,
+        lastCaptureTurn: 0,
+      },
+      lastMonthResolved: 0,
+      updatedAt: null,
+    };
+  }
+
+  function normalizeCausality(value) {
+    const base = createInitialCausality();
+    const current = value && typeof value === "object" ? value : {};
+    return {
+      ...base,
+      ...current,
+      version: 290,
+      pending: Array.isArray(current.pending) ? current.pending.slice(0, 16) : [],
+      history: Array.isArray(current.history) ? current.history.slice(0, 36) : [],
+      processedEventIds: Array.isArray(current.processedEventIds) ? current.processedEventIds.slice(-80) : [],
+      metrics: { ...base.metrics, ...(current.metrics || {}) },
+    };
+  }
+
+  function allEvents() {
+    return [
+      ...DATA.fixedEvents,
+      ...DATA.randomEvents,
+      ...(DATA.causalEvents || []),
+      ...Object.values(DATA.scenarioEvents || {}),
+    ];
+  }
 
   let state = null;
   let modalConfirmHandler = null;
@@ -291,7 +334,7 @@
 
     return {
       version: DATA.version,
-      schemaVersion: 100,
+      schemaVersion: 101,
       scenarioId: scenario.id,
       difficulty,
       turn: 1,
@@ -310,6 +353,7 @@
       chronicle: [],
       totalActions: 0,
       edictsIssued: 0,
+      causality: createInitialCausality(),
       ended: false,
       ending: null,
       challengeRecorded: false,
@@ -357,13 +401,17 @@
       scenarioId,
       createdAt: state.createdAt,
     });
-    const directedEvent = [...DATA.fixedEvents, ...DATA.randomEvents, ...Object.values(DATA.scenarioEvents || {})]
+    const directedEvent = allEvents()
       .find(event => event.id === directedEventId);
     if (directedEvent) return directedEvent;
     const scenarioOpening = state.turn === 1 ? DATA.scenarioEvents?.[scenarioId] : null;
     if (scenarioOpening) return scenarioOpening;
     const fixed = scenarioId === "jianan_196" ? DATA.fixedEvents.find((event) => event.fixedTurn === state.turn) : null;
     if (fixed) return fixed;
+
+    const causalEventId = window.XianCausalCourt?.selectEventId?.(JSON.parse(JSON.stringify(state)));
+    const causalEvent = (DATA.causalEvents || []).find(event => event.id === causalEventId);
+    if (causalEvent && !state.recentEventIds.includes(causalEvent.id)) return causalEvent;
 
     const scenarioPools = {
       zhongping_189: ["forged_edict", "old_official_petition", "palace_rumor", "seal_ceremony", "court_banquet", "secret_letter", "imperial_clothing"],
@@ -392,7 +440,7 @@
   }
 
   function getCurrentEvent() {
-    return [...DATA.fixedEvents, ...DATA.randomEvents, ...Object.values(DATA.scenarioEvents || {})].find((event) => event.id === state.currentEventId);
+    return allEvents().find((event) => event.id === state.currentEventId);
   }
 
   function renderAll() {
@@ -1402,6 +1450,18 @@
     checkImmediateEnding();
     saveGame(true);
     renderAll();
+    if (pkg.causal !== false) {
+      document.dispatchEvent(new CustomEvent("xian:external-action-completed", { detail: {
+        id: `action-${state.createdAt}-${state.turn}-${state.totalActions}`,
+        title: pkg.title,
+        text: pkg.text,
+        effects: { ...(pkg.effects || {}) },
+        hidden: { ...(pkg.hidden || {}) },
+        relations: { ...(pkg.relations || {}) },
+        turn: state.turn,
+        createdAt: state.createdAt,
+      } }));
+    }
   }
 
   function endTurn() {
@@ -1862,7 +1922,7 @@
       ...createInitialState(save.difficulty || "standard", save.scenarioId || "jianan_196"),
       ...save,
       version: DATA.version,
-      schemaVersion: 100,
+      schemaVersion: 101,
       scenarioId: save.scenarioId || "jianan_196",
       stats: { ...STARTING_STATS, ...(save.stats || {}) },
       hidden: { ...STARTING_HIDDEN, ...(save.hidden || {}) },
@@ -1870,6 +1930,7 @@
         ...Object.fromEntries(DATA.characters.map((character) => [character.id, character.relation])),
         ...(save.relations || {}),
       },
+      causality: normalizeCausality(save.causality),
     };
     if (!migrated.currentEventId && !migrated.ended) {
       const fixed = DATA.fixedEvents.find((event) => event.fixedTurn === migrated.turn);
@@ -2154,7 +2215,28 @@
     checkImmediateEnding();
     saveGame(true);
     renderAll();
+    if (pkg.causal !== false) {
+      document.dispatchEvent(new CustomEvent("xian:external-package-applied", { detail: {
+        id: pkg.causalId || `external-${state.createdAt}-${state.turn}-${Date.now()}`,
+        title: pkg.report?.title || pkg.title || "朝局变化",
+        text: pkg.report?.text || pkg.text || pkg.chronicle || "",
+        effects: { ...(pkg.effects || {}) },
+        hidden: { ...(pkg.hidden || {}) },
+        relations: { ...(pkg.relations || {}) },
+        turn: state.turn,
+        createdAt: state.createdAt,
+      } }));
+    }
     return { applied: true, changes };
+  }
+
+  function updateCausality(next) {
+    if (!state || state.ended) return false;
+    state.causality = normalizeCausality(next);
+    state.causality.updatedAt = new Date().toISOString();
+    saveGame(true);
+    renderAll();
+    return true;
   }
 
   function performExternalAction(pkg = {}) {
@@ -2183,6 +2265,7 @@
     calculateScenarioChallenge: (scenario, gameState) => calculateScenarioChallenge(scenario, gameState),
     buildTreasuryActionPackage: (method, currentTreasury) => buildTreasuryActionPackage(method, currentTreasury),
     chooseEventIllustration: event => ({ ...chooseEventIllustration(event) }),
+    updateCausality,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
   });
 })();

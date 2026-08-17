@@ -201,6 +201,34 @@
     return `<section class="court-history">${state.history.length ? state.history.map(item => `<article><strong>第 ${item.turn} 月</strong><p>${escapeHtml(item.text)}</p><small>${escapeHtml(item.responseLabel)}</small></article>`).join("") : '<p class="empty-state">尚无政议归档。</p>'}</section>`;
   }
 
+  function applyCausalEffects(pkg = {}) {
+    if (!state?.factions) return false;
+    let changed = false;
+    Object.entries(pkg.factions || {}).forEach(([id, effects]) => {
+      const faction = state.factions[id];
+      if (!faction) return;
+      ["support", "tension", "influence"].forEach(key => {
+        if (!Number.isFinite(Number(effects[key]))) return;
+        faction[key] = clamp(Number(faction[key] || 0) + Number(effects[key]), 0, 100);
+        changed = true;
+      });
+    });
+    if (!changed) return false;
+    state.history.unshift({
+      id: `causal-${Date.now()}`,
+      turn: Number(coreState?.turn || 1),
+      type: "consequence",
+      title: "朝局牵动",
+      text: pkg.reason || "御前处置改变了各方态度。",
+      responseLabel: "跨系统影响",
+      resolvedAt: new Date().toISOString(),
+    });
+    state.history = state.history.slice(0, MAX_HISTORY);
+    saveState();
+    renderAll();
+    return true;
+  }
+
   function factionMeter(label,value,color) { return `<div class="faction-meter" style="--faction:${color}"><span>${label}</span><i><b style="width:${clamp(value,0,100)}%"></b></i><em>${Math.round(value)}</em></div>`; }
   function attitudeLabel(support,tension) { return tension >= 70 ? "冲突将起" : support >= 70 ? "鼎力相助" : support >= 48 ? "谨慎观望" : "渐行渐远"; }
   function petitionTemplate(item) { return PETITIONS.find(template => template.id === item?.templateId); }
@@ -212,5 +240,5 @@
   function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[char])); }
   function seededRandom(seed) { let hash=2166136261; for(let index=0;index<seed.length;index+=1){hash^=seed.charCodeAt(index);hash=Math.imul(hash,16777619);} return()=>{hash+=0x6d2b79f5;let value=hash;value=Math.imul(value^(value>>>15),value|1);value^=value+Math.imul(value^(value>>>7),value|61);return((value^(value>>>14))>>>0)/4294967296;}; }
 
-  window.XianCourtPolitics = Object.freeze({ version: VERSION, factions: FACTIONS.map(item => ({ ...item })), petitions: PETITIONS.map(item => ({ id:item.id,type:item.type,speaker:item.speaker,title:item.title })), previewResponse, resolvePetition, diagnostics: () => state ? JSON.parse(JSON.stringify(state)) : null });
+  window.XianCourtPolitics = Object.freeze({ version: VERSION, factions: FACTIONS.map(item => ({ ...item })), petitions: PETITIONS.map(item => ({ id:item.id,type:item.type,speaker:item.speaker,title:item.title })), previewResponse, resolvePetition, applyCausalEffects, diagnostics: () => state ? JSON.parse(JSON.stringify(state)) : null });
 })();

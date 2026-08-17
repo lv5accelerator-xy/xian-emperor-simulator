@@ -1,0 +1,286 @@
+/* 天子蒙尘：献帝模拟器 v2.9.0 · 朝局相因 */
+
+.causal-court-panel {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  overflow: hidden;
+  border-color: rgba(209, 165, 81, .26);
+  background:
+    radial-gradient(circle at 88% 4%, rgba(148, 67, 49, .12), transparent 31%),
+    linear-gradient(135deg, rgba(37, 27, 22, .98), rgba(22, 18, 17, .98));
+}
+
+.causal-court-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 .15rem .8rem;
+}
+
+.causal-court-heading h2 {
+  margin: .08rem 0 .22rem;
+  color: #ead5a4;
+  font-family: var(--font-display, var(--font-serif));
+  font-size: 1.22rem;
+  font-weight: 500;
+  letter-spacing: .09em;
+}
+
+.causal-court-heading p {
+  max-width: 660px;
+  margin: 0;
+  color: #8f806c;
+  font-size: .66rem;
+  line-height: 1.55;
+}
+
+.causal-court-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .7rem;
+  color: #817463;
+  font-size: .58rem;
+}
+
+.causal-court-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: .28rem;
+}
+
+.causal-court-legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #75876f;
+  box-shadow: 0 0 0 3px rgba(117, 135, 111, .1);
+}
+
+.causal-court-legend i.tense { background: #bd8b47; box-shadow: 0 0 0 3px rgba(189, 139, 71, .1); }
+.causal-court-legend i.critical { background: #b55c4e; box-shadow: 0 0 0 3px rgba(181, 92, 78, .12); }
+
+.causal-issue-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .7rem;
+}
+
+.causal-issue {
+  --issue-color: #7f9277;
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto auto 1fr;
+  gap: .42rem;
+  min-width: 0;
+  padding: .8rem;
+  border: 1px solid color-mix(in srgb, var(--issue-color) 32%, transparent);
+  border-radius: 11px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--issue-color) 8%, transparent), rgba(255, 255, 255, .012));
+}
+
+.causal-issue.tense { --issue-color: #bd8b47; }
+.causal-issue.critical { --issue-color: #b55c4e; }
+
+.causal-issue::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  border-radius: 11px 0 0 11px;
+  background: var(--issue-color);
+  opacity: .78;
+}
+
+.causal-issue > header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: .55rem;
+  margin-bottom: .12rem;
+}
+
+.causal-issue > header > span {
+  color: color-mix(in srgb, var(--issue-color) 82%, #f0dcad);
+  font-family: var(--font-serif);
+  font-size: .62rem;
+  letter-spacing: .08em;
+}
+
+.causal-issue > header small {
+  display: block;
+  margin-bottom: .04rem;
+  color: var(--issue-color);
+  font-size: .52rem;
+  letter-spacing: .12em;
+}
+
+.causal-issue h3 {
+  margin: 0;
+  color: #ded0b2;
+  font-family: var(--font-serif);
+  font-size: .88rem;
+  font-weight: 600;
+}
+
+.causal-issue > header b {
+  color: var(--issue-color);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.causal-issue p {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr;
+  gap: .38rem;
+  margin: 0;
+  color: #928570;
+  font-size: .61rem;
+  line-height: 1.52;
+}
+
+.causal-issue p strong {
+  color: #b7a17a;
+  font-weight: 500;
+}
+
+.causal-issue .causal-origin {
+  color: #b1a38d;
+}
+
+.causal-issue > button,
+.causal-court-footer button {
+  align-self: end;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: .38rem;
+  margin-top: .2rem;
+  padding: .35rem .58rem;
+  border: 1px solid color-mix(in srgb, var(--issue-color, #bd8b47) 35%, transparent);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .018);
+  color: #cbb27d;
+  font-size: .58rem;
+  cursor: pointer;
+}
+
+.causal-issue > button:hover,
+.causal-court-footer button:hover {
+  border-color: rgba(218, 181, 102, .55);
+  background: rgba(205, 149, 70, .08);
+  color: #eed397;
+}
+
+.causal-court-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  padding: .7rem .15rem 0;
+  color: #766b5c;
+  font-size: .58rem;
+}
+
+.causal-court-footer button {
+  margin: 0;
+  --issue-color: #a88b54;
+}
+
+.causal-history-list {
+  display: grid;
+  gap: .55rem;
+}
+
+.causal-history-list article {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: .7rem;
+  padding: .65rem;
+  border: 1px solid rgba(211, 174, 99, .14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .018);
+}
+
+.causal-history-list span { color: #88785f; font-size: .62rem; }
+.causal-history-list strong { color: #dbc38e; font-family: var(--font-serif); font-size: .76rem; }
+.causal-history-list p { margin: .18rem 0 0; color: #a09380; font-size: .64rem; line-height: 1.55; }
+
+.causal-history-overlay {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(8, 7, 7, .76);
+  backdrop-filter: blur(8px);
+}
+
+.causal-history-window {
+  width: min(720px, 100%);
+  max-height: min(760px, calc(100dvh - 2rem));
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid rgba(211, 174, 99, .3);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #211a17, #151211);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .52);
+}
+
+.causal-history-window > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .8rem;
+}
+
+.causal-history-window h2 {
+  margin: .1rem 0 0;
+  color: #ead5a4;
+  font-family: var(--font-display, var(--font-serif));
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.causal-history-window > header button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(211, 174, 99, .2);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .025);
+  color: #b8a27b;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+@media (max-width: 1080px) {
+  .causal-issue-grid { grid-template-columns: 1fr; }
+  .causal-issue { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto auto auto; }
+  .causal-issue > header,
+  .causal-issue > p { grid-column: 1; }
+  .causal-issue > button { grid-column: 2; grid-row: 1 / 5; align-self: center; }
+}
+
+@media (max-width: 720px) {
+  .causal-court-panel { margin: 0 .7rem .8rem; padding: .78rem; }
+  .causal-court-heading { align-items: flex-start; }
+  .causal-court-heading h2 { font-size: 1.05rem; }
+  .causal-court-heading p { font-size: .62rem; }
+  .causal-court-legend { display: none; }
+  .causal-issue { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; padding: .72rem; }
+  .causal-issue > header,
+  .causal-issue > p,
+  .causal-issue > button { grid-column: 1; grid-row: auto; }
+  .causal-issue > button { justify-self: stretch; justify-content: center; min-height: 40px; margin-top: .32rem; }
+  .causal-court-footer { align-items: flex-start; }
+  .causal-court-footer button { min-height: 38px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .causal-issue > button,
+  .causal-court-footer button { transition: none; }
+}

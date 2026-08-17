@@ -43,8 +43,9 @@
 
 ## 当前版本
 
-当前版本为 **v2.8.0「御前焕新」**。
+当前版本为 **v2.9.0「朝局相因」**。
 
+- **v2.9.0**：以“当前三件大事”收拢复杂局势，打通奏报、人物、派系、财政、军团、城池与民生的双向因果链。
 - **v2.8.0**：重整首页信息层级，加入行动分类、危机捷径、结果预览、六类奏报插图与手机版底部导航。
 - **v2.7.2**：常用行动新增筹措钱粮，以节流、催贡或借调补充国库，并承担对应的官心、民望或自主权代价。
 - **v2.7.1**：站酷小薇体、Noto Serif SC 与 Noto Sans SC 本地化，统一题名、史书正文和操作界面的字体表现。
@@ -96,6 +97,7 @@ xian-emperor-simulator/
 ├─ assets/fonts/              # 本地 WOFF2 字体与 OFL 许可证
 ├─ src/visual-refresh.css     # v2.7.x 字体与插图适配
 ├─ src/ui-refresh-v280.*      # v2.8.0 信息减负与手机导航
+├─ src/causal-court.*         # v2.9.0 跨系统因果与三件大事
 ├─ scripts/                   # 字体子集等维护脚本
 ├─ src/                       # 游戏数据、系统模块与模块样式
 │  └─ portraits/             # 原创人物立绘数据
@@ -119,12 +121,13 @@ node tests/grand-map-regression.js
 node tests/campaign-evolution-regression.js
 node tests/legacy-systems-regression.js
 node tests/post-v2-systems-regression.js
+node tests/causal-court-regression.js
 ```
 
 发布检查还需要设置当前预期版本：
 
 ```bash
-EXPECTED_VERSION=2.6.0 node tests/release-regression.js
+EXPECTED_VERSION=2.9.0 node tests/release-regression.js
 ```
 
 GitHub Actions 会额外检查脚本语法、音频资源、圣旨目标顺序、军团计算、页面资源引用和独立版本说明。

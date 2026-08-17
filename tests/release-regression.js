@@ -82,7 +82,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.8.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.9.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -100,6 +100,9 @@ assert.match(read("index.html"), /src\/ui\.js\?v=2\.6\.1/);
 assert.match(read("index.html"), /src\/visual-refresh\.css\?v=2\.7\.1/);
 assert.match(read("index.html"), /src\/ui-refresh-v280\.css\?v=2\.8\.0/);
 assert.match(read("index.html"), /src\/ui-refresh-v280\.js\?v=2\.8\.0/);
+assert.match(read("index.html"), /src\/causal-court\.css\?v=2\.9\.0/);
+assert.match(read("index.html"), /src\/causal-court\.js\?v=2\.9\.0/);
+assert.match(read("index.html"), /id="causal-court-panel"/);
 assert.match(read("src/ui-refresh-v280.css"), /@media \(max-width: 820px\)[\s\S]+\.mobile-imperial-nav/);
 assert.match(read("src/ui-refresh-v280.css"), /\.topbar-v110 \.utility-nav-upgraded\s*{\s*display:\s*none/);
 assert.match(read("src/ui-refresh-v280.js"), /data-mobile-destination="month"[\s\S]+data-mobile-destination="actions"[\s\S]+data-mobile-destination="map"[\s\S]+data-mobile-destination="archive"/);
@@ -133,7 +136,7 @@ for (const resource of [
   "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.5.0",
 ]) assert.ok(read("index.html").includes(resource), `${resource} should be referenced`);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
-assert.match(read("src/game.js"), /schemaVersion:\s*100/);
+assert.match(read("src/game.js"), /schemaVersion:\s*101/);
 assert.match(read("src/game.js"), /__xianFullSaveImporting\s*=\s*true/);
 for (const file of [
   "world-system.js",
@@ -199,6 +202,8 @@ assert.ok(courtApi.petitions.some(item => item.type === "negotiation"), "dynamic
 
 const game = loadGameApi();
 assert.equal(game.data.version, expectedVersion, "game data version should match the release");
+assert.equal(game.data.causalEvents.length, 6, "six situation-driven memorials should connect existing systems");
+assert.ok(game.data.causalEvents.every(event => event.choices.every(choice => choice.causalLinks)), "causal memorial choices should declare downstream system links");
 assert.ok(game.data.actionCatalog.some(item => item.id === "revenue"), "common actions should include treasury fundraising");
 assert.deepEqual(
   Array.from(new Set(game.data.actionCatalog.filter(item => item.id !== "edict").map(item => item.category))).sort(),

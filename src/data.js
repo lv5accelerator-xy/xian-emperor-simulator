@@ -1,11 +1,11 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.8.0
+ * 天子蒙尘：献帝模拟器 v2.9.0
  * 游戏数据：人物、势力、事件与行动说明
  * 本作是历史题材架空模拟，数值与事件均经过游戏化处理。
  */
 
 window.GAME_DATA = {
-  version: "2.8.0",
+  version: "2.9.0",
   title: "天子蒙尘：献帝模拟器",
   scenarios: [
     {
@@ -755,6 +755,195 @@ window.GAME_DATA = {
           hint: "安全上升，皇权大幅下降。",
           effects: { security: 10, caoAlert: -10, authority: -10, prestige: -3 },
           chronicle: "天子全准司空府所请，许都政令归一，汉廷自主更微。",
+        },
+      ],
+    },
+  ],
+
+  causalEvents: [
+    {
+      id: "causal_grain_and_army",
+      title: "度支与军粮",
+      category: "因果奏报",
+      text: "尚书台将国库簿册与前线粮册并陈御前：朝廷的钱粮已经无法同时满足百官俸给、宫禁修缮与军团转运。此前的征调和行军，如今必须有人承担代价。",
+      choices: [
+        {
+          label: "先足军粮，缓发俸给",
+          hint: "军团补给改善，百官支持下降。",
+          effects: { treasury: -4, officials: -4, security: 2 },
+          causalLinks: { army: { owners: ["court"], supply: 10, morale: 2 }, factions: { loyalists: { support: -3, tension: 3 } } },
+          chronicle: "天子命度支先足军粮，百官俸给暂缓，前线得以续行。",
+        },
+        {
+          label: "裁减军运，保全朝廷",
+          hint: "国库喘息，军团士气与补给受损。",
+          effects: { treasury: 4, officials: 2, prestige: -2 },
+          causalLinks: { army: { owners: ["court"], supply: -7, morale: -4 }, factions: { gentry: { support: 2, tension: -1 } } },
+          chronicle: "朝廷裁减军运以保俸给，前线将士因粮道收紧而怨。",
+        },
+        {
+          label: "令州郡按地分担",
+          hint: "取得有限钱粮，但地方压力和民怨上升。",
+          effects: { treasury: 6, authority: 2, prestige: -2 },
+          hidden: { peopleStability: -5 },
+          causalLinks: { strategy: { courtCities: { supply: -6, courtLoyalty: -3, pressure: 3 } }, factions: { gentry: { support: -4, tension: 5 } } },
+          chronicle: "天子令受朝命州郡按地分担军需，度支稍充，地方怨声亦起。",
+        },
+      ],
+    },
+    {
+      id: "causal_war_aftermath",
+      title: "战殁名籍",
+      category: "因果奏报",
+      text: "军报不再只有胜负。阵亡者名籍、伤兵安置、功臣请赏与沿途流民一并送到御前。战场上的每一次推进，都在朝堂留下新的债。",
+      choices: [
+        {
+          label: "发帑抚恤，先安军民",
+          hint: "花费国库，修复民心并鼓舞军队。",
+          effects: { treasury: -6, prestige: 5, officials: 2 },
+          hidden: { peopleStability: 6 },
+          causalLinks: { army: { owners: ["court"], morale: 6, loyalty: 3, fatigue: -2 }, factions: { imperial: { support: 3, tension: -2 } } },
+          chronicle: "朝廷发帑抚恤阵亡与流离之家，军民稍知战事并非无人过问。",
+        },
+        {
+          label: "明诏论功，重奖主将",
+          hint: "强化权威与军心，也会提高曹氏警戒。",
+          effects: { authority: 4, prestige: 3, treasury: -3, caoAlert: 4 },
+          causalLinks: { army: { owners: ["court"], morale: 4, loyalty: 6 }, factions: { cao: { support: -1, tension: 4 } } },
+          chronicle: "天子明诏论功，军中知赏罚出于汉廷，司空府亦更加留意。",
+        },
+        {
+          label: "只录战果，暂缓追恤",
+          hint: "节省开支，但民心和军心持续受损。",
+          effects: { treasury: 2, prestige: -4, officials: -2 },
+          hidden: { peopleStability: -4 },
+          causalLinks: { army: { owners: ["court"], morale: -5, loyalty: -2 }, factions: { loyalists: { support: -3, tension: 4 } } },
+          chronicle: "朝廷只录战果而缓追恤，簿册虽简，军民怨意未消。",
+        },
+      ],
+    },
+    {
+      id: "causal_faction_deadlock",
+      title: "尚书台封驳",
+      category: "因果奏报",
+      text: "数道诏令在尚书台与司空府之间往返，帝后近臣、汉室旧臣和曹氏幕府各执一词。此前累积的猜疑已经开始拖慢政令执行。",
+      choices: [
+        {
+          label: "召五方廷议，当面定责",
+          hint: "缓和多数派系，但会消耗皇权威势。",
+          effects: { officials: 4, authority: -2, security: 2 },
+          causalLinks: { factions: { imperial: { tension: -4 }, loyalists: { tension: -4 }, cao: { tension: -3 }, regional: { tension: -2 }, gentry: { tension: -3 } } },
+          chronicle: "天子召各方廷议，责令当面陈说，尚书台封驳之争暂解。",
+        },
+        {
+          label: "御笔独断，限期奉行",
+          hint: "皇权上升，反对派系张力加剧。",
+          effects: { authority: 6, officials: -3, caoAlert: 4 },
+          causalLinks: { factions: { imperial: { support: 4 }, loyalists: { tension: 3 }, cao: { tension: 6 }, gentry: { tension: 3 } } },
+          chronicle: "天子御笔独断，命尚书台限期奉行，朝令得出而异议更深。",
+        },
+        {
+          label: "委荀彧调停，换取执行",
+          hint: "提高执行稳定，曹氏影响有所加深。",
+          effects: { officials: 3, security: 3, authority: -2, caoAlert: -2 },
+          relations: { xun_yu: 5 },
+          causalLinks: { factions: { cao: { support: 5, tension: -5 }, loyalists: { support: -2, tension: 2 } } },
+          chronicle: "天子委荀彧调停台府之争，政令复行，汉臣亦忧外府权重。",
+        },
+      ],
+    },
+    {
+      id: "causal_refugees",
+      title: "道旁流民",
+      category: "因果奏报",
+      text: "战线与征调经过的州郡出现流民，驿路、城门和官仓同时承压。若只把他们当作地图上的数字，盗贼、疫病与谣言很快会抵达许都。",
+      choices: [
+        {
+          label: "沿军路设粥棚与医舍",
+          hint: "消耗国库，明显恢复民稳与道路补给。",
+          effects: { treasury: -5, prestige: 4, security: 2 },
+          hidden: { peopleStability: 8 },
+          causalLinks: { strategy: { strainedRoutes: { supply: 5, pressure: -5 } }, factions: { gentry: { support: 3, tension: -3 } } },
+          chronicle: "朝廷沿军路设粥棚医舍，流民得食，驿道压力稍减。",
+        },
+        {
+          label: "迁入新附城池屯田",
+          hint: "改善城池供给，但短期地方张力上升。",
+          effects: { authority: 2, treasury: -2 },
+          hidden: { peopleStability: 3 },
+          causalLinks: { strategy: { courtCities: { supply: 5, courtLoyalty: -2, pressure: 2 } }, factions: { gentry: { tension: 3 } } },
+          chronicle: "天子命流民迁入新附州郡屯田，来年或有收成，眼下仍需安置。",
+        },
+        {
+          label: "封闭宫城，交州郡自理",
+          hint: "保全国库和宫禁，民心与威望下降。",
+          effects: { treasury: 2, security: 3, prestige: -5 },
+          hidden: { peopleStability: -7 },
+          causalLinks: { factions: { imperial: { support: -2 }, gentry: { support: -4, tension: 5 } } },
+          chronicle: "宫城闭门，流民交州郡自理，许都暂静而道路哭声不绝。",
+        },
+      ],
+    },
+    {
+      id: "causal_personal_appeal",
+      title: "旧臣求见",
+      category: "因果奏报",
+      text: "一名曾受诏令牵连的旧臣请求单独入见。他没有重述大道理，只将过去数月的取舍逐件列出，询问天子是否还记得当时的承诺。",
+      choices: [
+        {
+          label: "留中长谈，承认旧憾",
+          hint: "修复关键关系与百官支持。",
+          effects: { officials: 4, authority: -1 },
+          relations: { dong_cheng: 4, yang_biao: 4, empress_fu: 2 },
+          causalLinks: { factions: { loyalists: { support: 4, tension: -4 }, imperial: { support: 2, tension: -2 } } },
+          chronicle: "天子留旧臣长谈，坦言数月间不得已之处，君臣旧隙稍解。",
+        },
+        {
+          label: "以新官相授，责其办事",
+          hint: "强化皇权并换取执行，但增加国库支出。",
+          effects: { authority: 4, treasury: -3, officials: 2 },
+          relations: { yang_biao: 3, xun_yu: 2 },
+          causalLinks: { factions: { loyalists: { support: 3 }, gentry: { support: 2 } } },
+          chronicle: "天子以新官授旧臣，命其以实绩回答朝局，而非空论忠义。",
+        },
+        {
+          label: "不许私见，只令上奏",
+          hint: "维护制度距离，人物芥蒂继续累积。",
+          effects: { authority: 2, officials: -3 },
+          relations: { dong_cheng: -3, yang_biao: -3 },
+          causalLinks: { factions: { loyalists: { support: -4, tension: 5 } } },
+          chronicle: "天子不许私见，只令循制上奏，旧臣退下而心结未解。",
+        },
+      ],
+    },
+    {
+      id: "causal_new_territory",
+      title: "新附州郡",
+      category: "因果奏报",
+      text: "新近奉汉廷号令的城池送来户籍、仓簿与官员名册。城池易帜只是开始：征税、驻军、安民与任官将决定它究竟是朝廷根基，还是下一场叛乱。",
+      choices: [
+        {
+          label: "三月薄税，先复民业",
+          hint: "短期少收钱粮，提升民稳与城池忠诚。",
+          effects: { treasury: -3, prestige: 4 },
+          hidden: { peopleStability: 5 },
+          causalLinks: { strategy: { courtCities: { courtLoyalty: 7, supply: 3, pressure: -4 } }, factions: { gentry: { support: 3, tension: -2 } } },
+          chronicle: "新附州郡三月薄税，先复田业，汉廷名义渐由旗号落到民生。",
+        },
+        {
+          label: "核户征赋，充实度支",
+          hint: "国库收益较高，地方压力上升。",
+          effects: { treasury: 8, authority: 2, prestige: -2 },
+          hidden: { peopleStability: -4 },
+          causalLinks: { strategy: { courtCities: { supply: -3, courtLoyalty: -4, pressure: 5 } }, factions: { gentry: { support: -3, tension: 4 } } },
+          chronicle: "朝廷核定新附户籍并征赋，度支得补，地方负担亦随之而来。",
+        },
+        {
+          label: "遣亲信监郡，整军设防",
+          hint: "提高城防和皇权，消耗国库并刺激曹氏。",
+          effects: { treasury: -5, authority: 5, caoAlert: 4 },
+          causalLinks: { strategy: { courtCities: { defense: 7, courtLoyalty: 4 } }, army: { owners: ["court"], loyalty: 3, supply: 2 } },
+          chronicle: "天子遣亲信监郡整军，新附之地渐有汉廷直接号令。",
         },
       ],
     },
