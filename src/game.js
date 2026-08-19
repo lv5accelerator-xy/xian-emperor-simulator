@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.9.0
+ * 天子蒙尘：献帝模拟器 v2.10.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -32,6 +32,7 @@
     "xian_emperor_short_challenges_v230",
     "xian_emperor_weekly_challenge_v240",
     "xian_emperor_final_verdict_v250",
+    "xian_emperor_quarterly_agenda_v2100",
   ];
   const MAX_REPORTS = 10;
   const ACTION_CATEGORIES = [

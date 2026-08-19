@@ -43,8 +43,9 @@
 
 ## 当前版本
 
-当前版本为 **v2.9.0「朝局相因」**。
+当前版本为 **v2.10.0「三月朝局」**。
 
+- **v2.10.0**：每三个月只选择一个施政目标，让奏报、行动、人物与战事围绕同一条主线推进并统一结算。
 - **v2.9.0**：以“当前三件大事”收拢复杂局势，打通奏报、人物、派系、财政、军团、城池与民生的双向因果链。
 - **v2.8.0**：重整首页信息层级，加入行动分类、危机捷径、结果预览、六类奏报插图与手机版底部导航。
 - **v2.7.2**：常用行动新增筹措钱粮，以节流、催贡或借调补充国库，并承担对应的官心、民望或自主权代价。
@@ -98,6 +99,7 @@ xian-emperor-simulator/
 ├─ src/visual-refresh.css     # v2.7.x 字体与插图适配
 ├─ src/ui-refresh-v280.*      # v2.8.0 信息减负与手机导航
 ├─ src/causal-court.*         # v2.9.0 跨系统因果与三件大事
+├─ src/quarterly-agenda.*     # v2.10.0 三月施政主线
 ├─ scripts/                   # 字体子集等维护脚本
 ├─ src/                       # 游戏数据、系统模块与模块样式
 │  └─ portraits/             # 原创人物立绘数据
@@ -122,12 +124,13 @@ node tests/campaign-evolution-regression.js
 node tests/legacy-systems-regression.js
 node tests/post-v2-systems-regression.js
 node tests/causal-court-regression.js
+node tests/quarterly-agenda-regression.js
 ```
 
 发布检查还需要设置当前预期版本：
 
 ```bash
-EXPECTED_VERSION=2.9.0 node tests/release-regression.js
+EXPECTED_VERSION=2.10.0 node tests/release-regression.js
 ```
 
 GitHub Actions 会额外检查脚本语法、音频资源、圣旨目标顺序、军团计算、页面资源引用和独立版本说明。
