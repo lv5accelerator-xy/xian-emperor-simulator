@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.10.0' index.html
+          grep -q 'v2.11.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -289,7 +289,9 @@ jobs:
           grep -q 'src/causal-court.css?v=2.9.0' index.html
           grep -q 'src/causal-court.js?v=2.9.0' index.html
           grep -q 'src/quarterly-agenda.css?v=2.10.0' index.html
-          grep -q 'src/quarterly-agenda.js?v=2.10.0' index.html
+          grep -q 'src/quarterly-agenda.js?v=2.11.0' index.html
+          grep -q 'src/council-advice.css?v=2.11.0' index.html
+          grep -q 'src/council-advice.js?v=2.11.0' index.html
           grep -q 'assets/fonts/zcool-xiaowei-game.woff2' index.html
           test -f src/audio.css
           test -f src/audio-data.js
@@ -346,6 +348,8 @@ jobs:
           test -f src/causal-court.js
           test -f src/quarterly-agenda.css
           test -f src/quarterly-agenda.js
+          test -f src/council-advice.css
+          test -f src/council-advice.js
           test -f assets/images/illustrations/opening-palace.webp
           test -f assets/images/illustrations/court-memorial.webp
           test -f assets/images/illustrations/army-crossing.webp
@@ -391,6 +395,7 @@ jobs:
           test -f patch-notes/v2.8.0.txt
           test -f patch-notes/v2.9.0.txt
           test -f patch-notes/v2.10.0.txt
+          test -f patch-notes/v2.11.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -413,5 +418,8 @@ jobs:
       - name: Run quarterly agenda regression
         run: node tests/quarterly-agenda-regression.js
 
+      - name: Run council advice regression
+        run: node tests/council-advice-regression.js
+
       - name: Run release regression
-        run: EXPECTED_VERSION=2.10.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.11.0 node tests/release-regression.js

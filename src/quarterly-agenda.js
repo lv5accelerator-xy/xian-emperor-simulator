@@ -176,6 +176,16 @@
     saveState();
   }
 
+  function addContribution(points, text = "群臣对策推动御题") {
+    const core = coreState();
+    if (!core || !getActiveAgenda() || !state.active || !Number(points)) return false;
+    state.contribution = clamp(Number(state.contribution || 0) + Number(points), 0, 100);
+    state.contributionLog.unshift({ turn: core.turn, text: String(text), points: Number(points) });
+    state.contributionLog = state.contributionLog.slice(0, 8);
+    saveState();
+    return true;
+  }
+
   function calculateProgress(core = coreState(), agenda = getActiveAgenda()) {
     if (!core || !agenda || !state.active) return 0;
     const current = readMetric(core, agenda.metric);
@@ -309,6 +319,7 @@
     agendas: AGENDAS.map(item => ({ ...item })),
     buildOffers,
     calculateProgress,
+    addContribution,
     selectAgenda,
     getState,
     refresh: sync,

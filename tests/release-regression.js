@@ -82,7 +82,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.10.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.11.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -104,8 +104,10 @@ assert.match(read("index.html"), /src\/causal-court\.css\?v=2\.9\.0/);
 assert.match(read("index.html"), /src\/causal-court\.js\?v=2\.9\.0/);
 assert.match(read("index.html"), /id="causal-court-panel"/);
 assert.match(read("index.html"), /src\/quarterly-agenda\.css\?v=2\.10\.0/);
-assert.match(read("index.html"), /src\/quarterly-agenda\.js\?v=2\.10\.0/);
+assert.match(read("index.html"), /src\/quarterly-agenda\.js\?v=2\.11\.0/);
 assert.match(read("index.html"), /id="quarterly-agenda-panel"/);
+assert.match(read("index.html"), /src\/council-advice\.css\?v=2\.11\.0/);
+assert.match(read("index.html"), /src\/council-advice\.js\?v=2\.11\.0/);
 assert.match(read("src/ui-refresh-v280.css"), /@media \(max-width: 820px\)[\s\S]+\.mobile-imperial-nav/);
 assert.match(read("src/ui-refresh-v280.css"), /\.topbar-v110 \.utility-nav-upgraded\s*{\s*display:\s*none/);
 assert.match(read("src/ui-refresh-v280.js"), /data-mobile-destination="month"[\s\S]+data-mobile-destination="actions"[\s\S]+data-mobile-destination="map"[\s\S]+data-mobile-destination="archive"/);
@@ -242,6 +244,7 @@ assert.equal(challengeFail.completed, false, "missing a late-scenario goal shoul
 
 assert.match(read("src/game.js"), /xian_emperor_campaign_evolution_v150/, "full saves should include campaign evolution data");
 assert.match(read("src/game.js"), /xian_emperor_quarterly_agenda_v2100/, "full saves should include quarterly agenda data");
+assert.match(read("src/game.js"), /xian_emperor_council_advice_v2110/, "full saves should include council advice data");
 for (const key of [
   "xian_emperor_command_center_v160",
   "xian_emperor_character_memory_v170",
