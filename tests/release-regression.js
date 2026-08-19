@@ -82,7 +82,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.12.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.13.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -110,6 +110,8 @@ assert.match(read("index.html"), /src\/council-advice\.css\?v=2\.11\.0/);
 assert.match(read("index.html"), /src\/council-advice\.js\?v=2\.11\.0/);
 assert.match(read("index.html"), /src\/regional-echoes\.css\?v=2\.12\.0/);
 assert.match(read("index.html"), /src\/regional-echoes\.js\?v=2\.12\.0/);
+assert.match(read("index.html"), /src\/imperial-paths\.css\?v=2\.13\.0/);
+assert.match(read("index.html"), /src\/imperial-paths\.js\?v=2\.13\.0/);
 assert.match(read("src/ui-refresh-v280.css"), /@media \(max-width: 820px\)[\s\S]+\.mobile-imperial-nav/);
 assert.match(read("src/ui-refresh-v280.css"), /\.topbar-v110 \.utility-nav-upgraded\s*{\s*display:\s*none/);
 assert.match(read("src/ui-refresh-v280.js"), /data-mobile-destination="month"[\s\S]+data-mobile-destination="actions"[\s\S]+data-mobile-destination="map"[\s\S]+data-mobile-destination="archive"/);
@@ -211,6 +213,8 @@ const game = loadGameApi();
 assert.equal(game.data.version, expectedVersion, "game data version should match the release");
 assert.equal(game.data.causalEvents.length, 6, "six situation-driven memorials should connect existing systems");
 assert.ok(game.data.causalEvents.every(event => event.choices.every(choice => choice.causalLinks)), "causal memorial choices should declare downstream system links");
+assert.equal(game.data.pathEvents.length, 6, "three medium-term paths should provide six exclusive memorials");
+assert.deepEqual(Array.from(new Set(game.data.pathEvents.map(event => event.pathId))).sort(), ["benevolent", "martial", "restoration"]);
 assert.ok(game.data.actionCatalog.some(item => item.id === "revenue"), "common actions should include treasury fundraising");
 assert.deepEqual(
   Array.from(new Set(game.data.actionCatalog.filter(item => item.id !== "edict").map(item => item.category))).sort(),
@@ -248,6 +252,7 @@ assert.match(read("src/game.js"), /xian_emperor_campaign_evolution_v150/, "full 
 assert.match(read("src/game.js"), /xian_emperor_quarterly_agenda_v2100/, "full saves should include quarterly agenda data");
 assert.match(read("src/game.js"), /xian_emperor_council_advice_v2110/, "full saves should include council advice data");
 assert.match(read("src/game.js"), /xian_emperor_regional_echoes_v2120/, "full saves should include regional echo data");
+assert.match(read("src/game.js"), /xian_emperor_imperial_paths_v2130/, "full saves should include imperial path data");
 for (const key of [
   "xian_emperor_command_center_v160",
   "xian_emperor_character_memory_v170",

@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.12.0
+ * 天子蒙尘：献帝模拟器 v2.13.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -35,6 +35,7 @@
     "xian_emperor_quarterly_agenda_v2100",
     "xian_emperor_council_advice_v2110",
     "xian_emperor_regional_echoes_v2120",
+    "xian_emperor_imperial_paths_v2130",
   ];
   const MAX_REPORTS = 10;
   const ACTION_CATEGORIES = [
@@ -116,6 +117,7 @@
       ...DATA.fixedEvents,
       ...DATA.randomEvents,
       ...(DATA.causalEvents || []),
+      ...(DATA.pathEvents || []),
       ...Object.values(DATA.scenarioEvents || {}),
     ];
   }
@@ -411,6 +413,10 @@
     if (scenarioOpening) return scenarioOpening;
     const fixed = scenarioId === "jianan_196" ? DATA.fixedEvents.find((event) => event.fixedTurn === state.turn) : null;
     if (fixed) return fixed;
+
+    const pathEventId = window.XianImperialPaths?.selectEventId?.(JSON.parse(JSON.stringify(state)));
+    const pathEvent = (DATA.pathEvents || []).find(event => event.id === pathEventId);
+    if (pathEvent && !state.recentEventIds.includes(pathEvent.id)) return pathEvent;
 
     const causalEventId = window.XianCausalCourt?.selectEventId?.(JSON.parse(JSON.stringify(state)));
     const causalEvent = (DATA.causalEvents || []).find(event => event.id === causalEventId);

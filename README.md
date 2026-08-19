@@ -43,8 +43,9 @@
 
 ## 当前版本
 
-当前版本为 **v2.12.0「山河回响」**。
+当前版本为 **v2.13.0「帝业殊途」**。
 
+- **v2.13.0**：长期行为会推荐仁政、归政或戎马三条中期帝业，带来阶段目标与六件路线专属奏报。
 - **v2.12.0**：战斗和城池易手会留下持续数月的地方故事，朝廷的善后选择同时改变民生与真实城池状态。
 - **v2.11.0**：每项三月御题由三位真实人物提出不同办法，旧事和关系影响态度，采纳路线会改变后续推进方式。
 - **v2.10.0**：每三个月只选择一个施政目标，让奏报、行动、人物与战事围绕同一条主线推进并统一结算。
@@ -104,6 +105,7 @@ xian-emperor-simulator/
 ├─ src/quarterly-agenda.*     # v2.10.0 三月施政主线
 ├─ src/council-advice.*       # v2.11.0 人物对策与路线响应
 ├─ src/regional-echoes.*      # v2.12.0 战后地方故事与后报
+├─ src/imperial-paths.*       # v2.13.0 自适应中期帝业与专属奏报
 ├─ scripts/                   # 字体子集等维护脚本
 ├─ src/                       # 游戏数据、系统模块与模块样式
 │  └─ portraits/             # 原创人物立绘数据
@@ -131,12 +133,13 @@ node tests/causal-court-regression.js
 node tests/quarterly-agenda-regression.js
 node tests/council-advice-regression.js
 node tests/regional-echoes-regression.js
+node tests/imperial-paths-regression.js
 ```
 
 发布检查还需要设置当前预期版本：
 
 ```bash
-EXPECTED_VERSION=2.12.0 node tests/release-regression.js
+EXPECTED_VERSION=2.13.0 node tests/release-regression.js
 ```
 
 GitHub Actions 会额外检查脚本语法、音频资源、圣旨目标顺序、军团计算、页面资源引用和独立版本说明。

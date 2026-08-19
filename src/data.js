@@ -1,11 +1,11 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.12.0
+ * 天子蒙尘：献帝模拟器 v2.13.0
  * 游戏数据：人物、势力、事件与行动说明
  * 本作是历史题材架空模拟，数值与事件均经过游戏化处理。
  */
 
 window.GAME_DATA = {
-  version: "2.12.0",
+  version: "2.13.0",
   title: "天子蒙尘：献帝模拟器",
   scenarios: [
     {
@@ -945,6 +945,63 @@ window.GAME_DATA = {
           causalLinks: { strategy: { courtCities: { defense: 7, courtLoyalty: 4 } }, army: { owners: ["court"], loyalty: 3, supply: 2 } },
           chronicle: "天子遣亲信监郡整军，新附之地渐有汉廷直接号令。",
         },
+      ],
+    },
+  ],
+
+  pathEvents: [
+    {
+      id: "path_benevolent_granaries", pathId: "benevolent", pathStage: 1, title: "仓廪先问何人", category: "帝业·仁政",
+      text: "连月安民之后，尚书台请定常平仓次序：灾户、军属与官吏皆称自己最急。一次赈济容易，能否留下成法才是考验。",
+      choices: [
+        { label: "灾户为先，按户给粮", hint: "民稳与威望提高，国库承压。", effects: { treasury: -5, prestige: 3 }, hidden: { peopleStability: 6 }, relations: { xun_yu: 2 }, chronicle: "朝廷定常平仓以灾户为先，按籍给粮。" },
+        { label: "军民各半，先保转运", hint: "兼顾宫禁与民生。", effects: { treasury: -3, security: 2, prestige: 1 }, hidden: { peopleStability: 3 }, chronicle: "常平仓分济军民，先保要道不乱。" },
+        { label: "交由州郡因地施行", hint: "节省国库，但执行不一。", effects: { treasury: 1, officials: -1 }, hidden: { peopleStability: 1 }, chronicle: "朝廷命州郡自定赈次，各地施行不一。" },
+      ],
+    },
+    {
+      id: "path_benevolent_magistrates", pathId: "benevolent", pathStage: 2, title: "循吏之选", category: "帝业·仁政",
+      text: "数郡请求补任守令。名望、才能与地方人情难以兼得，群臣争论怎样的人才配得上所谓仁政。",
+      choices: [
+        { label: "察绩擢用能吏", hint: "百官与皇权提高。", effects: { officials: 5, authority: 3, caoAlert: 2 }, relations: { yang_biao: 2 }, chronicle: "朝廷察绩擢守令，责其以实政安民。" },
+        { label: "听百姓与乡议共举", hint: "民稳显著提高，中央权力稍退。", effects: { authority: -1, prestige: 3 }, hidden: { peopleStability: 5 }, chronicle: "朝廷许郡中乡议举守令，民间称便。" },
+        { label: "请司空府统一铨选", hint: "执行稳妥，曹氏警戒下降。", effects: { officials: 2, security: 2, caoAlert: -3, authority: -2 }, chronicle: "守令铨选多归司空府，地方政务迅速补齐。" },
+      ],
+    },
+    {
+      id: "path_restoration_seals", pathId: "restoration", pathStage: 1, title: "印绶归台", category: "帝业·归政",
+      text: "战乱以来，各署印绶、文簿与任命多由权府代行。若要重建中枢，首先必须决定哪些权柄应回到尚书台。",
+      choices: [
+        { label: "先收文官铨选与考课", hint: "皇权、百官提高，警戒上升。", effects: { authority: 5, officials: 4, caoAlert: 5 }, relations: { yang_biao: 3 }, chronicle: "天子诏收文官铨选与考课于尚书台。" },
+        { label: "只统一诏令格式与档案", hint: "温和恢复制度。", effects: { authority: 3, officials: 2, caoAlert: 1, treasury: -1 }, chronicle: "朝廷先统一诏令与档案，中枢法度稍复。" },
+        { label: "暂不争权，先清积案", hint: "百官支持提高，皇权进展较慢。", effects: { officials: 5, authority: 1, caoAlert: -1 }, chronicle: "尚书台先清积案，不急于争夺印绶。" },
+      ],
+    },
+    {
+      id: "path_restoration_offices", pathId: "restoration", pathStage: 2, title: "百司复位", category: "帝业·归政",
+      text: "尚书台渐能办事，各署却仍职责重叠。重定百司意味着真正触动既有权力，也可能让汉廷第一次拥有稳定执行力。",
+      choices: [
+        { label: "依旧制重分百司", hint: "制度收益高，国库与警戒承压。", effects: { authority: 5, officials: 5, treasury: -4, caoAlert: 4 }, chronicle: "朝廷依汉制重分百司，政令归于有司。" },
+        { label: "保留权府差遣，增设复核", hint: "折中提升执行与安全。", effects: { authority: 2, officials: 3, security: 2, caoAlert: 1 }, chronicle: "百司增设复核，权府差遣仍暂保留。" },
+        { label: "以人物信用代替改制", hint: "改善关键关系，制度进展有限。", effects: { officials: 2 }, relations: { xun_yu: 4, yang_biao: 3 }, chronicle: "天子托付重臣分掌积务，暂缓全面改制。" },
+      ],
+    },
+    {
+      id: "path_martial_commission", pathId: "martial", pathStage: 1, title: "奉诏出师", category: "帝业·戎马",
+      text: "前线诸军都愿借天子名义，却未必愿受同一道军令。若以战功中兴，第一步便是让胜利真正记在朝廷名下。",
+      choices: [
+        { label: "颁统一节钺与军令", hint: "皇权与威望提高，警戒明显上升。", effects: { authority: 5, prestige: 4, treasury: -2, caoAlert: 6 }, chronicle: "天子颁节钺统一军令，诸军皆称奉诏。" },
+        { label: "只定共同讨逆名义", hint: "稳妥提高威望与外部制衡。", effects: { prestige: 4, caoAlert: 2 }, hidden: { externalBalance: 3 }, chronicle: "朝廷诏诸军共奉讨逆名义，不强夺其兵柄。" },
+        { label: "以厚赏换取一役听命", hint: "国库换取短期军令。", effects: { treasury: -5, authority: 3, security: 2 }, chronicle: "天子厚赏诸军，换得一役奉诏而行。" },
+      ],
+    },
+    {
+      id: "path_martial_veterans", pathId: "martial", pathStage: 2, title: "归来将士", category: "帝业·戎马",
+      text: "一批久战将士回到朝廷控制区。他们既是可用之兵，也是需要田宅、抚恤与归属的人。如何安置将决定戎马中兴是否只剩下一场胜仗。",
+      choices: [
+        { label: "授田屯守新附城池", hint: "国库下降，宫禁与民稳提高。", effects: { treasury: -4, security: 3 }, hidden: { peopleStability: 3 }, chronicle: "朝廷授田安置归来将士，使之屯守新附。" },
+        { label: "择精锐编入宿卫", hint: "宫禁大幅提高，曹氏警戒上升。", effects: { security: 6, authority: 2, caoAlert: 5, treasury: -2 }, chronicle: "归来精锐被选入宿卫，宫门声势一新。" },
+        { label: "遣归乡里，减免赋役", hint: "民稳与威望提高，军事收益较少。", effects: { prestige: 3 }, hidden: { peopleStability: 5 }, chronicle: "朝廷遣老卒归乡并减免赋役，州里称颂。" },
       ],
     },
   ],
