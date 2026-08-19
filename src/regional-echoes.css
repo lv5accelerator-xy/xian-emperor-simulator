@@ -1,0 +1,6 @@
+/* 天子蒙尘 v2.12.0：山河回响 */
+.regional-echo{position:relative;z-index:1;margin-top:14px;padding:14px 15px;border:1px solid rgba(117,153,123,.22);border-radius:13px;background:linear-gradient(100deg,rgba(42,68,51,.25),rgba(11,12,10,.18))}
+.regional-echo.decision{border-color:rgba(198,139,84,.42);background:linear-gradient(100deg,rgba(92,53,30,.25),rgba(11,12,10,.18))}
+.regional-echo>header{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.regional-echo>header div{display:grid;gap:3px}.regional-echo>header span{font-size:.72rem;letter-spacing:.11em;color:#9daf9b}.regional-echo.decision>header span{color:#d1a36e}.regional-echo>header strong{color:#e4d8c6}.regional-echo>header small{color:#978b7c;text-align:right}
+.regional-echo>p{margin:8px 0 0;color:#bcae9d;line-height:1.55}.regional-echo>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:11px}.regional-echo button{display:grid;gap:4px;padding:10px 12px;border:1px solid rgba(207,157,89,.22);border-radius:10px;background:rgba(255,255,255,.035);color:#e1d4c2;text-align:left;cursor:pointer}.regional-echo button:hover{border-color:rgba(218,171,91,.58)}.regional-echo button small{color:#a99c8b;line-height:1.45}
+@media(max-width:620px){.regional-echo>header{display:grid}.regional-echo>header small{text-align:left}.regional-echo>div{grid-template-columns:1fr}}
