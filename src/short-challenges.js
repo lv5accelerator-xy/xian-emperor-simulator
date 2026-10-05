@@ -51,7 +51,7 @@
   let finishing = false;
 
   document.addEventListener("DOMContentLoaded", init, { once: true });
-  document.addEventListener("xian:before-month-end", () => checkChallengeEnd());
+  document.addEventListener("xian:month-settled", () => checkChallengeEnd());
   document.addEventListener("xian:campaign-concluded", event => recordResult(event.detail || {}));
 
   function init() {
@@ -97,7 +97,7 @@
     store.active = { kind: custom.kind, challengeId: custom.id, gameCreatedAt: null, startedAt: new Date().toISOString(), pendingGrade: null };
     saveStore();
     syncStartSelectors(custom);
-    window.XianEmperorGame?.startNewGame?.(custom.difficulty || "standard", custom.scenarioId);
+    window.XianEmperorGame?.startNewGame?.(custom.difficulty || "standard", custom.scenarioId, { randomSeed: custom.randomSeed });
     const core = window.XianEmperorGame?.getState?.();
     if (!core) return false;
     store.active.gameCreatedAt = core.createdAt;
@@ -122,14 +122,14 @@
     if (finishing || !store.active) return;
     const core = window.XianEmperorGame?.getState?.() || readCore();
     const definition = activeDefinition();
-    if (!core || !definition || core.createdAt !== store.active.gameCreatedAt || Number(core.turn) < Number(definition.duration)) return;
+    if (!core || core.ended || !definition || core.createdAt !== store.active.gameCreatedAt || Number(core.turn) < Number(definition.duration)) return;
     finishing = true;
     const grade = evaluateChallenge(definition, core);
     store.active.pendingGrade = grade;
     saveStore();
     window.XianEmperorGame?.concludeExternalEnding?.({
-      title: grade.medal === "gold" ? `${definition.name}·金章` : grade.medal === "silver" ? `${definition.name}·银章` : `${definition.name}·余烬`,
-      text: `${definition.duration}个月的限时危局已经结束。你完成 ${grade.completed}/${grade.total} 项目标，获得${medalName(grade.medal)}。`,
+      title: `${definition.name}·${grade.medal === "none" ? "余烬" : medalName(grade.medal)}`,
+      text: `${definition.duration}个月的限时危局已完成最后一月结算。你完成 ${grade.completed}/${grade.total} 项目标，${grade.medal === "none" ? "未获章" : `获得${medalName(grade.medal)}`}。`,
     });
     finishing = false;
   }
@@ -138,7 +138,8 @@
     if (!store.active || detail.state?.createdAt !== store.active.gameCreatedAt) return;
     const definition = activeDefinition();
     if (!definition) return;
-    const grade = store.active.pendingGrade || evaluateChallenge(definition, detail.state);
+    const endedEarly = !store.active.pendingGrade;
+    const grade = store.active.pendingGrade || { ...evaluateChallenge(definition, detail.state), medal: "none", score: 0 };
     const result = {
       id: `short-${Date.now()}`,
       kind: store.active.kind,
@@ -149,13 +150,17 @@
       completed: grade.completed,
       total: grade.total,
       score: grade.score,
+      checks: grade.checks,
+      endedEarly,
+      rulesVersion: 215,
+      randomSeed: detail.state.random?.seed ?? null,
       reward: definition.reward || "无名史签",
       completedAt: new Date().toISOString(),
     };
     store.results.unshift(result);
     store.results = store.results.slice(0, 40);
     const old = store.best[definition.id];
-    if (!old || result.score > old.score) store.best[definition.id] = result;
+    if (!old || old.rulesVersion !== result.rulesVersion || result.score > old.score) store.best[definition.id] = result;
     if (grade.medal !== "none" && !store.rewards.includes(result.reward)) store.rewards.push(result.reward);
     store.active = null;
     saveStore();
@@ -189,7 +194,7 @@
   function renderActive(definition) {
     const core = readCore();
     const grade = core ? evaluateChallenge(definition, core) : null;
-    return `<div class="short-active"><div><span>短局进行中 · 第 ${core?.turn || 1}/${definition.duration} 月</span><strong>${escapeHtml(definition.name)}</strong><p>${escapeHtml(definition.intro)}</p></div><section>${(grade?.checks || definition.goals).map(goal => `<i class="${goal.passed ? "pass" : ""}">${goal.passed ? "✓" : "○"} ${escapeHtml(goal.label)}${goal.value != null ? `（${Math.round(goal.value)}）` : ""}</i>`).join("")}</section></div>`;
+    return `<div class="short-active"><div><span>短局进行中 · 第 ${core?.turn || 1}/${definition.duration} 月</span><strong>${escapeHtml(definition.name)}</strong><p>${escapeHtml(definition.intro)}成绩在最后一月用度与风险结算后核验。</p></div><section>${(grade?.checks || definition.goals).map(goal => `<i class="${goal.passed ? "pass" : ""}">${goal.passed ? "✓" : "○"} ${escapeHtml(goal.label)}${goal.value != null ? `（${Math.round(goal.value)}）` : ""}</i>`).join("")}</section></div>`;
   }
 
   function renderCard(item, disabled) {
@@ -207,7 +212,7 @@
       if (!scroll || scroll.querySelector(".short-ending-badge")) return;
       const badge = document.createElement("section");
       badge.className = `short-ending-badge ${result.medal}`;
-      badge.innerHTML = `<span>乱世短局</span><strong>${medalName(result.medal)}</strong><p>完成 ${result.completed}/${result.total} 项目标 · 收录“${escapeHtml(result.reward)}”</p>`;
+      badge.innerHTML = `<span>乱世短局 · ${result.endedEarly ? "提前终局" : "月末核验"}</span><strong>${medalName(result.medal)}</strong><p>完成 ${result.completed}/${result.total} 项目标${result.medal === "none" ? " · 未收录纪念物" : ` · 收录“${escapeHtml(result.reward)}”`}</p><p>${(result.checks || []).map(goal => `${goal.passed ? "✓" : "○"} ${escapeHtml(goal.label)}（${Math.round(goal.value)}）`).join(" · ")}</p>`;
       scroll.querySelector(".ending-actions")?.before(badge);
     }, 30);
   }

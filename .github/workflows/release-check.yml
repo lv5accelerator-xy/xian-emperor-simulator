@@ -233,7 +233,9 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.14.0' index.html
+          grep -q 'v2.15.0' index.html
+          grep -q 'src/action-feedback.js?v=2.15.0' index.html
+          grep -q 'src/action-feedback.css?v=2.15.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -259,10 +261,10 @@ jobs:
           grep -q 'src/grand-map.js?v=2.14.0' index.html
           grep -q 'src/campaign-evolution.css?v=1.5.1' index.html
           grep -q 'src/campaign-evolution-data.js?v=1.5.1' index.html
-          grep -q 'src/campaign-evolution.js?v=1.5.1' index.html
+          grep -q 'src/campaign-evolution.js?v=2.15.0' index.html
           grep -q 'src/ui.css?v=1.5.1' index.html
           grep -q 'src/ui.js?v=2.6.1' index.html
-          grep -q 'src/world-system.js?v=2.6.1' index.html
+          grep -q 'src/world-system.js?v=2.15.0' index.html
           grep -q 'src/command-center.css?v=2.5.0-r2' index.html
           grep -q 'src/command-center.js?v=2.14.0' index.html
           grep -q 'src/character-memory.css?v=1.7.0' index.html
@@ -407,6 +409,7 @@ jobs:
           test -f patch-notes/v2.12.0.txt
           test -f patch-notes/v2.13.0.txt
           test -f patch-notes/v2.14.0.txt
+          test -f patch-notes/v2.15.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -441,5 +444,8 @@ jobs:
       - name: Run gameplay feedback regression
         run: node tests/gameplay-feedback-regression.js
 
+      - name: Run settlement and replay regression
+        run: node tests/settlement-replay-regression.js
+
       - name: Run release regression
-        run: EXPECTED_VERSION=2.14.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.15.0 node tests/release-regression.js

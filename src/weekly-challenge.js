@@ -68,11 +68,12 @@
       kind: "weekly",
       code,
       weekKey,
+      randomSeed: seed,
       name: `天下同题·${condition.name}`,
       scenarioId,
       duration: 6,
       difficulty: "standard",
-      intro: `${condition.text}所有使用代码 ${code} 的玩家面对相同剧本、事件顺序与初始修正。`,
+      intro: `${condition.text}使用代码 ${code} 将固定剧本、事件顺序、初始修正与执行、泄密的随机结果序列。相同版本、初始状态和行动顺序可复现结果。`,
       sequence,
       setup: condition.setup,
       goals: [condition.goal, sharedGoal, { path: "stats.caoAlert", max: 82, label: "曹氏警戒≤82" }],
@@ -94,7 +95,7 @@
     const record = { ...result, code };
     store.results.unshift(record);
     store.results = store.results.slice(0, 32);
-    if (!store.best[code] || result.score > store.best[code].score) store.best[code] = record;
+    if (!store.best[code] || store.best[code].rulesVersion !== record.rulesVersion || result.score > store.best[code].score) store.best[code] = record;
     saveStore();
     window.XianCommandCenter?.refresh?.();
   }
@@ -110,7 +111,7 @@
       <section class="weekly-goals"><h3>本题目标</h3>${definition.goals.map(goal => `<span>${escapeHtml(goal.label)}</span>`).join("")}</section>
       ${best ? `<div class="weekly-best"><span>个人最佳</span><strong>${medalName(best.medal)} · ${best.score}分</strong><p>${new Date(best.completedAt).toLocaleDateString("zh-CN")} 完成 ${best.completed}/${best.total} 项</p></div>` : '<div class="weekly-best empty">此分享码尚无本机成绩。</div>'}
       <button class="weekly-start" type="button" data-weekly-start ${window.XianDynastySaga?.isActive?.() ? "disabled" : ""}>开始同题挑战</button>
-      <p class="weekly-note">同题结果保存在本浏览器，可将分享码发给其他玩家；本版本不依赖服务器排行榜。</p>`;
+      <p class="weekly-note">新开的同题挑战会保存随机进度，刷新、读档或完整导入后继续原序列。结果保存在本浏览器，可分享代码邀请其他玩家挑战。</p>`;
   }
 
   function mountTab(root) {

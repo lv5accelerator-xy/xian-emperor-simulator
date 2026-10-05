@@ -478,7 +478,8 @@
   }
 
   function processElapsedTurns(core) {
-    const gap = clamp(core.turn - state.lastProcessedTurn, 0, 24);
+    const nextTurn = Math.max(core.turn, Number(core.monthlySettledTurn || 0) + 1);
+    const gap = clamp(nextTurn - state.lastProcessedTurn, 0, 24);
     for (let index = 0; index < gap; index += 1) {
       const completedTurn = state.lastProcessedTurn;
       simulateTurn(completedTurn, core);
@@ -487,7 +488,8 @@
   }
 
   function simulateTurn(turn, core) {
-    const rng = seededRandom(`${state.gameCreatedAt}-${turn}-strategy`);
+    const key = window.XianEmperorGame?.getRandomKey?.("strategy", state.gameCreatedAt, core) ?? state.gameCreatedAt;
+    const rng = seededRandom(`${key}-${turn}-strategy`);
     Object.values(state.strategies).forEach(strategy => {
       if (!strategy) return;
       const avgSupply = averageRouteMetric(strategy.routeIds, "supply", 55);
@@ -817,6 +819,10 @@
   }
 
   window.XianStrategyNetwork = Object.freeze({
+    settleMonth: () => {
+      processCoreSave(localStorage.getItem(GAME_SAVE_KEY));
+      if (state && coreState && state.lastProcessedTurn <= Number(coreState.monthlySettledTurn || 0)) processCoreSave(localStorage.getItem(GAME_SAVE_KEY));
+    },
     detectCityTargets,
     detectLordTargets,
     detectOrders,

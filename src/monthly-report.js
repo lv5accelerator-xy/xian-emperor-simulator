@@ -239,6 +239,7 @@
       fulfilled: operations.filter((item) => item.execution >= 75).length,
       partial: operations.filter((item) => item.execution >= 50 && item.execution < 75).length,
       poor: operations.filter((item) => item.execution < 50).length,
+      estimated: operations.filter(item => item.executionSource !== "recorded").length,
     };
 
     const statNames = {
@@ -292,6 +293,7 @@
       date,
       operations,
       averageExecution,
+      hasEstimates: counts.estimated > 0,
       overall,
       counts,
       statChanges,
@@ -317,7 +319,9 @@
       .reverse();
 
     return selected.map((report, index) => {
-      const execution = extractExecutionPercent(report.text) ?? estimateExecution(before, report, index);
+      const recorded = report.outcome?.execution?.source === "recorded" ? report.outcome.execution.value : extractExecutionPercent(report.text);
+      const executionSource = recorded == null ? "estimated" : "recorded";
+      const execution = recorded ?? estimateExecution(before, report);
       const band = executionBand(execution);
       const [result, changes] = splitReportText(report.text);
       return {
@@ -325,11 +329,14 @@
         kind: inferOperationKind(report),
         title: report.title || "未题名政务",
         result,
-        changes: changes || "未见即时公开数值变化",
+        changes: report.outcome ? describeActualChanges(report.outcome) : changes || "未见即时公开数值变化",
+        actualChanges: Boolean(report.outcome),
+        actionPointsSpent: report.outcome?.actionPointsSpent ?? null,
+        executionSource,
         execution,
         status: band.label,
         statusClass: band.className,
-        assessment: buildOperationAssessment(before, report, execution),
+        assessment: `${executionSource === "estimated" ? "按当月局势估计，实际结果以记录变化为准；" : "采用政令中已记录的执行评估；"}${buildOperationAssessment(before, report, execution)}`,
       };
     });
   }
@@ -341,17 +348,18 @@
 
   function extractMonthEndReports(after, date, before = after) {
     const reports = Array.isArray(after.reports) ? after.reports : [];
+    const previous = new Set((before.reports || []).map(item => `${item.timestamp}:${item.title}:${item.text}`));
     const items = reports
       .filter(
         (report) =>
           matchesMonth(report, before, date) &&
-          (report.title === "月末结算" || report.title === "宫中警讯")
+          (report.title === "月末结算" || report.title === "宫中警讯" || !previous.has(`${report.timestamp}:${report.title}:${report.text}`))
       )
       .slice()
       .reverse();
 
     const notes = [];
-    let summary = "";
+    const summaries = [];
 
     items.forEach((report) => {
       if (report.title === "宫中警讯") {
@@ -365,11 +373,11 @@
         .split("；")
         .map((item) => item.trim())
         .filter(Boolean)
-        .forEach((item) => notes.push(item));
-      if (delta) summary = delta.replace(/[。.]$/, "");
+        .forEach((item) => notes.push(report.title === "月末结算" ? item : `${report.title}：${item}`));
+      if (delta) summaries.push(`${report.title}：${delta.replace(/[。.]$/, "")}`);
     });
 
-    return { notes, summary };
+    return { notes, summary: summaries.join("；") };
   }
 
   function splitReportText(text = "") {
@@ -379,12 +387,16 @@
 
   function extractExecutionPercent(text = "") {
     const preferred = String(text).match(/(?:执行评估|落实到地方|执行度)[^0-9]{0,18}(\d{1,3})%/);
-    const fallback = String(text).match(/(\d{1,3})%/);
-    const value = Number(preferred?.[1] || fallback?.[1]);
+    if (!preferred) return null;
+    const value = Number(preferred[1]);
     return Number.isFinite(value) ? clamp(Math.round(value), 0, 100) : null;
   }
 
-  function estimateExecution(state, report, index) {
+  function describeActualChanges(outcome) {
+    return (outcome.stats || []).map(item => `${window.GAME_DATA?.statMeta?.[item.key]?.name || item.key} ${item.before} → ${item.after}（${signed(item.delta)}）`).join("，") || "公开指标无净变化";
+  }
+
+  function estimateExecution(state, report) {
     const stats = state.stats || {};
     const hidden = state.hidden || {};
     let score =
@@ -406,18 +418,7 @@
     if (report.type === "decision") score += 3;
     if (/国库不足|无法|折损|未能/.test(text)) score -= 12;
 
-    const jitter = (stableHash(`${report.title}|${report.timestamp}|${index}`) % 11) - 5;
-    return clamp(Math.round(score + jitter), 28, 96);
-  }
-
-  function stableHash(value) {
-    let hash = 2166136261;
-    const text = String(value);
-    for (let i = 0; i < text.length; i += 1) {
-      hash ^= text.charCodeAt(i);
-      hash = Math.imul(hash, 16777619);
-    }
-    return Math.abs(hash >>> 0);
+    return clamp(Math.round(score), 28, 96);
   }
 
   function inferOperationKind(report) {
@@ -470,6 +471,10 @@
     const adverse = report.statChanges.filter(
       (item) => (item.key === "caoAlert" ? item.delta > 0 : item.delta < 0)
     ).length;
+
+    if (report.hasEstimates) {
+      return `${adverse > favorable ? "本月公开指标净变偏弱，来月宜复核钱粮、宿卫与官心。" : "本月施政已留下实际变化，可结合月终净变继续判断局势。"}综合奉行度包含局势估计，不能据此认定所有政令已经落实。`;
+    }
 
     if (report.averageExecution >= 82 && favorable >= adverse) {
       return "本月诏令大体得行，中枢与承办官署尚能奉命。可在不骤增曹氏戒心的前提下，继续积累制度性权力。";
@@ -610,12 +615,13 @@
                     <small>${escapeHtml(operation.kind)}</small>
                     <h4>${escapeHtml(operation.title)}</h4>
                   </div>
-                  <strong>${operation.execution}%</strong>
+                  <strong>${operation.executionSource === "recorded" ? "记录" : "估计"} ${operation.execution}%</strong>
                 </div>
                 <div class="monthly-addon-meter"><i style="width:${clamp(operation.execution, 0, 100)}%"></i></div>
                 <p class="monthly-addon-status">${escapeHtml(operation.status)}｜${escapeHtml(operation.assessment)}</p>
                 <p><b>覆奏：</b>${escapeHtml(operation.result)}</p>
-                <p class="monthly-addon-change"><b>公开影响：</b>${escapeHtml(operation.changes)}</p>
+                ${operation.actionPointsSpent != null ? `<p class="monthly-addon-change"><b>实际投入：</b>御前行动 ${operation.actionPointsSpent} 次</p>` : ""}
+                <p class="monthly-addon-change"><b>${operation.actualChanges ? "实际公开变化" : "原始记录变化"}：</b>${escapeHtml(operation.changes)}</p>
               </article>
             `
           )
@@ -651,7 +657,7 @@
         <header class="monthly-addon-masthead">
           <span>尚书台谨覆</span>
           <h3>月度施政执行核验</h3>
-          <p>所列百分比为朝廷依据奏报、钱粮与承办反馈作出的执行度评估。</p>
+          <p>圣旨采用已记录的执行评估；其他政务明确标为估计。实际投入、公开变化与月末净变化分别列出。</p>
         </header>
 
         ${
@@ -794,7 +800,7 @@
     return window.XianEmperorGame.formatReignDate(Number(year), Number(month));
   }
 
-  function executionLabel(report) { return report.averageExecution == null ? "—" : `${report.averageExecution}%`; }
+  function executionLabel(report) { return report.averageExecution == null ? "—" : `${report.hasEstimates === false ? "记录" : "估计"} ${report.averageExecution}%`; }
 
   function toChineseYear(yearNumber) {
     const map = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];

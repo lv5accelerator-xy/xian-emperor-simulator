@@ -97,7 +97,8 @@
     const eligible = PETITIONS.filter(template => core.turn >= template.minTurn && !state.history.some(item => item.templateId === template.id));
     const pool = eligible.length ? eligible : PETITIONS.filter(template => core.turn >= template.minTurn);
     if (!pool.length) return;
-    const pick = pool[Math.floor(seededRandom(`${core.createdAt}-${core.turn}-court`)() * pool.length) % pool.length];
+    const key = window.XianEmperorGame?.getRandomKey?.("court", core.createdAt, core) ?? core.createdAt;
+    const pick = pool[Math.floor(seededRandom(`${key}-${core.turn}-court`)() * pool.length) % pool.length];
     state.petitions.unshift({ id: `petition-${core.turn}-${pick.id}`, templateId: pick.id, turn: core.turn, status: "pending", createdAt: new Date().toISOString() });
     state.petitions = state.petitions.slice(0, 8);
   }

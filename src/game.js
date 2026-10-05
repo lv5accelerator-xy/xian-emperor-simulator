@@ -314,7 +314,7 @@
     });
   }
 
-  function createInitialState(difficulty, scenarioId = "jianan_196") {
+  function createInitialState(difficulty, scenarioId = "jianan_196", options = {}) {
     const scenario = getScenarioById(scenarioId);
     const stats = { ...STARTING_STATS };
     const hidden = { ...STARTING_HIDDEN };
@@ -358,6 +358,9 @@
       chronicle: [],
       totalActions: 0,
       edictsIssued: 0,
+      externalSequence: 0,
+      monthlySettledTurn: 0,
+      random: Number.isInteger(options.randomSeed) ? createRandomState(options.randomSeed) : null,
       causality: createInitialCausality(),
       ended: false,
       ending: null,
@@ -367,9 +370,36 @@
     };
   }
 
-  function startNewGame(difficulty = "standard", scenarioId = "jianan_196") {
+  // Only seeded challenges use this stream. Cosmetic IDs and previews do not consume it.
+  function createRandomState(seed) {
+    return { algorithm: "mulberry32-v1", seed: seed >>> 0, state: seed >>> 0, draws: 0 };
+  }
+
+  function normalizeRandomState(value) {
+    if (value?.algorithm !== "mulberry32-v1" || ![value.seed, value.state, value.draws].every(Number.isInteger)
+      || value.seed < 0 || value.seed > 0xffffffff || value.state < 0 || value.state > 0xffffffff || !Number.isSafeInteger(value.draws) || value.draws < 0) return null;
+    return { algorithm: value.algorithm, seed: value.seed, state: value.state, draws: value.draws };
+  }
+
+  function nextRandom() {
+    if (!state?.random) return Math.random();
+    const stream = state.random;
+    stream.state = (stream.state + 0x6d2b79f5) >>> 0;
+    let value = stream.state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    stream.draws += 1;
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  }
+
+  function getRandomKey(scope, fallback = state?.createdAt || "game", gameState = state) {
+    const stream = normalizeRandomState(gameState?.random);
+    return stream ? `challenge:${stream.seed}:mulberry32-v1:${scope}` : String(fallback);
+  }
+
+  function startNewGame(difficulty = "standard", scenarioId = "jianan_196", options = {}) {
     const scenario = getScenarioById(scenarioId);
-    state = createInitialState(difficulty, scenario.id);
+    state = createInitialState(difficulty, scenario.id, options);
     addChronicle(
       formatReignDate(scenario.startYear, scenario.startMonth),
       scenario.opening
@@ -440,7 +470,7 @@
     }
     if (pool.length === 0) pool = [...availableRandomEvents];
 
-    const selected = pool[Math.floor(Math.random() * pool.length)];
+    const selected = pool[Math.floor(nextRandom() * pool.length)];
     state.usedRandomEvents.push(selected.id);
     if (state.usedRandomEvents.length > DATA.randomEvents.length) {
       state.usedRandomEvents = state.usedRandomEvents.slice(-DATA.randomEvents.length);
@@ -464,6 +494,7 @@
     updateControls();
     renderDangerBanner();
     updateActionWorkspace();
+    window.XianActionFeedback?.render?.(state);
   }
 
   function renderHeader() {
@@ -653,6 +684,7 @@
     const choice = event?.choices[choiceIndex];
     if (!choice) return;
 
+    const before = captureOutcomeState();
     const deltaText = applyPackage(choice);
     document.dispatchEvent(new CustomEvent("xian:decision-resolved", { detail: {
       eventId: event.id,
@@ -671,7 +703,9 @@
     state.recentEventIds.push(event.id);
     state.recentEventIds = state.recentEventIds.slice(-4);
     addChronicle(formatReignDate(state.year, state.month), choice.chronicle);
-    addReport(event.title, `${choice.chronicle}${deltaText ? `｜${deltaText}` : ""}`, "decision");
+    addReport(event.title, `${choice.chronicle}${deltaText ? `｜${deltaText}` : ""}`, "decision", {
+      outcome: buildActionOutcome(before, choice, "decision"),
+    });
     showToast("本月奏报已裁决。", "success");
     checkImmediateEnding();
     saveGame(true);
@@ -1304,8 +1338,8 @@
     }
     const efficiency = calculateEdictEfficiency(interpretation);
     const result = buildEdictOutcome(text, interpretation, efficiency);
-    completeAction(result);
     state.edictsIssued += 1;
+    completeAction(result);
     el["decree-input"].value = "";
   }
 
@@ -1336,7 +1370,7 @@
     return { categories, targets };
   }
 
-  function calculateEdictEfficiency(interpretation, gameState = state, variation = Math.random()) {
+  function calculateEdictEfficiency(interpretation, gameState = state, variation = nextRandom()) {
     let score = 0.34 + gameState.stats.authority / 220 + gameState.stats.officials / 360;
     score -= Math.max(0, gameState.stats.caoAlert - 65) / 400;
     if (interpretation.categories.includes("secret")) score -= gameState.hidden.leakRisk / 500;
@@ -1462,16 +1496,21 @@
       effects,
       hidden,
       relations,
+      execution: { value: Math.round(efficiency * 100), source: "recorded" },
       edict: { categories: [...interpretation.categories], effectiveText: interpretation.effectiveText ?? originalText, targets: [...interpretation.targets] },
     };
   }
 
   function completeAction(pkg) {
     if (!canAct()) return;
+    const before = captureOutcomeState();
     const deltaText = applyPackage(pkg);
     state.actionPoints -= 1;
     state.totalActions += 1;
-    addReport(pkg.title, `${pkg.text}${deltaText ? `｜${deltaText}` : ""}`, "action", pkg.edict ? { edict: pkg.edict } : {});
+    const report = addReport(pkg.title, `${pkg.text}${deltaText ? `｜${deltaText}` : ""}`, "action", {
+      ...(pkg.edict ? { edict: pkg.edict } : {}),
+      outcome: buildActionOutcome(before, pkg, "action"),
+    });
     addChronicle(formatReignDate(state.year, state.month), pkg.chronicle);
     showToast(`行动完成，尚可行动 ${state.actionPoints} 次。`, "success");
     checkImmediateEnding();
@@ -1488,7 +1527,42 @@
         turn: state.turn,
         createdAt: state.createdAt,
       } }));
+      // Include synchronous replies and newly scheduled consequences, then persist the receipt.
+      report.outcome = buildActionOutcome(before, pkg, "action");
+      saveGame(true);
+      renderAll();
     }
+  }
+
+  function collectFollowUps() {
+    const pending = (state.causality?.pending || []).map(item => ({
+      id: `cause:${item.id}`, title: item.source || "朝局回响", text: item.text || "后续局势仍待结算。", dueTurn: Number(item.dueTurn),
+    }));
+    const echoes = window.XianConsequenceEchoes?.getState?.()?.records || [];
+    echoes.filter(item => item.status === "pending" && item.gameCreatedAt === state.createdAt).forEach(item => pending.push({
+      id: `echo:${item.id}`, title: item.type === "promise" ? "承诺复核" : "人物回响",
+      text: `“${item.choiceLabel || item.eventTitle || "御前裁决"}”将在后续月份得到回应。`, dueTurn: Number(item.dueTurn),
+    }));
+    return pending;
+  }
+
+  function captureOutcomeState() {
+    return { stats: { ...state.stats }, hidden: { ...state.hidden }, relations: { ...state.relations },
+      actionPoints: state.actionPoints, followUpIds: collectFollowUps().map(item => item.id) };
+  }
+
+  function buildActionOutcome(before, pkg, kind) {
+    const changes = group => Object.entries(state[group]).flatMap(([key, after]) => {
+      const start = Number(before[group][key] ?? after);
+      const delta = Math.round((Number(after) - start) * 100) / 100;
+      return delta ? [{ key, before: start, after: Number(after), delta }] : [];
+    });
+    return {
+      kind, actionPointsSpent: Math.max(0, before.actionPoints - state.actionPoints),
+      stats: changes("stats"), hidden: changes("hidden"), relations: changes("relations"),
+      execution: pkg.execution || null,
+      followUps: collectFollowUps().filter(item => !before.followUpIds.includes(item.id)).slice(0, 6),
+    };
   }
 
   function endTurn() {
@@ -1498,11 +1572,24 @@
       return;
     }
 
-    document.dispatchEvent(new CustomEvent("xian:before-month-end", { detail: { turn: state.turn, createdAt: state.createdAt } }));
-    if (state.ended) return;
-    applyMonthlyDynamics();
+    if (state.monthlySettledTurn < state.turn) {
+      document.dispatchEvent(new CustomEvent("xian:before-month-end", { detail: { turn: state.turn, createdAt: state.createdAt } }));
+      if (state.ended) return;
+      applyMonthlyDynamics();
+      if (checkImmediateEnding()) return;
+      state.monthlySettledTurn = state.turn;
+      saveGame(true);
+    }
+    // Flush dependent worlds before quarter goals, short-run scores and the monthly report snapshot.
+    for (const system of [window.XianWorldSystem, window.XianStrategyNetwork, window.XianArmySystem]) {
+      system?.settleMonth?.();
+      if (state.ended) return;
+    }
     if (checkImmediateEnding()) return;
     document.dispatchEvent(new CustomEvent("xian:month-ended", { detail: { turn: state.turn, createdAt: state.createdAt } }));
+    if (state.ended) return;
+    // Short challenges grade after monthly dynamics and quarter-end rewards or penalties.
+    document.dispatchEvent(new CustomEvent("xian:month-settled", { detail: { turn: state.turn, createdAt: state.createdAt } }));
     if (state.ended) return;
 
     if (state.turn >= state.maxTurns) {
@@ -1563,7 +1650,7 @@
 
     // 泄密检验
     const leakChance = clamp(state.hidden.leakRisk / 150, 0, 0.65);
-    if (Math.random() < leakChance) {
+    if (nextRandom() < leakChance) {
       const severity = Math.ceil(state.hidden.leakRisk / 20);
       effects.security = (effects.security || 0) - (2 + severity);
       effects.caoAlert = (effects.caoAlert || 0) + (3 + severity);
@@ -1896,17 +1983,20 @@
   }
 
   function addReport(title, text, type = "neutral", metadata = {}) {
-    state.reports.unshift({
+    const timestamp = Math.max(Date.now(), Number(state.reports[0]?.timestamp || 0) + 1);
+    const report = {
       ...metadata,
       title,
       text,
       type,
       date: formatReignDate(state.year, state.month),
-      timestamp: Date.now(),
+      timestamp,
       turn: state.turn,
       gameCreatedAt: state.createdAt,
-    });
+    };
+    state.reports.unshift(report);
     state.reports = state.reports.slice(0, 30);
+    return report;
   }
 
   function addChronicle(date, text) {
@@ -1963,6 +2053,8 @@
         ...(save.relations || {}),
       },
       causality: normalizeCausality(save.causality),
+      random: normalizeRandomState(save.random),
+      monthlySettledTurn: clamp(Number(save.monthlySettledTurn ?? (Number(save.turn || 1) - 1)), 0, Number(save.turn || 1)),
     };
     if (!migrated.currentEventId && !migrated.ended) {
       const fixed = DATA.fixedEvents.find((event) => event.fixedTurn === migrated.turn);
@@ -2239,6 +2331,7 @@
 
   function applyExternalPackage(pkg = {}) {
     if (!state || state.ended) return { applied: false, changes: "" };
+    state.externalSequence += 1;
     const changes = applyPackage(pkg);
     if (pkg.report?.title && pkg.report?.text) {
       addReport(pkg.report.title, `${pkg.report.text}${changes ? `｜${changes}` : ""}`, pkg.report.type || "decision");
@@ -2249,7 +2342,7 @@
     renderAll();
     if (pkg.causal !== false) {
       document.dispatchEvent(new CustomEvent("xian:external-package-applied", { detail: {
-        id: pkg.causalId || `external-${state.createdAt}-${state.turn}-${Date.now()}`,
+        id: pkg.causalId || `external-${state.createdAt}-${state.turn}-${state.externalSequence}`,
         title: pkg.report?.title || pkg.title || "朝局变化",
         text: pkg.report?.text || pkg.text || pkg.chronicle || "",
         effects: { ...(pkg.effects || {}) },
@@ -2301,6 +2394,7 @@
     formatReignDate,
     interpretEdict,
     previewEdict,
+    getRandomKey,
     updateCausality,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
   });

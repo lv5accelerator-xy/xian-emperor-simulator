@@ -217,7 +217,7 @@
     return result;
   }
 
-  function chooseFrontEvent(season, turn, routes = routeDefs(), currentStrategy = strategyState(), seed = state?.gameCreatedAt || "") {
+  function chooseFrontEvent(season, turn, routes = routeDefs(), currentStrategy = strategyState(), seed = window.XianEmperorGame?.getRandomKey?.("campaign-front", state?.gameCreatedAt || "", core) ?? (state?.gameCreatedAt || "")) {
     const routeStates = currentStrategy.routes || {};
     let candidates = [];
     let type = "convoy";

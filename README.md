@@ -43,7 +43,9 @@
 
 ## 当前版本
 
-当前版本为 **v2.14.0「朝政有据」**。
+当前版本为 **v2.15.0「施政留痕」**。
+
+- **v2.15.0**：短局在最后一月与季度结算后核验成绩；行动显示实际投入、净变化与后续事项；月报区分记录与估计；新开的同题挑战保存随机序列，读档后可继续复现。
 
 - **v2.14.0**：季度御题以月末实际成果结算；修复月报漏项与否定圣旨误判；简明模式把奏报放在前面；军令明确费用与外镇调遣条件。
 
@@ -136,12 +138,14 @@ node tests/quarterly-agenda-regression.js
 node tests/council-advice-regression.js
 node tests/regional-echoes-regression.js
 node tests/imperial-paths-regression.js
+node tests/gameplay-feedback-regression.js
+node tests/settlement-replay-regression.js
 ```
 
 发布检查还需要设置当前预期版本：
 
 ```bash
-EXPECTED_VERSION=2.13.0 node tests/release-regression.js
+EXPECTED_VERSION=2.15.0 node tests/release-regression.js
 ```
 
 GitHub Actions 会额外检查脚本语法、音频资源、圣旨目标顺序、军团计算、页面资源引用和独立版本说明。
@@ -162,4 +166,3 @@ GitHub Pages 从 `main` 分支根目录直接发布。每次正式更新应同�
 ## 地图、音乐与授权
 
 海岸线轮廓改编自公有领域的 [Natural Earth 1:110m 数据](https://www.naturalearthdata.com/)；历史势力边界和山川标注属于游戏化近似。游戏另包含原创人物立绘、操作音效和五首场景背景音乐；三首备选曲仅归档，不进入运行时清单。仓库当前未附带开源许可证，公开可见不代表其他内容可被任意复制、修改或再发布。
-

@@ -480,7 +480,8 @@
   }
 
   function processElapsedTurns(core) {
-    const gap = clamp(core.turn - state.lastProcessedTurn, 0, 24);
+    const nextTurn = Math.max(core.turn, Number(core.monthlySettledTurn || 0) + 1);
+    const gap = clamp(nextTurn - state.lastProcessedTurn, 0, 24);
     for (let index = 0; index < gap; index += 1) {
       const completedTurn = state.lastProcessedTurn;
       simulateTurn(completedTurn, core);
@@ -489,7 +490,8 @@
   }
 
   function simulateTurn(turn, core) {
-    const rng = seededRandom(`${state.gameCreatedAt}-${turn}-armies`);
+    const key = window.XianEmperorGame?.getRandomKey?.("armies", state.gameCreatedAt, core) ?? state.gameCreatedAt;
+    const rng = seededRandom(`${key}-${turn}-armies`);
     Object.values(state.armies).forEach(army => {
       if (army.status === "destroyed") return;
       if (["marching", "routing"].includes(army.status)) advanceArmy(army, turn, rng);
@@ -900,7 +902,8 @@
     const commanderId = siege.defenderCommander;
     const commander = commanderDef(commanderId);
     const captureChance = siege.stance === "persuade" ? 0.82 : siege.stance === "blockade" ? 0.62 : 0.38;
-    const captured = Boolean(commanderId && seededRandom(`${siege.id}-captive`)() <= captureChance);
+    const captureKey = window.XianEmperorGame?.getRandomKey?.(`captive:${siege.cityId}:${siege.startedTurn}:${siege.attackerArmyId}:${commanderId}`, `${siege.id}-captive`, coreState) ?? `${siege.id}-captive`;
+    const captured = Boolean(commanderId && seededRandom(captureKey)() <= captureChance);
     let captiveId = null;
     if (captured) {
       captiveId = `captive-${siege.id}-${commanderId}`;
@@ -998,7 +1001,8 @@
     let recruitSucceeded = false;
     if (captive) {
       if (result.captiveStatus === "recruit-check") {
-        recruitSucceeded = seededRandom(`${judgment.id}-recruit`)() * 100 <= result.recruitChance;
+        const recruitKey = window.XianEmperorGame?.getRandomKey?.(`recruit:${judgment.cityId}:${judgment.turn}:${judgment.attackerArmyId}:${captive.commanderId}`, `${judgment.id}-recruit`, coreState) ?? `${judgment.id}-recruit`;
+        recruitSucceeded = seededRandom(recruitKey)() * 100 <= result.recruitChance;
         captive.status = recruitSucceeded ? "recruited" : "detained";
         captive.lastChange = recruitSucceeded ? "奉诏归降，列入汉廷可用将领" : "拒绝归降，继续留置候议";
         if (recruitSucceeded) state.surrenderedOfficers.unshift({ commanderId: captive.commanderId, name: captive.name, joinedTurn: judgment.turn, sourceCityId: judgment.cityId });
@@ -1398,6 +1402,10 @@
   }
 
   window.XianArmySystem = Object.freeze({
+    settleMonth: () => {
+      processCoreSave(localStorage.getItem(CORE_KEY));
+      if (state && coreState && state.lastProcessedTurn <= Number(coreState.monthlySettledTurn || 0)) processCoreSave(localStorage.getItem(CORE_KEY));
+    },
     choosePrimaryOrder,
     calculateCombatPower,
     calculateSiegeTurn,

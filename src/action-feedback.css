@@ -1,0 +1,14 @@
+.action-feedback { margin-bottom: 14px; padding: 12px; border: 1px solid #846742; border-radius: 10px; background: #211d17; line-height: 1.6; }
+.action-feedback[hidden] { display: none; }
+.action-feedback header { display: grid; gap: 3px; }
+.action-feedback header span, .action-feedback > small { color: #bcad95; font-size: .75rem; }
+.action-feedback header strong { color: #ead6ae; }
+.feedback-cost { color: #d2bd96; font-size: .85rem; }
+.feedback-changes { display: grid; gap: 5px; margin: 8px 0; padding: 0; list-style: none; font-size: .82rem; }
+.feedback-changes li { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.feedback-changes .gain { color: #a6c59a; }
+.feedback-changes .cost { color: #dfa69a; }
+.action-feedback details { margin: 8px 0; font-size: .8rem; }
+.action-feedback summary { cursor: pointer; color: #d9c39a; }
+.action-feedback p { margin: 6px 0; font-size: .82rem; }
+.feedback-future ul { margin: 6px 0; padding-left: 18px; }

@@ -54,7 +54,7 @@
     syncQueued = true;
     setTimeout(() => {
       syncQueued = false;
-      syncFromCoreRaw(raw || localStorage.getItem(GAME_SAVE_KEY), reason);
+      syncFromCoreStorage(reason);
     }, 0);
   }
 
@@ -75,7 +75,8 @@
     worldState = ensureWorldState(core);
     processNewCoreReports(core);
 
-    const gap = Math.max(0, Math.min(24, core.turn - worldState.lastProcessedTurn));
+    const nextTurn = Math.max(core.turn, Number(core.monthlySettledTurn || 0) + 1);
+    const gap = Math.max(0, Math.min(24, nextTurn - worldState.lastProcessedTurn));
     for (let index = 0; index < gap; index += 1) {
       const completedTurn = worldState.lastProcessedTurn;
       processWorldMonth(core, completedTurn);
@@ -327,7 +328,8 @@
 
   function processWorldMonth(core, completedTurn) {
     const date = formatTurnDate(completedTurn);
-    const rng = seededRandom(`${worldState.gameCreatedAt}-${completedTurn}-${core.stats.prestige}`);
+    const key = window.XianEmperorGame?.getRandomKey?.("world", worldState.gameCreatedAt, core) ?? worldState.gameCreatedAt;
+    const rng = seededRandom(`${key}-${completedTurn}-${core.stats.prestige}`);
     const lordPool = [...DATA.lords]
       .map((lord) => ({ lord, score: rng() + (worldState.lords[lord.id]?.expansion || lord.expansion) / 300 }))
       .sort((a, b) => b.score - a.score)
@@ -826,4 +828,8 @@
   function formatSigned(value) { return value > 0 ? `+${Math.round(value)}` : String(Math.round(value)); }
   function clamp(value, min, max) { return Math.min(max, Math.max(min, Number(value) || 0)); }
   function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
+  window.XianWorldSystem = Object.freeze({
+    settleMonth: () => syncFromCoreStorage("month-end"),
+    getState: () => worldState ? JSON.parse(JSON.stringify(worldState)) : null,
+  });
 })();
