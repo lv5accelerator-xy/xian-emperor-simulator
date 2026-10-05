@@ -280,9 +280,9 @@ jobs:
           grep -q 'src/consequence-echoes.css?v=2.2.0' index.html
           grep -q 'src/consequence-echoes.js?v=2.2.0' index.html
           grep -q 'src/short-challenges.css?v=2.3.0' index.html
-          grep -q 'src/short-challenges.js?v=2.3.0' index.html
+          grep -q 'src/short-challenges.js?v=2.15.0' index.html
           grep -q 'src/weekly-challenge.css?v=2.4.0' index.html
-          grep -q 'src/weekly-challenge.js?v=2.4.0' index.html
+          grep -q 'src/weekly-challenge.js?v=2.15.0' index.html
           grep -q 'src/final-verdict.css?v=2.5.0' index.html
           grep -q 'src/final-verdict.js?v=2.5.0' index.html
           grep -q 'src/visual-refresh.css?v=2.7.1' index.html
