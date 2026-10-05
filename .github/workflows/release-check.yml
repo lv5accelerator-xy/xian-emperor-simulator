@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.13.0' index.html
+          grep -q 'v2.14.0' index.html
           grep -q 'src/audio.css' index.html
           grep -q 'src/audio-data.js' index.html
           grep -q 'src/audio-tracks.js' index.html
@@ -256,7 +256,7 @@ jobs:
           grep -q 'src/imperial-progress.js?v=1.5.1' index.html
           grep -q 'src/grand-map.css?v=2.6.1' index.html
           grep -q 'src/historical-geography-data.js?v=2.6.1' index.html
-          grep -q 'src/grand-map.js?v=2.6.1' index.html
+          grep -q 'src/grand-map.js?v=2.14.0' index.html
           grep -q 'src/campaign-evolution.css?v=1.5.1' index.html
           grep -q 'src/campaign-evolution-data.js?v=1.5.1' index.html
           grep -q 'src/campaign-evolution.js?v=1.5.1' index.html
@@ -264,7 +264,7 @@ jobs:
           grep -q 'src/ui.js?v=2.6.1' index.html
           grep -q 'src/world-system.js?v=2.6.1' index.html
           grep -q 'src/command-center.css?v=2.5.0-r2' index.html
-          grep -q 'src/command-center.js?v=2.5.0-r2' index.html
+          grep -q 'src/command-center.js?v=2.14.0' index.html
           grep -q 'src/character-memory.css?v=1.7.0' index.html
           grep -q 'src/character-memory.js?v=1.7.0' index.html
           grep -q 'src/world-marks.css?v=1.8.0' index.html
@@ -274,7 +274,7 @@ jobs:
           grep -q 'src/dynasty-saga.css?v=2.0.0' index.html
           grep -q 'src/dynasty-saga.js?v=2.0.0-r2' index.html
           grep -q 'src/monthly-flow.css?v=2.1.0' index.html
-          grep -q 'src/monthly-flow.js?v=2.1.0' index.html
+          grep -q 'src/monthly-flow.js?v=2.14.0' index.html
           grep -q 'src/consequence-echoes.css?v=2.2.0' index.html
           grep -q 'src/consequence-echoes.js?v=2.2.0' index.html
           grep -q 'src/short-challenges.css?v=2.3.0' index.html
@@ -289,7 +289,7 @@ jobs:
           grep -q 'src/causal-court.css?v=2.9.0' index.html
           grep -q 'src/causal-court.js?v=2.9.0' index.html
           grep -q 'src/quarterly-agenda.css?v=2.10.0' index.html
-          grep -q 'src/quarterly-agenda.js?v=2.11.0' index.html
+          grep -q 'src/quarterly-agenda.js?v=2.14.0' index.html
           grep -q 'src/council-advice.css?v=2.11.0' index.html
           grep -q 'src/council-advice.js?v=2.11.0' index.html
           grep -q 'src/regional-echoes.css?v=2.12.0' index.html
@@ -406,6 +406,7 @@ jobs:
           test -f patch-notes/v2.11.0.txt
           test -f patch-notes/v2.12.0.txt
           test -f patch-notes/v2.13.0.txt
+          test -f patch-notes/v2.14.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -437,5 +438,9 @@ jobs:
       - name: Run imperial paths regression
         run: node tests/imperial-paths-regression.js
 
+      - name: Run gameplay feedback regression
+        run: node tests/gameplay-feedback-regression.js
+
       - name: Run release regression
-        run: EXPECTED_VERSION=2.13.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.14.0 node tests/release-regression.js
+

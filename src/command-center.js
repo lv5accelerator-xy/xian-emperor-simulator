@@ -29,6 +29,7 @@
 
   document.addEventListener("DOMContentLoaded", init, { once: true });
   document.addEventListener("xian:core-saved", () => queueRefresh());
+  document.addEventListener("xian:quarterly-agenda-updated", () => queueRefresh());
   window.addEventListener?.("storage", event => {
     if (event.key === CORE_KEY || event.key === STORE_KEY) queueRefresh();
   });
@@ -196,10 +197,29 @@
     const stats = state?.stats || {};
     const hidden = state?.hidden || {};
     if (!state?.eventResolved) return { actionId: "event", label: "裁决奏报", reason: "所有行动都要在本月奏报裁决后进行。" };
+    if (Number(state.actionPoints ?? 2) <= 0) return { actionId: "end", label: "结束本月", reason: "本月行动已用尽，核对风险后进入月末结算。" };
     if ((stats.caoAlert || 0) >= 72) return { actionId: "appease", label: "安抚曹氏", reason: "曹氏警戒已接近危险线，先换取政治空间。" };
     if ((stats.treasury || 0) <= 24) return { actionId: "revenue", label: "筹措钱粮", reason: "国库已经偏低，可用一次御前行动换取钱粮，并选择能够承受的政治代价。" };
+    if ((stats.security ?? 50) <= 28) return { actionId: "appease", label: "安抚曹氏", reason: "宫禁已经松动，先换取宿卫与整顿时间。" };
     if ((hidden.peopleStability || 0) <= 35 && (stats.treasury || 0) >= 28) return { actionId: "relief", label: "赈济减赋", reason: "民间稳定偏低，继续拖延会反噬威望与宫廷安全。" };
     if ((hidden.leakRisk || 0) >= 55) return { actionId: "audience", label: "召见人物", reason: "泄密风险偏高，暂缓密令并修补关键关系。" };
+    const quarterly = window.XianQuarterlyAgenda?.getState?.();
+    if (quarterly?.gameCreatedAt === state.createdAt && quarterly.active && window.XianQuarterlyAgenda.calculateProgress(state) < 100) {
+      const choices = {
+        restore_treasury: ["revenue", "筹措钱粮", "御题度支有继需要国库净增长，先补用度。"],
+        steady_court: ["audience", "召见人物", "御题朝议归一需要百官支持，优先修补朝臣关系。"],
+        settle_people: ["relief", "赈济减赋", "御题安集黎庶需要民间稳定，注意预留后续财政。"],
+        secure_palace: ["appease", "安抚曹氏", "御题清宁宫禁需要安全净增长，避免新增泄密。"],
+        renew_mandate: ["ritual", "恢复朝仪", "御题重申汉命需要皇权净增长，并维持汉室威望。"],
+      };
+      const choice = choices[quarterly.active.id];
+      if (choice) return { actionId: choice[0], label: choice[1], reason: choice[2] };
+    }
+    const progression = window.XianImperialProgress?.getState?.();
+    if (progression?.session?.gameCreatedAt === state.createdAt) {
+      const choice = { guard: ["appease", "安抚曹氏", "宿卫方略先稳住宫廷安全，再经营直属力量。"], balance: ["regional", "结交外镇", "外镇方略需要地方关系与制衡，先取得可兑现的合作。"], covert: ["secret", "派遣密使", "忠汉方略需要可信密线；注意控制泄密与曹氏警戒。"] }[progression.session.pathId];
+      if (choice) return { actionId: choice[0], label: choice[1], reason: choice[2] };
+    }
     if ((hidden.externalBalance || 0) <= 35) return { actionId: "regional", label: "结交外镇", reason: "朝廷缺少外部制衡，地方承认能牵制一方独大。" };
     if ((stats.authority || 0) <= 45) return { actionId: "appointment", label: "任免封赏", reason: "皇权偏弱，可借官爵重新建立中枢存在感。" };
     return { actionId: "audience", label: "召见人物", reason: "当前没有迫近的数值危机，适合经营关键人物关系。" };

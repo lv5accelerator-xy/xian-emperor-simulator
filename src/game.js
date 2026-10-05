@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.13.0
+ * 天子蒙尘：献帝模拟器 v2.14.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -551,6 +551,8 @@
   }
 
   function getRecommendedCommonAction() {
+    const recommendation = window.XianCommandCenter?.recommendAction?.(state);
+    if (recommendation) return recommendation;
     const stats = state?.stats || {};
     const hidden = state?.hidden || {};
     if ((stats.caoAlert || 0) >= 72) return { actionId: "appease", label: "安抚曹氏", reason: "曹氏警戒已接近危险线，先换取政治空间。" };
@@ -1296,6 +1298,10 @@
     }
 
     const interpretation = interpretEdict(text);
+    if (interpretation.blocked) {
+      showToast(interpretation.warnings.join(" ") || "请写明一项可以执行的正面政令。", "warning");
+      return;
+    }
     const efficiency = calculateEdictEfficiency(interpretation);
     const result = buildEdictOutcome(text, interpretation, efficiency);
     completeAction(result);
@@ -1304,6 +1310,7 @@
   }
 
   function interpretEdict(text) {
+    if (window.XianEdictRules) return window.XianEdictRules.analyze(text, DATA.characters);
     const categories = [];
     const targets = [];
     const patterns = [
@@ -1329,17 +1336,25 @@
     return { categories, targets };
   }
 
-  function calculateEdictEfficiency(interpretation) {
-    let score = 0.34 + state.stats.authority / 220 + state.stats.officials / 360;
-    score -= Math.max(0, state.stats.caoAlert - 65) / 400;
-    if (interpretation.categories.includes("secret")) score -= state.hidden.leakRisk / 500;
+  function calculateEdictEfficiency(interpretation, gameState = state, variation = Math.random()) {
+    let score = 0.34 + gameState.stats.authority / 220 + gameState.stats.officials / 360;
+    score -= Math.max(0, gameState.stats.caoAlert - 65) / 400;
+    if (interpretation.categories.includes("secret")) score -= gameState.hidden.leakRisk / 500;
     if (interpretation.categories.includes("relief") || interpretation.categories.includes("tax")) {
-      score += state.hidden.peopleStability < 40 ? 0.06 : 0;
+      score += gameState.hidden.peopleStability < 40 ? 0.06 : 0;
     }
-    return clamp(score + (Math.random() - 0.5) * 0.12, 0.28, 0.94);
+    return clamp(score + (variation - 0.5) * 0.12, 0.28, 0.94);
   }
 
-  function buildEdictOutcome(originalText, interpretation, efficiency) {
+  function previewEdict(text, gameState = state) {
+    const interpretation = interpretEdict(text);
+    if (!gameState || interpretation.blocked) return { ok: false, interpretation };
+    const efficiency = calculateEdictEfficiency(interpretation, gameState, 0.5);
+    const outcome = buildEdictOutcome(text, interpretation, efficiency, gameState);
+    return { ok: true, interpretation, actionCost: 1, treasuryCost: Math.max(0, -Number(outcome.effects.treasury || 0)), outcome };
+  }
+
+  function buildEdictOutcome(originalText, interpretation, efficiency, gameState = state) {
     const effects = {};
     const hidden = {};
     const relations = {};
@@ -1416,18 +1431,20 @@
       }
     });
 
+    // 人物收益共用一份行动预算，罗列更多名字不会放大总收益。
+    const targetCount = Math.max(1, interpretation.targets.length);
     interpretation.targets.forEach((targetId) => {
       const character = getCharacter(targetId);
       if (!character) return;
-      const positive = !/(罢免|黜|问罪|讨伐|斥责)/.test(originalText);
-      relations[targetId] = positive ? Math.round(5 * efficiency) : -Math.round(7 * efficiency);
-      if (character.faction === "regional_lords") add(hidden, "externalBalance", positive ? 3 : -2);
-      if (targetId === "cao_cao") add(effects, "caoAlert", positive ? -3 : 7);
+      const positive = interpretation.targetDisposition ? interpretation.targetDisposition[targetId] !== "punitive" : !/(罢免|黜|问罪|讨伐|斥责)/.test(originalText);
+      relations[targetId] = positive ? Math.floor(5 * efficiency / targetCount) : -Math.ceil(7 * efficiency / targetCount);
+      if (character.faction === "regional_lords") add(hidden, "externalBalance", positive ? 3 / targetCount : -2 / targetCount);
+      if (targetId === "cao_cao") add(effects, "caoAlert", positive ? -3 / targetCount : 7 / targetCount);
     });
 
-    if ((effects.treasury || 0) < 0 && state.stats.treasury < Math.abs(effects.treasury)) {
-      const shortfall = Math.abs(effects.treasury) - state.stats.treasury;
-      effects.treasury = -Math.max(0, state.stats.treasury - 1);
+    if ((effects.treasury || 0) < 0 && gameState.stats.treasury < Math.abs(effects.treasury)) {
+      const shortfall = Math.abs(effects.treasury) - gameState.stats.treasury;
+      effects.treasury = -Math.max(0, gameState.stats.treasury - 1);
       add(effects, "prestige", -Math.ceil(shortfall / 2));
       add(effects, "officials", -2);
     }
@@ -1445,6 +1462,7 @@
       effects,
       hidden,
       relations,
+      edict: { categories: [...interpretation.categories], effectiveText: interpretation.effectiveText ?? originalText, targets: [...interpretation.targets] },
     };
   }
 
@@ -1453,7 +1471,7 @@
     const deltaText = applyPackage(pkg);
     state.actionPoints -= 1;
     state.totalActions += 1;
-    addReport(pkg.title, `${pkg.text}${deltaText ? `｜${deltaText}` : ""}`, "action");
+    addReport(pkg.title, `${pkg.text}${deltaText ? `｜${deltaText}` : ""}`, "action", pkg.edict ? { edict: pkg.edict } : {});
     addChronicle(formatReignDate(state.year, state.month), pkg.chronicle);
     showToast(`行动完成，尚可行动 ${state.actionPoints} 次。`, "success");
     checkImmediateEnding();
@@ -1484,6 +1502,8 @@
     if (state.ended) return;
     applyMonthlyDynamics();
     if (checkImmediateEnding()) return;
+    document.dispatchEvent(new CustomEvent("xian:month-ended", { detail: { turn: state.turn, createdAt: state.createdAt } }));
+    if (state.ended) return;
 
     if (state.turn >= state.maxTurns) {
       finishCampaign();
@@ -1875,13 +1895,16 @@
     modalConfirmHandler = null;
   }
 
-  function addReport(title, text, type = "neutral") {
+  function addReport(title, text, type = "neutral", metadata = {}) {
     state.reports.unshift({
+      ...metadata,
       title,
       text,
       type,
       date: formatReignDate(state.year, state.month),
       timestamp: Date.now(),
+      turn: state.turn,
+      gameCreatedAt: state.createdAt,
     });
     state.reports = state.reports.slice(0, 30);
   }
@@ -2260,6 +2283,7 @@
     return true;
   }
 
+  document.addEventListener("xian:quarterly-agenda-updated", () => { if (state) updateActionWorkspace(); });
   window.XianEmperorGame = Object.freeze({
     applyExternalPackage,
     performExternalAction,
@@ -2274,6 +2298,9 @@
     calculateScenarioChallenge: (scenario, gameState) => calculateScenarioChallenge(scenario, gameState),
     buildTreasuryActionPackage: (method, currentTreasury) => buildTreasuryActionPackage(method, currentTreasury),
     chooseEventIllustration: event => ({ ...chooseEventIllustration(event) }),
+    formatReignDate,
+    interpretEdict,
+    previewEdict,
     updateCausality,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
   });

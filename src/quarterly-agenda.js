@@ -46,7 +46,7 @@
     },
     {
       id: "turn_the_front", title: "转危为战", seal: "军", category: "军略",
-      summary: "在三个月内取得一次对朝廷有利的战果，或实质改善军团态势。",
+      summary: "在三个月内让汉廷军团取得一次胜利，投入与部署不能替代实际胜绩。",
       metric: "courtVictories", delta: 1, actions: ["军", "出征", "监军", "攻城"],
       success: { effects: { prestige: 3, authority: 1 }, hidden: { externalBalance: 2 } },
       failure: { effects: { prestige: -2, treasury: -1 } },
@@ -59,7 +59,7 @@
   document.addEventListener("xian:external-action-completed", event => recordContribution(event.detail || {}, "action"));
   document.addEventListener("xian:battle-report", event => recordContribution(event.detail || {}, "battle"));
   document.addEventListener("xian:city-captured", event => recordContribution(event.detail || {}, "capture"));
-  document.addEventListener("xian:before-month-end", settleIfDue);
+  document.addEventListener("xian:month-ended", settleIfDue);
 
   function init() {
     document.getElementById("quarterly-agenda-panel")?.addEventListener("click", handleClick);
@@ -148,6 +148,7 @@
       endTurn: Math.min(core.maxTurns, core.turn + 2),
       baseline: readMetric(core, agenda.metric),
       secondaryBaseline: agenda.secondary ? readMetric(core, agenda.secondary) : null,
+      peopleBaseline: readMetric(core, "peopleStability"),
       startedAt: new Date().toISOString(),
     };
     state.offers = [];
@@ -189,13 +190,15 @@
   function calculateProgress(core = coreState(), agenda = getActiveAgenda()) {
     if (!core || !agenda || !state.active) return 0;
     const current = readMetric(core, agenda.metric);
-    const change = (current - Number(state.active.baseline || 0)) * (agenda.metric === "courtVictories" ? 100 : (100 / agenda.delta));
-    let secondary = 0;
+    const baseline = Number(state.active.baseline || 0);
+    const target = agenda.metric === "courtVictories" ? baseline + agenda.delta : Math.min(100, baseline + agenda.delta);
+    let progress = target === baseline ? (current >= target ? 100 : 0) : (current - baseline) * 100 / (target - baseline);
     if (agenda.secondary) {
       const secondaryChange = (readMetric(core, agenda.secondary) - Number(state.active.secondaryBaseline || 0)) * Number(agenda.secondaryDirection || 1);
-      secondary = secondaryChange * 5;
+      if (secondaryChange < 0) progress = Math.min(progress, 99);
     }
-    return clamp(Math.max(Number(state.contribution || 0), change + secondary), 0, 100);
+    if (agenda.id === "restore_treasury" && state.active.peopleBaseline != null && readMetric(core, "peopleStability") < state.active.peopleBaseline - 4) progress = Math.min(progress, 99);
+    return clamp(progress, 0, 100);
   }
 
   function settleIfDue(event) {
@@ -265,7 +268,8 @@
       </header>
       <div class="quarterly-progress-row"><div><span>三月进度</span><strong>${progress}%</strong></div><span>尚余 ${remaining} 月</span></div>
       <div class="quarterly-track" role="progressbar" aria-label="${esc(agenda.title)}进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div>
-      <div class="quarterly-guidance"><strong>${progress >= 100 ? "本季目标已经达成" : buildGuidance(agenda)}</strong><span>${latest ? `最近推进：${esc(latest.text)} +${latest.points}` : "相关奏报、行动、战果都会推进目标。"}</span></div>
+      <p class="quarterly-target">${esc(describeTarget(core, agenda))}</p>
+      <div class="quarterly-guidance"><strong>${progress >= 100 ? "已达到目标，月末扣除用度后核验" : buildGuidance(agenda)}</strong><span>施政投入 ${Math.round(state.contribution)} / 100；${latest ? `最近处分：${esc(latest.text)}` : "相关行动记入投入，完成度只按实际成果计算。"}</span></div>
       <div id="imperial-advice-slot" class="imperial-extension-slot"></div>
       <div id="regional-echo-slot" class="imperial-extension-slot"></div>
       <div id="imperial-path-slot" class="imperial-extension-slot"></div>
@@ -288,9 +292,19 @@
       settle_people: "赈济、减赋与巡抚州郡最为直接。",
       secure_palace: "降低泄密与警戒，同时恢复宫廷安全。",
       renew_mandate: "礼制、任免与有效圣旨都能重申汉命。",
-      turn_the_front: "取得战果、夺城或派出监军即可显著推进。",
+      turn_the_front: "支持汉廷军团取得实际胜利；部署与监军只记入施政投入。",
     };
     return map[agenda.id] || "处理与目标相关的奏报和行动。";
+  }
+
+  function describeTarget(core, agenda) {
+    const names = { treasury: "国库", officials: "百官支持", peopleStability: "民稳", security: "宫廷安全", authority: "皇权", courtVictories: "汉军胜绩", leakRisk: "泄密风险", prestige: "威望" };
+    const baseline = Number(state.active.baseline || 0);
+    const target = agenda.metric === "courtVictories" ? baseline + agenda.delta : Math.min(100, baseline + agenda.delta);
+    let text = `${names[agenda.metric]} ${readMetric(core, agenda.metric)} / 目标${target}（立题时${baseline}）`;
+    if (agenda.secondary) text += `；${names[agenda.secondary]}须${agenda.secondaryDirection < 0 ? "不高于" : "不低于"}${state.active.secondaryBaseline}`;
+    if (agenda.id === "restore_treasury" && state.active.peopleBaseline != null) text += `；民稳须不低于${Math.max(0, state.active.peopleBaseline - 4)}`;
+    return text;
   }
 
   function handleClick(event) {

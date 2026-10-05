@@ -229,10 +229,10 @@
   function buildMonthlyReport(before, after, monthStart) {
     const date = formatReignDate(before.year, before.month);
     const operations = extractOperations(before, date);
-    const dynamics = extractMonthEndReports(after, date);
+    const dynamics = extractMonthEndReports(after, date, before);
     const averageExecution = operations.length
       ? Math.round(operations.reduce((sum, item) => sum + item.execution, 0) / operations.length)
-      : 100;
+      : null;
     const overall = executionBand(averageExecution);
 
     const counts = {
@@ -312,7 +312,7 @@
   function extractOperations(before, date) {
     const reports = Array.isArray(before.reports) ? before.reports : [];
     const selected = reports
-      .filter((report) => report.date === date && (report.type === "decision" || report.type === "action"))
+      .filter((report) => matchesMonth(report, before, date) && (report.type === "decision" || report.type === "action"))
       .slice()
       .reverse();
 
@@ -334,12 +334,17 @@
     });
   }
 
-  function extractMonthEndReports(after, date) {
+  function matchesMonth(report, core, date) {
+    if (report.turn != null) return Number(report.turn) === Number(core.turn) && (!report.gameCreatedAt || report.gameCreatedAt === core.createdAt);
+    return report.date === date;
+  }
+
+  function extractMonthEndReports(after, date, before = after) {
     const reports = Array.isArray(after.reports) ? after.reports : [];
     const items = reports
       .filter(
         (report) =>
-          report.date === date &&
+          matchesMonth(report, before, date) &&
           (report.title === "月末结算" || report.title === "宫中警讯")
       )
       .slice()
@@ -449,6 +454,7 @@
   }
 
   function executionBand(value) {
+    if (value == null) return { label: "无可评估政令", className: "neutral" };
     if (value >= 90) return { label: "奉诏尽行", className: "excellent" };
     if (value >= 75) return { label: "大部施行", className: "good" };
     if (value >= 60) return { label: "施行过半", className: "balanced" };
@@ -457,6 +463,7 @@
   }
 
   function buildVerdict(report) {
+    if (report.averageExecution == null) return "本月没有可评估的政令记录；请依据月末用度与国势净变判断局势，不能据此认定政令全部落实。";
     const favorable = report.statChanges.filter(
       (item) => (item.key === "caoAlert" ? item.delta < 0 : item.delta > 0)
     ).length;
@@ -529,7 +536,7 @@
             (report) => `
               <button type="button" data-report-id="${escapeHtml(report.id)}">
                 <span>${escapeHtml(report.date)}</span>
-                <strong>${report.averageExecution}% · ${escapeHtml(report.overall.label)}</strong>
+                <strong>${executionLabel(report)} · ${escapeHtml(report.overall.label)}</strong>
                 <small>政令 ${report.operations.length} 项｜奉行不力 ${report.counts.poor} 项</small>
               </button>
             `
@@ -656,7 +663,7 @@
         <div class="monthly-addon-summary">
           <div class="${report.overall.className}">
             <span>综合奉行度</span>
-            <strong>${report.averageExecution}%</strong>
+            <strong>${executionLabel(report)}</strong>
             <small>${escapeHtml(report.overall.label)}</small>
           </div>
           <div><span>奉诏较全</span><strong>${report.counts.fulfilled}</strong><small>75%以上</small></div>
@@ -784,8 +791,10 @@
   }
 
   function formatReignDate(year, month) {
-    return `建安${toChineseYear(Number(year) - 195)}年${toChineseMonth(Number(month))}`;
+    return window.XianEmperorGame.formatReignDate(Number(year), Number(month));
   }
+
+  function executionLabel(report) { return report.averageExecution == null ? "—" : `${report.averageExecution}%`; }
 
   function toChineseYear(yearNumber) {
     const map = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
@@ -815,4 +824,5 @@
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
+  window.XianMonthlyReport = Object.freeze({ buildMonthlyReport, formatReignDate, buildReportHtml });
 })();

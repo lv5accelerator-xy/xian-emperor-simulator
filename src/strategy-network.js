@@ -237,7 +237,8 @@
       .sort((a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0));
 
     reports.forEach(report => {
-      const text = extractEdictText(report.text || "");
+      const text = window.XianEdictRules?.reportText(report) ?? extractEdictText(report.text || "");
+      if (!text) return;
       const cityIds = detectCityTargets(text);
       const lordIds = detectLordTargets(text);
       const order = choosePrimaryOrder(detectOrders(text));
@@ -268,7 +269,7 @@
   }
 
   function processEdictReport(report, core) {
-    const text = extractEdictText(report.text || "");
+    const text = window.XianEdictRules?.reportText(report) ?? extractEdictText(report.text || "");
     if (!text) return;
     const cityIds = detectCityTargets(text);
     const lordIds = detectLordTargets(text);
@@ -326,19 +327,21 @@
   }
 
   function detectCityTargets(text) {
-    return orderedMatches(String(text || ""), DATA.cities);
+    return orderedMatches(window.XianEdictRules?.affirmativeText(text) ?? String(text || ""), DATA.cities);
   }
 
   function detectLordTargets(text) {
-    return orderedMatches(String(text || ""), DATA.lords);
+    return orderedMatches(window.XianEdictRules?.affirmativeText(text) ?? String(text || ""), DATA.lords);
   }
 
   function detectOrders(text) {
+    text = window.XianEdictRules?.affirmativeText(text) ?? text;
     const found = DATA.orderRules.filter(rule => new RegExp(rule.pattern).test(text)).map(rule => rule.id);
     return [...new Set(found)];
   }
 
   function detectPromises(text) {
+    text = window.XianEdictRules?.affirmativeText(text) ?? text;
     const found = DATA.promiseRules.filter(rule => new RegExp(rule.pattern).test(text)).map(rule => rule.id);
     return [...new Set(found)];
   }

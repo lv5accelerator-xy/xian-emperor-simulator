@@ -219,7 +219,8 @@
   }
 
   function processArmyEdict(report, core) {
-    const text = extractEdictText(report.text || "");
+    const text = window.XianEdictRules?.reportText(report) ?? extractEdictText(report.text || "");
+    if (!text) return;
     const cityIds = STRATEGY_API.detectCityTargets(text);
     const lordIds = STRATEGY_API.detectLordTargets(text);
     const orders = STRATEGY_API.detectOrders(text);
@@ -227,7 +228,7 @@
     const execution = extractExecution(report.text || "");
 
     if (primaryOrder === "ceasefire") {
-      const owners = lordIds.length ? lordIds : uniqueOwners();
+      const owners = lordIds.length ? lordIds : ["court"];
       stopArmies(owners, text, core.turn);
       return;
     }
@@ -242,6 +243,12 @@
     const army = selectArmy(owner, cityIds[0]);
     if (!army) {
       addLog(turn, "warning", `${ownerName(owner)}没有可执行诏令的完整军团。`);
+      return;
+    }
+    const access = getCommandAccess(army, coreState, readStrategyState());
+    if (!access.allowed) {
+      army.lastChange = access.message;
+      addLog(turn, "warning", `${armyName(army)}未承接军令：${access.message}`);
       return;
     }
 
@@ -293,6 +300,17 @@
     routeIds.forEach(routeId => adjustStrategyRoute(routeId, { pressure: task === "attack" ? 3 : 1, supply: task === "supply" ? 2 : -1 }, `${armyName(army)}奉诏进入军路`));
   }
 
+  function getCommandAccess(army, core = window.XianEmperorGame?.getState?.() || coreState, strategy = readStrategyState()) {
+    if (!army || !core) return { allowed: false, message: "尚未载入军籍。" };
+    if (army.owner === "court") return { allowed: true, mode: "direct", message: "汉廷直属，可直接下令。" };
+    const trust = Number(strategy?.strategies?.[army.owner]?.trust ?? 50);
+    const relation = Number(core.relations?.[army.owner] ?? 50);
+    const authority = Number(core.stats?.authority || 0);
+    const allowed = authority >= 45 && trust >= 60 && relation >= 50;
+    return { allowed, mode: "coordinated", trust, relation, authority,
+      message: allowed ? "外镇已具备协同条件，奉诏调遣。" : `外镇未开放调遣：需皇权45、该镇信任60、关系50；当前为${authority} / ${trust} / ${relation}。可先结交外镇或兑现承诺。` };
+  }
+
   function previewMapOrder(armyId, targetCityId, task) {
     const army = state?.armies?.[armyId];
     const city = STRATEGY_DATA.cities.find(item => item.id === targetCityId);
@@ -301,6 +319,13 @@
     if (!army || army.status === "destroyed") return { ok: false, message: "该军团已经失去建制。" };
     if (!city) return { ok: false, message: "没有找到目标城池。" };
     if (!allowedTasks.includes(task)) return { ok: false, message: "该军令暂不支持从舆图下达。" };
+    const currentCore = window.XianEmperorGame?.getState?.() || coreState;
+    const access = getCommandAccess(army, currentCore);
+    if (!access.allowed) return { ok: false, message: access.message };
+    const actionCost = 1;
+    const treasuryCost = task === "supply" ? 3 : task === "attack" ? 1 : 0;
+    if (Number(currentCore.stats.treasury || 0) < treasuryCost) return { ok: false, message: `国库不足：此军令需${treasuryCost}，当前仅有${currentCore.stats.treasury || 0}。` };
+    if (!currentCore.eventResolved || currentCore.ended || Number(currentCore.actionPoints || 0) < actionCost) return { ok: false, message: "请先裁决本月奏报，并保留1次御前行动。" };
     if (["engaged", "besieging"].includes(army.status) && task !== "retreat") {
       return { ok: false, message: "军团正处于交战或围城状态，只能先下令撤退。" };
     }
@@ -317,7 +342,7 @@
     const relation = Number(coreState.relations?.[army.commander] ?? 55);
     const ownerTrust = Number(strategyState?.strategies?.[army.owner]?.trust ?? 50);
     const courtBonus = army.owner === "court" ? 20 : 0;
-    const treasury = Number(coreState.stats.treasury || 0);
+    const treasury = Number(currentCore.stats.treasury || 0);
     const courtFactions = Object.values(window.XianCourtPolitics?.diagnostics?.()?.factions || {});
     const factionTension = courtFactions.length ? Math.max(...courtFactions.map(item => Number(item.tension || 0))) : 45;
     const treasuryModifier = clamp((treasury - 45) * .14, -9, 6);
@@ -341,6 +366,10 @@
 
     return {
       ok: true,
+      commandMode: access.mode,
+      commandAccess: access.message,
+      actionCost,
+      treasuryCost,
       armyId,
       armyName: armyName(army),
       task,
@@ -365,7 +394,7 @@
     if (!preview.ok) return preview;
     const game = window.XianEmperorGame;
     if (!game?.performExternalAction) return { ok: false, message: "核心行动接口尚未就绪。" };
-    const treasuryCost = task === "supply" ? -3 : task === "attack" ? -1 : 0;
+    const treasuryCost = -preview.treasuryCost;
     const actionAccepted = game.performExternalAction({
       title: `舆图军令·${preview.taskLabel}`,
       text: `${preview.armyName}奉命自${preview.originName}${preview.eta ? `沿${preview.routeNames.join("、")}` : "就地"}${preview.eta ? `前往${preview.targetName}` : `守备${preview.targetName}`}，预计${preview.eta}个月完成部署。`,
@@ -428,6 +457,7 @@
     let stopped = 0;
     Object.values(state.armies).forEach(army => {
       if (!owners.includes(army.owner) || ["destroyed", "idle", "recovering"].includes(army.status)) return;
+      if (!getCommandAccess(army, coreState).allowed) return;
       army.routeIds = [];
       army.routeIndex = 0;
       army.currentRouteId = null;
@@ -1375,6 +1405,7 @@
     getJudgmentDecision,
     resolvePostwarJudgment,
     previewMapOrder,
+    getCommandAccess,
     issueMapOrder,
     applyCampaignAssignment,
     applyCausalEffects,

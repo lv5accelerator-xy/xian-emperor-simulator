@@ -1,0 +1,25 @@
+/* v2.14.0 · 简明御前聚焦当前奏报。 */
+.long-term-objectives { margin-top: 18px; padding: 14px 18px; border: 1px solid #6f5736; border-radius: 14px; background: #221c17; color: #e4d2ac; }
+.long-term-objectives[hidden] { display: none; }
+.long-term-objectives summary { cursor: pointer; font-weight: 700; line-height: 1.6; }
+.objective-intro { color: #c1b5a0; font-size: .85rem; }
+.objective-content { display: grid; gap: 14px; }
+.objective-content > section { margin: 0; }
+.quarterly-target { color: #d0bc98; font-size: .82rem; line-height: 1.6; }
+body.xian-flow-simple #imperial-focus-strip { display: none; }
+body.xian-flow-simple .monthly-flow-bar { grid-template-columns: minmax(0,1fr) minmax(260px,1fr); padding: 10px 14px; gap: 12px; }
+body.xian-flow-simple .monthly-flow-copy small, body.xian-flow-simple .monthly-flow-advice { display: none; }
+body.xian-flow-simple .monthly-flow-steps { grid-template-columns: repeat(3,1fr); }
+body.xian-flow-simple .event-illustration { height: 110px; margin-bottom: 16px; }
+body.xian-flow-simple .event-illustration img { height: 100%; }
+body.xian-flow-simple .stats-grid { gap: 8px; }
+body.xian-flow-simple .stat-card { padding: 12px; }
+#start-short-challenge-btn { margin-top: 10px; width: 100%; }
+.map-command-cost { padding: 12px; border: 1px solid #9f7a40; border-radius: 10px; color: #f0d9a7; }
+@media (max-width: 720px) {
+  body.xian-flow-simple .monthly-flow-bar { grid-template-columns: 1fr; gap: 8px; }
+  body.xian-flow-simple .monthly-flow-copy strong { font-size: .85rem; }
+  body.xian-flow-simple .monthly-flow-steps button span { display: inline; font-size: .7rem; }
+  body.xian-flow-simple .event-illustration { height: 82px; }
+  .long-term-objectives { padding: 12px; }
+}

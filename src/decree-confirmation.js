@@ -74,15 +74,25 @@
   }
 
   function analyzeEdict(text, button) {
-    const cityIds = API.detectCityTargets(text);
-    const lordIds = API.detectLordTargets(text);
-    const orders = API.detectOrders(text);
-    const promises = API.detectPromises(text);
+    const interpretation = window.XianEdictRules?.analyze(text);
+    const costPreview = window.XianEmperorGame?.previewEdict?.(text, safeParse(localStorage.getItem(CORE_KEY)));
+    const effectiveText = interpretation?.blocked ? "" : interpretation?.effectiveText ?? text;
+    const cityIds = API.detectCityTargets(effectiveText);
+    const lordIds = API.detectLordTargets(effectiveText);
+    const orders = API.detectOrders(effectiveText);
+    const promises = API.detectPromises(effectiveText);
     const primaryOrder = API.choosePrimaryOrder?.(orders) || choosePrimaryOrder(orders);
     const routeIds = API.resolveOrderedPath?.(cityIds, lordIds) || resolvePath(cityIds, lordIds);
     const route = buildRouteSummary(cityIds, lordIds, routeIds);
-    const execution = estimateExecution(text);
-    const warnings = [];
+    const execution = estimateExecution(effectiveText);
+    const warnings = [...(interpretation?.warnings || [])];
+    if (interpretation?.targets.length > 1) warnings.push("人物关系与外部制衡共用一份行动收益，不按名字数量倍增。" );
+    const armies = Object.values(window.XianArmySystem?.getState?.()?.armies || {});
+    lordIds.forEach(id => {
+      const army = armies.find(item => item.owner === id);
+      const access = army && window.XianArmySystem?.getCommandAccess?.(army);
+      if (access && !access.allowed && ["attack", "support", "advance", "defend", "supply"].includes(primaryOrder)) warnings.push(access.message);
+    });
 
     if (!lordIds.length && ["attack", "support", "advance", "defend", "supply"].includes(primaryOrder)) {
       warnings.push("未识别明确受命诸侯；军事命令将优先记入汉廷方略，不会自动指定外镇军团。");
@@ -98,6 +108,8 @@
 
     return {
       text,
+      interpretation,
+      costPreview,
       cityIds,
       lordIds,
       orders,
@@ -119,10 +131,14 @@
     const cityNames = analysis.cityIds.map(id => cityDef(id)?.name).filter(Boolean);
     const orderNames = analysis.orders.map(orderLabel);
     const promiseNames = analysis.promises.map(promiseLabel);
+    const confirm = document.getElementById("decree-confirmation-confirm");
+    if (confirm) { confirm.disabled = Boolean(analysis.interpretation?.blocked); confirm.textContent = analysis.interpretation?.blocked ? "请拆分或修改诏文" : "确认用玺 · 行动1次"; }
 
     content.innerHTML = `
       <blockquote>${escapeHtml(analysis.text)}</blockquote>
       <section class="decree-confirmation-grid">
+        ${analysisItem("实际处分", analysis.interpretation?.labels.join("、") || "中央一般政令", "clear")}
+        ${analysisItem("用玺成本", `御前行动1次 · 国库 −${analysis.costPreview?.treasuryCost ?? "待核"}`, "neutral")}
         ${analysisItem("受命者", lordNames.length ? lordNames.join("、") : "未明确指定", lordNames.length ? "clear" : "uncertain")}
         ${analysisItem("战略行动", orderNames.length ? orderNames.join("、") : "中央一般政令", orderNames.length ? "clear" : "neutral")}
         ${analysisItem("城池顺序", cityNames.length ? cityNames.join(" → ") : "未识别城池", cityNames.length ? "clear" : "uncertain")}
@@ -144,7 +160,7 @@
 
   function confirmIssue() {
     const analysis = currentAnalysis;
-    if (!analysis?.button) return;
+    if (!analysis?.button || analysis.interpretation?.blocked) return;
     closeOverlay();
     bypassNextClick = true;
     analysis.button.click();

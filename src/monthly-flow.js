@@ -16,6 +16,7 @@
 
   document.addEventListener("DOMContentLoaded", init, { once: true });
   document.addEventListener("xian:core-saved", () => queueRefresh());
+  document.addEventListener("xian:quarterly-agenda-updated", () => queueRefresh());
   document.addEventListener("xian:decision-resolved", event => rememberDecision(event.detail || {}));
 
   function init() {
@@ -176,6 +177,7 @@
   function applyMode() {
     document.body.classList.toggle("xian-flow-simple", store.mode === "simple");
     updateModeButton();
+    document.dispatchEvent?.(new CustomEvent("xian:display-mode-changed", { detail: { mode: store.mode } }));
   }
 
   function updateModeButton() {

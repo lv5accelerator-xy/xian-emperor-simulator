@@ -143,6 +143,7 @@
 
   function applyEdictToWorld(report, core, world) {
     const parsed = parseEdictReport(report);
+    if (parsed.empty) return null;
     if (parsed.regionIds.length === 0 && parsed.lordIds.length === 0) return null;
 
     const regionIds = new Set(parsed.regionIds);
@@ -222,7 +223,8 @@
   }
 
   function parseEdictReport(report) {
-    const combined = `${report.title || ""} ${report.text || ""}`;
+    const effective = window.XianEdictRules?.reportText(report);
+    const combined = effective ?? `${report.title || ""} ${report.text || ""}`;
     const categories = [];
     const categoryPatterns = [
       ["relief", /(赈济|开仓|救灾|灾民|流民)/],
@@ -243,13 +245,13 @@
 
     const regionIds = detectRegions(combined);
     const lordIds = detectLords(combined);
-    const efficiencyMatch = combined.match(/[（(](\d{1,3})%[）)]/);
+    const efficiencyMatch = String(report.text || "").match(/[（(](\d{1,3})%[）)]/);
     const efficiency = efficiencyMatch
       ? clamp(Number(efficiencyMatch[1]) / 100, 0.28, 0.94)
       : 0.58;
     const negative = /(讨伐|罢免|黜|问罪|斥责|削爵|追责|征讨|平叛)/.test(combined);
 
-    return { categories, regionIds, lordIds, efficiency, negative };
+    return { categories: report.edict?.categories || categories, regionIds, lordIds, efficiency, negative, empty: effective === "" };
   }
 
   function detectRegions(text) {
