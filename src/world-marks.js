@@ -45,7 +45,8 @@
     const newest = next.reports?.[0];
     const previousNewest = lastCore?.reports?.[0];
     if (newest?.timestamp && newest.timestamp !== previousNewest?.timestamp && newest.type === "action") {
-      const actionType = inferAction(newest.title || "", newest.text || "");
+      const text = /^圣旨·/.test(newest.title || "") && window.XianEdictRules ? window.XianEdictRules.reportText(newest) : newest.text || "";
+      const actionType = inferAction(newest.title || "", text);
       if (actionType && MARK_TEMPLATES[actionType]) createMark(actionType, newest.title, next.turn);
     }
     core = next;
@@ -53,6 +54,10 @@
   }
 
   function inferAction(title, text) {
+    if (/^圣旨·/.test(title) && window.XianEdictRules) {
+      text = window.XianEdictRules.effectiveText(String(text).match(/“([^”]+)”/)?.[1] || text);
+      if (!text) return null;
+    }
     const value = `${title}${text}`;
     if (/赈|减赋|仓廪/.test(value)) return "relief";
     if (/朝仪|祭|经筵|宗庙/.test(value)) return "ritual";

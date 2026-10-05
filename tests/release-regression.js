@@ -139,7 +139,7 @@ for (const illustration of [
 for (const resource of [
   "command-center.css?v=2.5.0-r2", "command-center.js?v=2.14.0",
   "character-memory.css?v=1.7.0", "character-memory.js?v=1.7.0",
-  "world-marks.css?v=1.8.0", "world-marks.js?v=1.8.0",
+  "world-marks.css?v=1.8.0", "world-marks.js?v=2.14.0",
   "historian.css?v=1.9.0", "historian.js?v=1.9.0",
   "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.0.0-r2",
   "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.14.0",

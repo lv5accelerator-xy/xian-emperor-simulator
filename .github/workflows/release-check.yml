@@ -268,7 +268,7 @@ jobs:
           grep -q 'src/character-memory.css?v=1.7.0' index.html
           grep -q 'src/character-memory.js?v=1.7.0' index.html
           grep -q 'src/world-marks.css?v=1.8.0' index.html
-          grep -q 'src/world-marks.js?v=1.8.0' index.html
+          grep -q 'src/world-marks.js?v=2.14.0' index.html
           grep -q 'src/historian.css?v=1.9.0' index.html
           grep -q 'src/historian.js?v=1.9.0' index.html
           grep -q 'src/dynasty-saga.css?v=2.0.0' index.html
@@ -443,4 +443,3 @@ jobs:
 
       - name: Run release regression
         run: EXPECTED_VERSION=2.14.0 node tests/release-regression.js
-

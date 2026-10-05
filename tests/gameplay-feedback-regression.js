@@ -39,7 +39,7 @@ const coreFixture = () => ({
 
 // Exercise the same parser and outcome builder used by the core and confirmation page.
 const rules = harness();
-rules.load("data", "strategy-network-data", "edict-rules", "game", "monthly-report", "strategy-network", "decree-confirmation");
+rules.load("data", "strategy-network-data", "edict-rules", "game", "monthly-report", "strategy-network", "decree-confirmation", "world-marks");
 const game = rules.window.XianEmperorGame;
 const core = coreFixture();
 assert.equal(game.previewEdict("不得练兵，不得任命曹操。", core).ok, false, "negated orders must not become executable positive policies");
@@ -48,10 +48,12 @@ const mixed = game.previewEdict("不得练兵；安抚曹操。", core);
 assert.deepEqual(Array.from(mixed.interpretation.categories), ["appease"]);
 assert.equal(mixed.outcome.effects.treasury || 0, 0, "excluded military text must not charge military spending");
 assert.equal(mixed.outcome.edict.effectiveText, "安抚曹操", "subsystems receive affirmative text only");
+assert.equal(rules.window.XianWorldMarks.inferAction("圣旨·安抚", "“不得赈济；安抚曹操。”"), "appease", "negated relief cannot create recurring relief income");
 const names = game.previewEdict("曹操、袁绍、袁术、刘表、孙策各守本分。", core).outcome;
 assert.equal(Object.keys(names.relations).length, 0, "name lists alone cannot grant relations");
 assert.equal(names.hidden.externalBalance || 0, 0, "name lists alone cannot grant external balance");
 assert.equal(rules.window.XianEdictRules.reportText({ ...names, text: names.text }), "", "name lists must not create world or army orders");
+assert.equal(rules.window.XianWorldMarks.inferAction(names.title, names.text), null, "name-only generic orders cannot create recurring political benefits");
 const pair = game.previewEdict("安抚袁绍、刘表。", core).outcome;
 assert.ok(pair.hidden.externalBalance <= 3, "multiple targets share one political budget");
 assert.ok(Object.values(pair.relations).reduce((sum, value) => sum + value, 0) <= 5);
