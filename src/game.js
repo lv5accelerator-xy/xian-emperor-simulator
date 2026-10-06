@@ -278,9 +278,9 @@
 
     const commonActions = DATA.actionCatalog.filter((action) => action.id !== "edict");
     el["action-grid"].innerHTML = `
-      <button class="action-recommendation" type="button" data-action-recommend="">
+      <div class="action-advice"><button class="action-recommendation" type="button" data-action-recommend="">
         <span>当前建议</span><strong>裁决奏报后生成</strong><small>系统会根据国库、宫禁与警戒推荐一项行动。</small>
-      </button>
+      </button><div class="action-advice-tools"><button type="button" data-action-compare="" hidden>比较方案</button><details data-action-advice-details="" hidden><summary>详细依据</summary><p></p></details></div></div>
       <div class="action-category-tabs" role="tablist" aria-label="常用行动分类">
         ${ACTION_CATEGORIES.map(category => `<button type="button" role="tab" data-action-category-tab="${category.id}" aria-selected="false"><i>${category.icon}</i><span>${category.name}</span></button>`).join("")}
       </div>
@@ -317,6 +317,7 @@
       updateActionWorkspace();
       openRecommendedAction(recommendation);
     });
+    el["action-grid"].querySelector("[data-action-compare]")?.addEventListener("click", openActionComparison);
   }
 
   function createInitialState(difficulty, scenarioId = "jianan_196", options = {}) {
@@ -631,7 +632,11 @@
       button.classList.toggle("recommended-action", button.dataset.actionId === recommendation.actionId);
     });
     const banner = el["action-grid"].querySelector("[data-action-recommend]");
-    if (banner) banner.innerHTML = `<span>当前建议 · ${recommendation.actionId === "end" ? "月末" : ACTION_CATEGORIES.find(item => item.id === recommendationCategory)?.name || "御前"}</span><strong>${escapeHtml(recommendation.label)}</strong><small>${escapeHtml(recommendation.reason)}</small>`;
+    if (banner) banner.innerHTML = `<span>当前建议 · ${recommendation.actionId === "end" ? "月末" : ACTION_CATEGORIES.find(item => item.id === recommendationCategory)?.name || "御前"}</span><strong>${escapeHtml(recommendation.label)}</strong><small>${escapeHtml(recommendation.benefit || recommendation.reason)}</small>${recommendation.cost ? `<small>代价：${escapeHtml(recommendation.cost)}</small>` : ""}`;
+    const compare = el["action-grid"].querySelector("[data-action-compare]");
+    if (compare) compare.hidden = !window.XianCommandCenter?.compareActions || !state.eventResolved || state.ended || state.actionPoints <= 0 || state.monthlySettledTurn >= state.turn;
+    const detail = el["action-grid"].querySelector("[data-action-advice-details]");
+    if (detail) { detail.hidden = !recommendation.benefit; detail.innerHTML = `<summary>详细依据</summary><p>${escapeHtml(recommendation.reason)}</p>`; }
   }
 
   function renderCharacters() {
@@ -884,9 +889,40 @@
     openAction(recommendation.actionId, plan?.fields || {});
     if (plan) {
       const note = document.createElement("div"); note.className = "recommended-plan-note";
-      note.innerHTML = `<strong>建议方案：${escapeHtml(plan.label)}</strong><p>${escapeHtml(recommendation.reason)}</p>${renderOutcomePreview(plan)}<small>可修改方案，确认后才消耗行动。</small>`;
+      note.innerHTML = `<strong>建议方案：${escapeHtml(plan.label)}</strong><p>${escapeHtml(recommendation.benefit || recommendation.reason)}</p>${recommendation.cost ? `<p>代价：${escapeHtml(recommendation.cost)}</p>` : ""}<details><summary>详细依据与数值</summary><p>${escapeHtml(recommendation.reason)}</p>${renderOutcomePreview(plan)}</details><small>可修改方案，确认后才消耗行动。</small>`;
       el["modal-body"].prepend(note);
     }
+    return true;
+  }
+
+  function actionComparisonSignature() {
+    return JSON.stringify([state?.createdAt, state?.turn, state?.actionPoints, state?.stats, state?.hidden, state?.relations, state?.monthlySettledTurn, state?.ended]);
+  }
+
+  function openActionComparison() {
+    if (window.__xianFullSaveImporting) return false;
+    const comparison = window.XianCommandCenter?.compareActions?.(state);
+    if (!comparison?.available) { showToast(comparison?.reason || "当前无法比较方案。", "warning"); return false; }
+    const signature = actionComparisonSignature();
+    const signed = value => `${value > 0 ? "+" : ""}${Math.round(value * 100) / 100}`;
+    openModal({ title: "行动方案比较", wide: true, confirmText: "返回理政", cancelHidden: true, onConfirm: closeModal,
+      body: `<div class="action-comparison"><p>打开、比较和返回均不花资源。选定后进入原行动窗口，确认才施行；选择守成会先打开月末预检。</p>
+        ${comparison.choices.map((choice, index) => `<article class="${choice.recommended ? "recommended" : ""}"><span>${choice.recommended ? "当前建议" : choice.actionId === "end" ? "守成基准" : "另一种取舍"}</span><h3>${escapeHtml(choice.label)}</h3><p class="comparison-benefit">主要收益：${escapeHtml(choice.benefit)}</p><p class="comparison-cost">代价：${escapeHtml(choice.cost)}</p>
+          ${choice.checks.length ? `<p>固定结算后预计 ${choice.checks.filter(check => check.afterPassed).length}/${choice.checks.length} 项目标达标，终月仍须核验。</p>` : ""}
+          <details><summary>查看数值、目标与风险</summary><table><thead><tr><th>项目</th><th>当前</th><th>行动后</th><th>固定月末后</th><th>比守成</th></tr></thead><tbody>${choice.changes.map(row => `<tr><th>${escapeHtml(row.name)}</th><td>${row.before}</td><td>${row.immediate}</td><td>${row.fixed}</td><td>${signed(row.versusGuard)}</td></tr>`).join("")}</tbody></table>
+          ${choice.checks.map(check => `<p>${escapeHtml(check.label)} · 预计 ${check.after} · ${check.afterPassed ? "达到" : "未达到"}</p>`).join("")}
+          ${choice.relations.length ? `<p>人物关系：${choice.relations.map(item => `${escapeHtml(item.name)} ${signed(item.delta)}`).join(" · ")}</p>` : ""}
+          ${choice.leak ? `<p>泄密检验约 ${Math.round(choice.leak.chance * 100)}%；若触发，安全额外 −${choice.leak.securityLoss}、警戒额外 +${choice.leak.alertGain}。</p>` : ""}</details>
+          <button type="button" data-compare-choice="${index}">${escapeHtml(choice.label)} · ${choice.actionId === "end" ? "查看预检" : "选此方案"}</button></article>`).join("")}
+        ${comparison.choices.filter(choice => choice.actionId !== "end" && !choice.recommended).length === 0 ? "<p>当前没有筛出具有不同数值取舍的其他候选，仍可在常用行动中自行选择。</p>" : ""}<p class="comparison-note">${escapeHtml(comparison.note)}</p></div>` });
+    el["modal-body"].querySelectorAll("[data-compare-choice]").forEach(button => button.addEventListener("click", () => {
+      if (signature !== actionComparisonSignature()) { showToast("局势已变化，请核对重新生成的方案。", "warning"); return openActionComparison(); }
+      const choice = comparison.choices[Number(button.dataset.compareChoice)];
+      if (!choice) return;
+      closeModal();
+      if (choice.actionId === "end") requestEndTurn();
+      else openRecommendedAction({ ...choice, reason: comparison.note });
+    }));
     return true;
   }
 
@@ -2333,6 +2369,7 @@
     endTurn,
     requestEndTurn,
     openRecommendedAction,
+    openActionComparison,
     getActionPlans: gameState => gameState || state ? window.XianActionPlans.list(gameState || state) : [],
     captureFullSave,
     downloadFullSave,

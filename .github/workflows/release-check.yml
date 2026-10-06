@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.19.0' index.html
+          grep -q 'v2.20.0' index.html
           grep -q 'src/action-feedback.js?v=2.15.0' index.html
           grep -q 'src/action-feedback.css?v=2.15.0' index.html
           grep -q 'src/audio.css' index.html
@@ -268,7 +268,7 @@ jobs:
           grep -q 'src/ui.js?v=2.6.1' index.html
           grep -q 'src/world-system.js?v=2.15.0' index.html
           grep -q 'src/command-center.css?v=2.5.0-r2' index.html
-          grep -q 'src/command-center.js?v=2.19.0' index.html
+          grep -q 'src/command-center.js?v=2.20.0' index.html
           grep -q 'src/character-memory.css?v=1.7.0' index.html
           grep -q 'src/character-memory.js?v=1.7.0' index.html
           grep -q 'src/world-marks.css?v=1.8.0' index.html
@@ -276,28 +276,33 @@ jobs:
           grep -q 'src/historian.css?v=1.9.0' index.html
           grep -q 'src/historian.js?v=1.9.0' index.html
           grep -q 'src/dynasty-saga.css?v=2.0.0' index.html
-          grep -q 'src/dynasty-saga.js?v=2.19.0' index.html
+          grep -q 'src/dynasty-saga.js?v=2.20.0' index.html
           grep -q 'src/monthly-flow.css?v=2.1.0' index.html
           grep -q 'src/monthly-flow.js?v=2.16.0' index.html
           grep -q 'src/consequence-echoes.css?v=2.2.0' index.html
           grep -q 'src/consequence-echoes.js?v=2.2.0' index.html
-          grep -q 'src/short-challenges.css?v=2.17.0' index.html
-          grep -q 'src/short-challenges.js?v=2.19.0' index.html
-          grep -q 'src/short-review.js?v=2.17.0' index.html
+          grep -q 'src/short-challenges.css?v=2.20.0' index.html
+          grep -q 'src/short-challenges.js?v=2.20.0' index.html
+          grep -q 'src/short-review.js?v=2.20.0' index.html
           grep -q 'id="short-ending-review"' index.html
-          grep -q 'src/action-plans.js?v=2.19.0' index.html
-          grep -q 'src/monthly-report.js?v=2.19.0' index.html
+          grep -q 'src/action-plans.js?v=2.20.0' index.html
+          grep -q 'src/monthly-report.js?v=2.20.0' index.html
           grep -q 'id="ending-audit-btn"' index.html
           test -f src/action-plans.js
           test -f docs/SETTLEMENT_AUDIT.md
+          test -f docs/DECISION_COMPARISON.md
+          grep -q 'src/same-challenge.js?v=2.20.0' index.html
+          test -f tests/action-comparison-regression.js
+          test -f tests/review-turning-points-regression.js
+          test -f tests/same-challenge-regression.js
           test -f tests/action-plans-regression.js
           test -f tests/settlement-audit-regression.js
           test -f tests/backup-compare-regression.js
           test -f tests/advice-playthrough-regression.js
-          test -f patch-notes/v2.19.0.txt
-          grep -q 'src/monthly-safety.js?v=2.19.0' index.html
-          grep -q 'src/monthly-safety.css?v=2.19.0' index.html
-          grep -q 'src/save-backups.js?v=2.19.0' index.html
+          test -f patch-notes/v2.20.0.txt
+          grep -q 'src/monthly-safety.js?v=2.20.0' index.html
+          grep -q 'src/monthly-safety.css?v=2.20.0' index.html
+          grep -q 'src/save-backups.js?v=2.20.0' index.html
           grep -q 'id="start-backups-btn"' index.html
           grep -q 'src/weekly-challenge.css?v=2.4.0' index.html
           grep -q 'src/weekly-challenge.js?v=2.15.0' index.html
@@ -436,7 +441,7 @@ jobs:
           test -f patch-notes/v2.14.0.txt
           test -f patch-notes/v2.16.0.txt
           test -f patch-notes/v2.17.0.txt
-          test -f patch-notes/v2.19.0.txt
+          test -f patch-notes/v2.20.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -502,4 +507,13 @@ jobs:
         run: node tests/balance-regression.js
 
       - name: Run release regression
-        run: EXPECTED_VERSION=2.19.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.20.0 node tests/release-regression.js
+
+      - name: Validate action comparison and manual confirmation
+        run: node tests/action-comparison-regression.js
+
+      - name: Validate actual review turning points
+        run: node tests/review-turning-points-regression.js
+
+      - name: Validate same challenge comparison
+        run: node tests/same-challenge-regression.js

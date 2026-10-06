@@ -160,7 +160,7 @@
         <strong>${escapeHtml(focus.title)}</strong>
         <small>${escapeHtml(focus.detail)}</small>
       </div>
-      <div class="focus-recommendation"><span>建议</span><strong>${escapeHtml(recommendation.label)}</strong><small>${escapeHtml(recommendation.reason)}</small></div>
+      <div class="focus-recommendation"><span>建议</span><strong>${escapeHtml(recommendation.label)}</strong><small>${escapeHtml(recommendation.benefit || recommendation.reason)}</small>${recommendation.cost ? `<small>代价：${escapeHtml(recommendation.cost)}</small>` : ""}</div>
       <div class="focus-actions">
         ${firstVisit ? '<button type="button" data-focus-open="guide" class="focus-guide">第一次到此剧本 · 查看指引</button>' : ""}
         <button type="button" data-focus-jump="${focus.target}">${escapeHtml(focus.button)}</button>
@@ -268,8 +268,89 @@
     const costs = [["stats", plan.effects], ["hidden", plan.hidden]].flatMap(([group, changes]) => Object.entries(changes)
       .filter(([key, delta]) => key === "caoAlert" || key === "leakRisk" ? delta > 0 : delta < 0)
       .map(([key, delta]) => `${names[key] || key}${delta > 0 ? "+" : ""}${delta}`));
-    return { actionId: plan.actionId, fields: { ...plan.fields }, label: plan.label,
+    return { actionId: plan.actionId, fields: { ...plan.fields }, label: plan.label, ...summarizePlan(state, plan),
       reason: `${prefix}${changed.length ? changed.join("；") + "。" : ""}${costs.length ? "代价：" + costs.join("、") + "。" : "不耗国库。"}比较已计入固定月末用度；即时回响与随机风险仍会改变结果。` };
+  }
+
+  function metricName(path) {
+    const key = path.split(".")[1];
+    return window.GAME_DATA.statMeta[key]?.name || ({ loyalNetwork: "忠汉网络", leakRisk: "泄密风险", peopleStability: "民间稳定", externalBalance: "外部制衡", escapeRoute: "安全退路" })[key] || key;
+  }
+  const signed = value => `${value > 0 ? "+" : ""}${Math.round(value * 100) / 100}`;
+  const direction = path => /\.(caoAlert|leakRisk)$/.test(path) ? -1 : 1;
+
+  function summarizePlan(state, plan) {
+    const next = window.XianActionPlans.project(state, plan);
+    const changes = ["stats", "hidden"].flatMap(group => Object.keys(state[group]).map(key => ({
+      path: `${group}.${key}`, delta: next[group][key] - state[group][key],
+    })).filter(item => item.delta !== 0));
+    const gains = changes.filter(item => direction(item.path) * item.delta > 0);
+    const losses = changes.filter(item => item.path !== "stats.treasury" && direction(item.path) * item.delta < 0);
+    return { benefit: gains.slice(0, 3).map(item => `${metricName(item.path)} ${signed(item.delta)}`).join(" · ") || "经营人物关系",
+      cost: [`行动 1`, plan.cost ? `国库 ${plan.cost}` : "不耗国库", ...losses.slice(0, 2).map(item => `${metricName(item.path)} ${signed(item.delta)}`)].join(" · ") };
+  }
+
+  function compareActions(state) {
+    if (!state || state.ended || !state.eventResolved || state.actionPoints <= 0 || state.monthlySettledTurn >= state.turn) {
+      return { available: false, reason: "裁决奏报后且本月仍可行动时，才能比较方案。", choices: [] };
+    }
+    const goals = window.XianShortChallenges?.getActiveStatus?.(state)?.checks || [];
+    const baseline = window.XianMonthlySafety.preview(state, goals);
+    const recommendation = recommendAction(state);
+    const make = (plan, recommended = false) => {
+      const next = plan ? window.XianActionPlans.project(state, plan) : state;
+      const estimate = window.XianMonthlySafety.preview(next, goals);
+      const relations = Object.entries(plan?.relations || {}).flatMap(([id, delta]) => {
+        const before = state.relations?.[id] ?? 50;
+        const actual = Math.max(0, Math.min(100, before + delta)) - before;
+        return actual ? [{ name: window.GAME_DATA.characters.find(person => person.id === id)?.name || id, delta: actual }] : [];
+      });
+      const paths = ["stats", "hidden"].flatMap(group => Object.keys(state[group]).map(key => `${group}.${key}`));
+      const vector = paths.map(path => { const [group, key] = path.split("."); return direction(path) * estimate.projected[group][key]; });
+      vector.push(relations.reduce((sum, item) => sum + item.delta, 0));
+      const changes = paths.map(path => {
+        const [group, key] = path.split(".");
+        return { path, name: metricName(path), before: state[group][key], immediate: next[group][key], fixed: estimate.projected[group][key],
+          versusGuard: estimate.projected[group][key] - baseline.projected[group][key] };
+      }).filter(item => item.immediate !== item.before || item.fixed !== item.before || goals.some(goal => goal.path === item.path));
+      const summary = plan ? summarizePlan(state, plan) : {
+        benefit: `保留 ${state.actionPoints} 次行动，守成收益计入下方月末预估`, cost: "不再消耗行动或国库；月末固定用度仍会结算",
+      };
+      return { actionId: plan?.actionId || "end", fields: plan ? { ...plan.fields } : null,
+        label: plan?.label || `留 ${state.actionPoints} 次行动守成`, recommended, ...summary, changes, relations,
+        checks: estimate.checks, leak: estimate.leak, vector, plan,
+        score: goals.length ? planScore(state, next, goals) : vector.slice(0, -1).reduce((sum, value, index) => sum + (value - direction(paths[index]) * baseline.projected[paths[index].split(".")[0]][paths[index].split(".")[1]]), 0) };
+    };
+    const guard = make(null, recommendation.actionId === "end");
+    const plans = window.XianActionPlans.list(state).filter(plan => plan.affordable && state.stats.treasury - plan.cost >= 1);
+    const records = plans.map(plan => make(plan));
+    const key = item => JSON.stringify([item.actionId, item.fields]);
+    const advised = recommendation.fields && window.XianActionPlans.build(recommendation.actionId, recommendation.fields, state);
+    const primary = advised?.affordable && state.stats.treasury - advised.cost >= 1 ? make(advised, true) : { ...guard, recommended: true };
+    const dominates = (a, b) => a.vector.every((value, index) => value >= b.vector[index]) && a.vector.some((value, index) => value > b.vector[index]);
+    // Same numeric outcomes are one candidate; a different target is still selectable in its original menu.
+    const unique = new Map();
+    for (const item of [primary, ...records]) {
+      const signature = JSON.stringify(item.vector);
+      if (!unique.has(signature)) unique.set(signature, item);
+    }
+    const all = [...unique.values(), guard];
+    const candidates = [...unique.values()].filter(item => item.plan && key(item) !== key(primary)
+      && item.vector.some((value, index) => value > primary.vector[index])
+      && item.vector.some((value, index) => value < primary.vector[index])
+      && ["security", "prestige"].every(key => window.XianActionPlans.project(state, item.plan).stats[key] > 0)
+      && !item.changes.some(row => row.path === "stats.caoAlert" && row.immediate >= 100)
+      && !all.some(other => dominates(other, item))).sort((a, b) => b.score - a.score || a.plan.cost - b.plan.cost);
+    const alternatives = [];
+    for (const item of candidates) {
+      if (alternatives.some(other => other.actionId === item.actionId)) continue;
+      alternatives.push(item);
+      if (alternatives.length === 2) break;
+    }
+    const choices = primary.actionId === "end" ? [primary, ...alternatives] : [primary, ...alternatives, guard];
+    return { available: true, gameCreatedAt: state.createdAt, turn: state.turn, actionPoints: state.actionPoints,
+      choices: choices.map(({ vector, plan, score, ...item }) => item),
+      note: "数值为当前方案与固定月末结算的预估。即时回应、后续回响和随机风险仍会改变实际结果。候选按已知数值筛选，人物后续故事另计。" };
   }
 
   function recommendAction(state) {
@@ -307,7 +388,7 @@
     const rec = recommendAction(core);
     const warnings = collectWarnings(core);
     return `
-      <div class="command-hero"><span>${escapeHtml(focus.title)}</span><strong>${escapeHtml(rec.label)}</strong><p>${escapeHtml(rec.reason)}</p></div>
+      <div class="command-hero"><span>${escapeHtml(focus.title)}</span><strong>${escapeHtml(rec.label)}</strong><p>${escapeHtml(rec.benefit || rec.reason)}</p>${rec.cost ? `<p>代价：${escapeHtml(rec.cost)}</p><details><summary>详细依据</summary><p>${escapeHtml(rec.reason)}</p></details>` : ""}</div>
       <div class="command-three-steps">
         ${stepCard("一", "裁决奏报", core.eventResolved, "event")}
         ${stepCard("二", "使用御前行动", Number(core.actionPoints || 0) <= 0, "actions")}
@@ -426,6 +507,7 @@
     refresh,
     getCore: () => clone(core),
     recommendAction: state => clone(recommendAction(state)),
+    compareActions: state => clone(compareActions(state)),
     collectWarnings: state => clone(collectWarnings(state)),
     groupForTab: tabId => clone(groupForTab(tabId)),
     escapeHtml,

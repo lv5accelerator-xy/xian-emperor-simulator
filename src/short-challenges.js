@@ -63,6 +63,13 @@
     else trackProgress();
   });
   document.addEventListener("xian:month-settled", () => { trackProgress(true); checkChallengeEnd(); });
+  document.addEventListener("xian:settlement-completed", event => {
+    const core = event.detail?.after;
+    if (!core || !store.active || store.active.gameCreatedAt !== core.createdAt || !window.XianShortReview) return;
+    store.active.reviewLog ||= window.XianShortReview.createLog(core, false);
+    window.XianShortReview.recordSettlement(store.active.reviewLog, core, event.detail.settlement);
+    saveStore();
+  });
   document.addEventListener("xian:campaign-concluded", event => recordResult(event.detail || {}));
 
   function init() {
@@ -129,6 +136,7 @@
     const core = window.XianEmperorGame?.getState?.();
     if (!core || !store.active || !window.XianShortReview) return;
     store.active.reviewLog = window.XianShortReview.createLog(core, true);
+    store.active.comparisonIdentity = window.XianSameChallenge?.identity(activeDefinition(), core) || null;
     saveStore();
   }
 
@@ -189,6 +197,7 @@
       endingTitle: detail.state.ending?.title || "",
       rulesVersion: 216,
       randomSeed: detail.state.random?.seed ?? null,
+      comparisonIdentity: store.active.comparisonIdentity || null,
       reward: definition.reward || "无名史签",
       completedAt: new Date().toISOString(),
     };
@@ -272,8 +281,11 @@
 
   function reviewHtml(result, core = {}) {
     const review = getReview(result, core);
-    return review ? window.XianShortReview.html(review) : `<p>完成 ${result.completed}/${result.total} 项目标。</p>`;
+    const comparison = result.kind === "weekly" || result.comparisonIdentity ? window.XianSameChallenge?.html(comparisonFor(result)) || "" : "";
+    return (review ? window.XianShortReview.html(review) : `<p>完成 ${result.completed}/${result.total} 项目标。</p>`) + comparison;
   }
+
+  function comparisonFor(result) { return window.XianSameChallenge?.findPrevious(result, store.results) || { available: false, reason: "尚无对比记录。" }; }
 
   function renderEndingReview(core) {
     const panel = document.getElementById("short-ending-review");
@@ -293,7 +305,8 @@
   function formatReviewText(core) {
     const result = core && getResultForGame(core.createdAt);
     const review = result && getReview(result, core);
-    return review ? window.XianShortReview.text(review) : "";
+    const comparison = result && (result.kind === "weekly" || result.comparisonIdentity) ? window.XianSameChallenge?.text(comparisonFor(result)) || "" : "";
+    return review ? window.XianShortReview.text(review) + (comparison ? `\n${comparison}` : "") : "";
   }
 
   function syncStartSelectors(definition) {
@@ -319,6 +332,7 @@
     getActiveStatus,
     refreshStatus,
     getResultForGame,
+    getComparison: result => comparisonFor(result),
     renderEndingReview,
     formatReviewText,
     start,

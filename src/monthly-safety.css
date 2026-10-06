@@ -27,6 +27,27 @@
 .backup-compare table { width: 100%; border-collapse: collapse; }
 .backup-compare th, .backup-compare td { padding: 9px 6px; text-align: left; border-bottom: 1px solid rgba(221,187,105,.2); }
 .backup-compare .changed { color: #e5c987; }
+.action-advice { display: grid; gap: 8px; min-width: 0; }
+.action-advice .action-recommendation small { color: #d4c4a8; font-size: .82rem; }
+.action-advice .action-recommendation span { grid-row: 1 / 4; }
+.action-advice-tools { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.action-advice-tools button, .action-comparison button { min-height: 44px; padding: 10px 14px; border: 1px solid rgba(221,187,105,.4); border-radius: 9px; background: #3a3526; color: #f1dba8; cursor: pointer; }
+.action-advice-tools details { flex: 1; min-width: 180px; }
+.action-advice-tools summary, .recommended-plan-note summary, .command-hero summary { min-height: 44px; padding: 10px 0; box-sizing: border-box; cursor: pointer; }
+.action-advice-tools p { font-size: .88rem; line-height: 1.65; margin: 4px 0; }
+.action-comparison { display: grid; gap: 14px; min-width: 0; }
+.action-comparison article { display: grid; gap: 7px; padding: 15px; border: 1px solid rgba(221,187,105,.24); border-radius: 12px; min-width: 0; }
+.action-comparison article.recommended { border-color: #d1ad68; background: rgba(123,95,39,.16); }
+.action-comparison article > span { color: #a8cfba; font-size: .82rem; }
+.action-comparison h3, .action-comparison p { margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
+.action-comparison .comparison-benefit { color: #b8dfc4; }
+.action-comparison .comparison-cost { color: #efc597; }
+.action-comparison summary { min-height: 44px; padding: 10px 0; cursor: pointer; box-sizing: border-box; }
+.action-comparison table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .85rem; }
+.action-comparison th, .action-comparison td { padding: 8px 4px; border-bottom: 1px solid rgba(221,187,105,.2); text-align: left; overflow-wrap: anywhere; }
+.action-comparison details p { margin-top: 8px; font-size: .88rem; }
+.action-comparison button { width: 100%; }
+.action-comparison .comparison-note { font-size: .85rem; color: #c1b6a3; }
 @media (max-width: 540px) {
   .save-backups article { align-items: stretch; flex-direction: column; }
   .save-backups article button { width: 100%; min-height: 44px; }
