@@ -81,6 +81,7 @@
     if (!definition || window.XianDynastySaga?.isActive?.()) return false;
     const current = window.XianEmperorGame?.getState?.();
     if (current && !current.ended && typeof window.confirm === "function" && !window.confirm("开始短局会覆盖当前单局存档，完整导出后仍可恢复。确定继续吗？")) return false;
+    if (window.XianSaveBackups?.prepareReplacement?.("开始新短局前") === false) return false;
     store.active = { kind: "curated", challengeId: definition.id, gameCreatedAt: null, startedAt: new Date().toISOString(), pendingGrade: null };
     saveStore();
     syncStartSelectors(definition);
@@ -102,10 +103,10 @@
   function startCustom(config) {
     if (!config?.id || !config.scenarioId || !Array.isArray(config.sequence)) return false;
     const custom = { ...config, kind: config.kind || "weekly" };
-    store.customDefinitions[custom.id] = custom;
-    saveStore();
     const current = window.XianEmperorGame?.getState?.();
     if (current && !current.ended && typeof window.confirm === "function" && !window.confirm("开始同题挑战会覆盖当前单局存档，确定继续吗？")) return false;
+    if (window.XianSaveBackups?.prepareReplacement?.("开始同题挑战前") === false) return false;
+    store.customDefinitions[custom.id] = custom;
     store.active = { kind: custom.kind, challengeId: custom.id, gameCreatedAt: null, startedAt: new Date().toISOString(), pendingGrade: null };
     saveStore();
     syncStartSelectors(custom);

@@ -11,7 +11,7 @@ const plain = value => JSON.parse(JSON.stringify(value));
 function harness(stores = {}, ambientRandom = .99) {
   const listeners = new Map();
   const nodes = new Map();
-  const timers = new Map(); let timerId = 0;
+  const timers = new Map(); let timerId = 0, timerClock = 0;
   let clock = Date.now() + Math.round(ambientRandom * 100000000);
   class ClockDate extends Date { constructor(...args) { super(...(args.length ? args : [clock++])); } static now() { return clock++; } }
   class Element {
@@ -67,7 +67,7 @@ function harness(stores = {}, ambientRandom = .99) {
     dispatchEvent(event) { (listeners.get(event.type) || []).slice().forEach(handler => handler(event)); } };
   const math = Object.create(Math); math.random = () => ambientRandom;
   const context = { console, document, localStorage, Storage: StorageMock, Math: math, Date: ClockDate, JSON,
-    setTimeout: callback => { timers.set(++timerId, callback); return timerId; }, clearTimeout: id => timers.delete(id), requestAnimationFrame: callback => callback(),
+    setTimeout: (callback, delay = 0) => { timers.set(++timerId, { callback, deadline: timerClock + Number(delay || 0) }); return timerId; }, clearTimeout: id => timers.delete(id), requestAnimationFrame: callback => callback(),
     MutationObserver: class { observe() {} disconnect() {} },
     Event: class { constructor(type) { this.type = type; } }, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } },
     FileReader: class { readAsText(file) { this.result = file.text; this.onload(); } },
@@ -77,14 +77,24 @@ function harness(stores = {}, ambientRandom = .99) {
   vm.createContext(context);
   const load = (...files) => files.forEach(file => vm.runInContext(fs.readFileSync(path.join(root, "src", `${file}.js`), "utf8"), context, { filename: file }));
   const mount = (...files) => { const initial = (listeners.get("DOMContentLoaded") || []).length; load(...files); listeners.get("DOMContentLoaded").slice(initial).forEach(handler => handler()); };
-  load("data", "edict-rules", "action-feedback", "game", "short-review", "short-challenges", "weekly-challenge", "monthly-report");
+  load("data", "monthly-safety", "edict-rules", "action-feedback", "game", "short-review", "short-challenges", "weekly-challenge", "monthly-report");
   // Initialize the core only; monthly report's pure builder remains available below.
   listeners.get("DOMContentLoaded")[0]();
   const api = context.window.XianEmperorGame;
   const replaceCore = patch => { const core = api.getState(); Object.assign(core, patch); localStorage.setItem(CORE_KEY, JSON.stringify(core)); node("continue-game-btn").click(); return api.getState(); };
   const decide = index => { const buttons = node("event-choices").querySelectorAll("[data-choice-index]"); assert.ok(buttons[index], "real event choice must exist"); buttons[index].click(); };
   const edict = text => { node("decree-input").value = text; node("issue-decree-btn").click(); };
-  const flush = () => { let count = 0; while (timers.size && count++ < 500) { const [id, callback] = timers.entries().next().value; timers.delete(id); callback(); } assert.ok(count < 500, "save watchers must settle"); };
+  const advance = (duration = Infinity) => {
+    const until = timerClock + duration; let count = 0;
+    while (timers.size && count++ < 500) {
+      const [id, entry] = [...timers.entries()].sort((a, b) => a[1].deadline - b[1].deadline || a[0] - b[0])[0];
+      if (entry.deadline > until) break;
+      timers.delete(id); timerClock = entry.deadline; entry.callback();
+    }
+    if (Number.isFinite(until)) timerClock = until;
+    assert.ok(count < 500, "save watchers must settle");
+  };
+  const flush = () => advance();
   const loadEngine = () => {
     const initial = listeners.get("DOMContentLoaded").length;
     // Dynamic UI panels are absent until their modules install them.
@@ -111,7 +121,7 @@ function harness(stores = {}, ambientRandom = .99) {
     load("imperial-progress-data", "imperial-progress", "character-memory", "world-marks", "consequence-echoes", "causal-court", "quarterly-agenda", "council-advice", "regional-echoes", "imperial-paths");
     listeners.get("DOMContentLoaded").slice(initial).forEach(handler => handler()); flush();
   };
-  return { act, mount, loadMechanics, api, window: context.window, document, node, localStorage, load, loadEngine, flush, replaceCore, decide, edict, stores: () => Object.fromEntries(localStorage.values) };
+  return { act, mount, loadMechanics, api, window: context.window, document, node, localStorage, load, loadEngine, advance, flush, replaceCore, decide, edict, stores: () => Object.fromEntries(localStorage.values) };
 }
 
 

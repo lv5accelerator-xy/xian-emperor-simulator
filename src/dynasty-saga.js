@@ -75,6 +75,7 @@
   }
 
   function beginSaga() {
+    if (window.XianSaveBackups?.prepareReplacement?.("开启长卷前") === false) return;
     profile = defaultProfile();
     profile.active = true;
     profile.startedAt = new Date().toISOString();
@@ -103,6 +104,7 @@
   function startChapter(index) {
     const scenarioId = CHAPTERS[index];
     if (!scenarioId) return finishSaga();
+    if (window.XianSaveBackups?.prepareReplacement?.("续写长卷前") === false) return;
     profile.active = true;
     profile.currentIndex = index;
     profile.pendingScenarioId = scenarioId;
@@ -288,3 +290,4 @@
     begin: beginSaga,
   });
 })();
+

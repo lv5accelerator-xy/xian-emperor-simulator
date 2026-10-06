@@ -213,7 +213,7 @@
     });
 
     el["issue-decree-btn"].addEventListener("click", issueFreeformEdict);
-    el["end-turn-btn"].addEventListener("click", endTurn);
+    el["end-turn-btn"].addEventListener("click", requestEndTurn);
     el["save-btn"].addEventListener("click", () => saveGame(false));
     el["load-btn"].addEventListener("click", () => loadGame(false));
     el["export-btn"].addEventListener("click", exportSave);
@@ -275,7 +275,7 @@
 
     const commonActions = DATA.actionCatalog.filter((action) => action.id !== "edict");
     el["action-grid"].innerHTML = `
-      <button class="action-recommendation" type="button" data-action-recommend>
+      <button class="action-recommendation" type="button" data-action-recommend="">
         <span>当前建议</span><strong>裁决奏报后生成</strong><small>系统会根据国库、宫禁与警戒推荐一项行动。</small>
       </button>
       <div class="action-category-tabs" role="tablist" aria-label="常用行动分类">
@@ -307,6 +307,8 @@
     });
     el["action-grid"].querySelector("[data-action-recommend]")?.addEventListener("click", () => {
       const recommendation = getRecommendedCommonAction();
+      if (recommendation.actionId === "end") return requestEndTurn();
+      if (recommendation.actionId === "event") return el["event-choices"].scrollIntoView({ behavior: "smooth", block: "center" });
       activeActionCategory = getActionCategory(recommendation.actionId);
       actionCategoryPinned = false;
       updateActionWorkspace();
@@ -400,6 +402,8 @@
   }
 
   function startNewGame(difficulty = "standard", scenarioId = "jianan_196", options = {}) {
+    if (window.__xianFullSaveImporting) return false;
+    if (window.XianSaveBackups?.beforeNewGame?.() === false) return false;
     const scenario = getScenarioById(scenarioId);
     state = createInitialState(difficulty, scenario.id, options);
     addChronicle(
@@ -410,6 +414,7 @@
     prepareTurn();
     enterGame();
     saveGame(true);
+    return true;
   }
 
   function enterGame(resume = false) {
@@ -623,7 +628,7 @@
       button.classList.toggle("recommended-action", button.dataset.actionId === recommendation.actionId);
     });
     const banner = el["action-grid"].querySelector("[data-action-recommend]");
-    if (banner) banner.innerHTML = `<span>当前建议 · ${ACTION_CATEGORIES.find(item => item.id === recommendationCategory)?.name || "御前"}</span><strong>${recommendation.label}</strong><small>${recommendation.reason}</small>`;
+    if (banner) banner.innerHTML = `<span>当前建议 · ${recommendation.actionId === "end" ? "月末" : ACTION_CATEGORIES.find(item => item.id === recommendationCategory)?.name || "御前"}</span><strong>${escapeHtml(recommendation.label)}</strong><small>${escapeHtml(recommendation.reason)}</small>`;
   }
 
   function renderCharacters() {
@@ -863,6 +868,7 @@
   }
 
   function canAct() {
+    if (window.__xianFullSaveImporting) return false;
     if (!state || state.ended) return false;
     if (state.monthlySettledTurn >= state.turn) {
       showToast("本月已经结算，请完成月末核验。", "warning");
@@ -1578,7 +1584,48 @@
     };
   }
 
+  function preflightSignature() {
+    const core = { ...state };
+    delete core.updatedAt;
+    return JSON.stringify([core, window.XianQuarterlyAgenda?.getState?.() || null]);
+  }
+
+  function requestEndTurn() {
+    if (window.__xianFullSaveImporting) return;
+    if (!state || state.ended) return;
+    if (!state.eventResolved) return showToast("请先裁决本月奏报。", "warning");
+    const short = window.XianShortChallenges?.getActiveStatus?.(state);
+    const preview = window.XianMonthlySafety.preview(state, short?.checks || []);
+    const signature = preflightSignature();
+    const names = { ...Object.fromEntries(Object.entries(DATA.statMeta).map(([key, meta]) => [key, meta.name])),
+      leakRisk: "泄密风险", loyalNetwork: "忠汉网络" };
+    const rows = [["stats", preview.fixed.effects], ["hidden", preview.fixed.hidden]].flatMap(([kind, changes]) =>
+      Object.entries(changes).map(([key]) => `<tr><th scope="row">${escapeHtml(names[key] || key)}</th><td>${Math.round(state[kind][key])}</td><td>${Math.round(preview.projected[kind][key])}</td></tr>`)).join("");
+    const quarterly = window.XianQuarterlyAgenda?.getState?.();
+    const hasQuarter = quarterly?.gameCreatedAt === state.createdAt && quarterly.active;
+    const quarterText = hasQuarter ? `<section><h3>本季御题${state.turn >= quarterly.active.endTurn ? " · 本月核验" : ""}</h3><p>当前进度 ${Math.round(window.XianQuarterlyAgenda.calculateProgress(state))}% → 固定结算后 ${Math.round(window.XianQuarterlyAgenda.calculateProgress(preview.projected))}%。季度奖惩另行结算。</p></section>` : "";
+    const goalText = short ? `<section><h3>${escapeHtml(short.name)} · ${state.turn >= short.duration ? "本月完成短局，按实际终值评分" : `还余 ${short.duration - state.turn + 1} 个月`}</h3>
+      <ul class="preflight-goals">${preview.checks.map(check => `<li class="${check.afterPassed ? "safe" : "risk"}"><strong>${escapeHtml(check.label)}</strong><span>${Math.round(check.value)} → 预计 ${Math.round(check.after)} · ${check.afterPassed ? "固定结算后达到" : `还差 ${Math.ceil(check.gap)}`}${check.passed && !check.afterPassed ? "，原已达标，月末将跌出" : ""}</span></li>`).join("")}</ul></section>` : "";
+    const randomText = preview.leak ? `泄密检验概率约 ${Math.round(preview.leak.chance * 100)}%；若触发，安全额外 −${preview.leak.securityLoss}、警戒额外 +${preview.leak.alertGain}。未触发时泄密风险再 −1，触发时再 −8。` : "固定结算已完成，后续系统核验仍可能改变终值。";
+    openModal({ title: "月末结算预检", wide: true, confirmText: state.turn >= (short?.duration || state.maxTurns) ? "确认结算并核验终局" : "确认结束本月",
+      body: `<div class="month-preflight"><p class="modal-note">仅供核对。打开或返回预检不扣行动、钱粮，也不推进随机序列。</p>
+        <section><h3>固定用度与守成</h3><p>${preview.settled ? "本月固定结算已完成，不再重复扣款。" : `日常用度：国库 −1。余下 ${preview.unusedActions} 次行动守成：安全 +${preview.unusedActions}，泄密风险 −${preview.unusedActions}（均受 0–100 上限限制）。`}</p>
+        ${rows ? `<table><thead><tr><th>项目</th><th>当前</th><th>固定结算后</th></tr></thead><tbody>${rows}</tbody></table>` : ""}
+        <p>${escapeHtml(preview.fixed.notes.join("；"))}</p></section>${goalText}${quarterText}
+        <section class="preflight-risk"><h3>仍未确定的风险与回报</h3><p>${escapeHtml(randomText)}</p><p>军团、地方回报和季度奖惩仍会改变终值；上表不保证最终成绩。</p></section></div>`,
+      onConfirm: () => {
+        if (signature !== preflightSignature()) {
+          showToast("局势已变化，已重新生成预检，请再核对一次。", "warning");
+          return requestEndTurn();
+        }
+        closeModal();
+        endTurn();
+      },
+    });
+  }
+
   function endTurn() {
+    if (window.__xianFullSaveImporting) return;
     if (!state || state.ended) return;
     if (!state.eventResolved) {
       showToast("请先裁决本月奏报。", "warning");
@@ -1620,46 +1667,7 @@
   }
 
   function applyMonthlyDynamics() {
-    const effects = {};
-    const hidden = {};
-    const notes = [];
-
-    // 朝廷日常消耗
-    effects.treasury = -1;
-
-    // 未使用的行动可转化为谨慎治理收益
-    if (state.actionPoints > 0) {
-      effects.security = state.actionPoints;
-      hidden.leakRisk = -state.actionPoints;
-      notes.push(`余下${state.actionPoints}次行动用于谨慎守成`);
-    }
-
-    // 国库与官僚连锁
-    if (state.stats.treasury <= 18) {
-      effects.officials = (effects.officials || 0) - 3;
-      effects.prestige = (effects.prestige || 0) - 2;
-      notes.push("俸粮与行政经费不足");
-    }
-
-    // 民间稳定反馈
-    if (state.hidden.peopleStability <= 22) {
-      effects.prestige = (effects.prestige || 0) - 4;
-      effects.security = (effects.security || 0) - 2;
-      notes.push("民间不稳，流言与盗贼滋生");
-    } else if (state.hidden.peopleStability >= 72) {
-      effects.prestige = (effects.prestige || 0) + 2;
-      notes.push("地方相对安定，汉廷声望回升");
-    }
-
-    // 皇权过快增长会刺激警戒
-    if (state.stats.authority >= 72) {
-      effects.caoAlert = (effects.caoAlert || 0) + 2;
-      notes.push("皇权扩张引起司空府关注");
-    }
-
-    // 警戒自然回落或回归
-    if (state.stats.caoAlert > 55) effects.caoAlert = (effects.caoAlert || 0) - 1;
-    if (state.stats.caoAlert < 25 && state.stats.authority > 45) effects.caoAlert = (effects.caoAlert || 0) + 1;
+    const { effects, hidden, notes } = window.XianMonthlySafety.fixedDynamics(state);
 
     // 泄密检验
     const leakChance = clamp(state.hidden.leakRisk / 150, 0, 0.65);
@@ -1673,9 +1681,6 @@
     } else {
       hidden.leakRisk = (hidden.leakRisk || 0) - 1;
     }
-
-    // 忠汉网络在高风险下会自行损耗
-    if (state.hidden.leakRisk >= 70) hidden.loyalNetwork = (hidden.loyalNetwork || 0) - 2;
 
     const summary = applyPackage({ effects, hidden });
     if (notes.length || summary) {
@@ -2081,25 +2086,71 @@
     return migrated;
   }
 
+  function captureFullSave() {
+    const stores = {};
+    // A malformed system store must not silently disappear from a supposedly complete backup.
+    for (const key of PORTABLE_STORAGE_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) stores[key] = JSON.parse(raw);
+    }
+    if (!validateSave(stores[SAVE_KEY])) return null;
+    return { format: "xian-emperor-full-save", version: DATA.version, exportedAt: new Date().toISOString(), stores };
+  }
+
+  function restoreFullSave(bundle) {
+    if (bundle?.format !== "xian-emperor-full-save" || !bundle.stores || Array.isArray(bundle.stores) || !validateSave(bundle.stores[SAVE_KEY])) {
+      showToast("恢复失败：不是有效的完整存档。", "error");
+      return false;
+    }
+    const previous = new Map();
+    let importing = false;
+    try {
+      const restored = migrateSave(bundle.stores[SAVE_KEY]);
+      const values = new Map(PORTABLE_STORAGE_KEYS.map(key => [key, key === SAVE_KEY ? JSON.stringify(restored) :
+        Object.prototype.hasOwnProperty.call(bundle.stores, key) ? JSON.stringify(bundle.stores[key]) : null]));
+      PORTABLE_STORAGE_KEYS.forEach(key => previous.set(key, localStorage.getItem(key)));
+      if (window.XianSaveBackups?.captureBeforeReplacement?.("恢复或导入前") === false) return false;
+      importing = true;
+      window.__xianFullSaveImporting = true;
+      window.__xianFullSaveWriting = true;
+      // Core last: storage watchers cannot combine the new core with an old world.
+      for (const key of [...PORTABLE_STORAGE_KEYS.filter(key => key !== SAVE_KEY), SAVE_KEY]) {
+        if (values.get(key) == null) localStorage.removeItem(key);
+        else localStorage.setItem(key, values.get(key));
+      }
+      window.__xianFullSaveWriting = false;
+      state = restored;
+      showToast("完整存档已恢复，正在重新载入全部系统。", "success");
+      setTimeout(() => window.location.reload(), 350);
+      return true;
+    } catch (error) {
+      if (importing) {
+        window.__xianFullSaveWriting = true;
+        for (const [key, raw] of previous) {
+          try { if (raw === null) localStorage.removeItem(key); else localStorage.setItem(key, raw); }
+          catch (rollbackError) { console.error("存档回滚失败", rollbackError); }
+        }
+      }
+      window.__xianFullSaveWriting = false;
+      window.__xianFullSaveImporting = false;
+      console.error(error);
+      showToast("恢复失败：请检查浏览器存储空间。当前存档已尝试保留。", "error");
+      return false;
+    }
+  }
+
   function exportSave() {
     if (!state) return;
     saveGame(true);
-    const stores = {};
-    PORTABLE_STORAGE_KEYS.forEach(key => {
-      try {
-        const raw = localStorage.getItem(key);
-        if (raw !== null) stores[key] = JSON.parse(raw);
-      } catch (_) {}
-    });
-    const bundle = {
-      format: "xian-emperor-full-save",
-      version: DATA.version,
-      exportedAt: new Date().toISOString(),
-      stores,
-    };
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json;charset=utf-8" });
-    downloadBlob(blob, `xian-emperor-v${DATA.version}-turn-${state.turn}.json`);
-    showToast("完整存档包已导出，包含军团、政议、方略与收藏。", "success");
+    try {
+      const bundle = captureFullSave();
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json;charset=utf-8" });
+      downloadBlob(blob, `xian-emperor-v${DATA.version}-turn-${state.turn}.json`);
+      showToast("完整存档包已导出，包含军团、政议、方略与收藏。", "success");
+    } catch (error) {
+      console.error(error);
+      showToast("导出失败：存在损坏的系统存档，请先检查备份。", "error");
+    }
   }
 
   function importSave(event) {
@@ -2114,20 +2165,11 @@
         const importedCore = isBundle ? imported.stores[SAVE_KEY] : imported;
         if (!validateSave(importedCore)) throw new Error("Invalid save");
         if (isBundle) {
-          window.__xianFullSaveImporting = true;
-          PORTABLE_STORAGE_KEYS.filter(key => key !== SAVE_KEY).forEach(key => {
-            if (Object.prototype.hasOwnProperty.call(imported.stores, key)) {
-              localStorage.setItem(key, JSON.stringify(imported.stores[key]));
-            }
-          });
-        }
-        state = migrateSave(importedCore);
-        if (isBundle) {
-          localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-          showToast("完整存档包已导入，正在重新载入全部系统。", "success");
-          setTimeout(() => window.location.reload(), 350);
+          restoreFullSave(imported);
           return;
         }
+        if (window.XianSaveBackups?.captureBeforeReplacement?.("导入旧版存档前") === false) return;
+        state = migrateSave(importedCore);
         saveGame(true);
         enterGame();
         if (state.ended && state.ending) displayEnding(state.ending);
@@ -2163,9 +2205,10 @@
   function confirmReset() {
     openModal({
       title: "重开本局",
-      body: "<p>这会删除当前浏览器中的自动存档，并返回开局界面。已导出的 JSON 文件不会受影响。</p>",
+      body: "<p>重开前会保留一份完整备份，再删除当前自动存档并返回开局界面。可在“存档备份”中恢复。</p>",
       confirmText: "确认删除",
       onConfirm: () => {
+        if (window.XianSaveBackups?.captureBeforeReplacement?.("重开前") === false) return;
         localStorage.removeItem(SAVE_KEY);
         state = null;
         closeModal();
@@ -2350,6 +2393,7 @@
   }
 
   function applyExternalPackage(pkg = {}) {
+    if (window.__xianFullSaveImporting) return false;
     if (!state || state.ended) return { applied: false, changes: "" };
     state.externalSequence += 1;
     const changes = applyPackage(pkg);
@@ -2376,6 +2420,7 @@
   }
 
   function updateCausality(next) {
+    if (window.__xianFullSaveImporting) return false;
     if (!state || state.ended) return false;
     state.causality = normalizeCausality(next);
     state.causality.updatedAt = new Date().toISOString();
@@ -2391,6 +2436,7 @@
   }
 
   function concludeExternalEnding(ending = {}) {
+    if (window.__xianFullSaveImporting) return false;
     if (!state || state.ended || !ending.title || !ending.text) return false;
     concludeGame({ title: String(ending.title), text: String(ending.text) });
     return true;
@@ -2412,6 +2458,13 @@
     performExternalAction,
     concludeExternalEnding,
     endTurn,
+    requestEndTurn,
+    captureFullSave,
+    restoreFullSave,
+    getPortableStorageKeys: () => [...PORTABLE_STORAGE_KEYS],
+    openUtilityModal: openModal,
+    closeUtilityModal: closeModal,
+    notify: showToast,
     startNewGame,
     getCurrentEvent: () => {
       const event = state ? getCurrentEvent() : null;

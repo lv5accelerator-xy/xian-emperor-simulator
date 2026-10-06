@@ -189,6 +189,8 @@
 
   function getFocus(state) {
     if (!state.eventResolved) return { title: "先裁决本月奏报", detail: "裁决后才可拟旨或施行御前行动。", target: "event", button: "前往奏报" };
+    const rec = recommendAction(state);
+    if (rec.actionId === "end") return { title: rec.label, detail: rec.reason, target: "end", button: "查看月末预检" };
     if (Number(state.actionPoints || 0) > 0) return { title: `尚可行动 ${state.actionPoints} 次`, detail: "选择一项最能处理当前危险的行动；不必把所有系统都打开。", target: "actions", button: "查看行动" };
     return { title: "本月行动已经用尽", detail: "检查警告后即可结束本月，未处理的扩展页面不会产生惩罚。", target: "end", button: "结束本月" };
   }
@@ -198,9 +200,16 @@
     const hidden = state?.hidden || {};
     if (!state?.eventResolved) return { actionId: "event", label: "裁决奏报", reason: "所有行动都要在本月奏报裁决后进行。" };
     if (Number(state.actionPoints ?? 2) <= 0) return { actionId: "end", label: "结束本月", reason: "本月行动已用尽，核对风险后进入月末结算。" };
-    if ((stats.caoAlert || 0) >= 72) return { actionId: "appease", label: "安抚曹氏", reason: "曹氏警戒已接近危险线，先换取政治空间。" };
-    if ((stats.treasury || 0) <= 24) return { actionId: "revenue", label: "筹措钱粮", reason: "国库已经偏低，可用一次御前行动换取钱粮，并选择能够承受的政治代价。" };
-    if ((stats.security ?? 50) <= 28) return { actionId: "appease", label: "安抚曹氏", reason: "宫禁已经松动，先换取宿卫与整顿时间。" };
+    if (state.monthlySettledTurn >= state.turn) return { actionId: "end", label: "继续月末核验", reason: "固定结算已完成，本月不能再安排新行动。" };
+    if ((stats.caoAlert || 0) >= 85) return { actionId: "appease", label: "安抚曹氏", reason: "警戒接近 100 的失败线。可先公开褒奖，避免继续密联或扩权。" };
+    if ((stats.security ?? 50) <= 20) return { actionId: "appease", label: "安抚曹氏 · 修复宿卫", reason: "安全接近崩溃。暂授军务便宜可换安全 +6，但皇权 −6；先保住本局。" };
+    if ((stats.prestige ?? 50) <= 15) return { actionId: stats.treasury >= 6 ? "ritual" : "revenue", label: stats.treasury >= 6 ? "整饬朝仪 · 祭告宗庙" : "先筹措仪典用度", reason: "威望接近零的失败线。祭告宗庙需国库 5，另留月末用度 1。" };
+    if ((stats.treasury || 0) <= 12) return { actionId: "revenue", label: "筹措钱粮", reason: "国库已近枯竭，先补用度；核减冗费会降低百官支持，借调会降低皇权。" };
+    const short = window.XianShortChallenges?.getActiveStatus?.(state);
+    if (short) return recommendShortAction(state, short);
+    if ((stats.caoAlert || 0) >= 72) return { actionId: "appease", label: "安抚曹氏", reason: "曹氏警戒偏高，先换取政治空间。" };
+    if ((stats.treasury || 0) <= 24) return { actionId: "revenue", label: "筹措钱粮", reason: "国库偏低，先补用度，并核对筹措方案的政治代价。" };
+    if ((stats.security ?? 50) <= 28) return { actionId: "appease", label: "安抚曹氏 · 修复宿卫", reason: "宫禁已经松动。暂授军务便宜可换安全 +6，但皇权 −6。" };
     if ((hidden.peopleStability || 0) <= 35 && (stats.treasury || 0) >= 28) return { actionId: "relief", label: "赈济减赋", reason: "民间稳定偏低，继续拖延会反噬威望与宫廷安全。" };
     if ((hidden.leakRisk || 0) >= 55) return { actionId: "audience", label: "召见人物", reason: "泄密风险偏高，暂缓密令并修补关键关系。" };
     const quarterly = window.XianQuarterlyAgenda?.getState?.();
@@ -213,7 +222,10 @@
         renew_mandate: ["ritual", "恢复朝仪", "御题重申汉命需要皇权净增长，并维持汉室威望。"],
       };
       const choice = choices[quarterly.active.id];
-      if (choice) return { actionId: choice[0], label: choice[1], reason: choice[2] };
+      if (choice) {
+        if (["relief", "ritual"].includes(choice[0]) && stats.treasury < 5) return { actionId: "revenue", label: "先筹措御题用度", reason: "御题行动至少需要国库 4，并应留出月末用度 1。" };
+        return { actionId: choice[0], label: choice[1], reason: choice[2] };
+      }
     }
     const progression = window.XianImperialProgress?.getState?.();
     if (progression?.session?.gameCreatedAt === state.createdAt) {
@@ -223,6 +235,41 @@
     if ((hidden.externalBalance || 0) <= 35) return { actionId: "regional", label: "结交外镇", reason: "朝廷缺少外部制衡，地方承认能牵制一方独大。" };
     if ((stats.authority || 0) <= 45) return { actionId: "appointment", label: "任免封赏", reason: "皇权偏弱，可借官爵重新建立中枢存在感。" };
     return { actionId: "audience", label: "召见人物", reason: "当前没有迫近的数值危机，适合经营关键人物关系。" };
+  }
+
+  function recommendShortAction(state, short) {
+    const preview = window.XianMonthlySafety.preview(state, short.checks);
+    const guard = reason => ({ actionId: "end", label: "留行动守成", reason: `${reason}余下 ${state.actionPoints} 次行动可换安全与泄密控制。先查看月末预检；随机风险仍需留意。` });
+    const ample = preview.checks.every(check => check.afterPassed && (check.min == null || check.after >= check.min + 2) && (check.max == null || check.after <= check.max - 3));
+    if (ample && state.hidden.leakRisk < 55) return guard("短局目标在固定结算后均有余量。可保住现有成果。");
+    const deficits = preview.checks.filter(check => !check.afterPassed).sort((a, b) => b.gap - a.gap);
+    const thin = preview.checks.filter(check => !deficits.includes(check)).sort((a, b) =>
+      (a.min != null ? a.after - a.min : a.max - a.after) - (b.min != null ? b.after - b.min : b.max - b.after));
+    const check = deficits[0] || thin[0];
+    if (!check) return guard("当前没有待补的短局目标。");
+    const prefix = `${short.name}：${check.label}，固定结算后预计 ${Math.round(check.after)}${check.gap ? `，还差 ${Math.ceil(check.gap)}` : "，余量较小"}。`;
+    let actionId, label, reason;
+    switch (check.path) {
+      case "stats.treasury": actionId = "revenue"; label = "筹措钱粮"; reason = "先计入月末国库 −1；比较节流、催贡与借调的代价，避免伤及其他目标。"; break;
+      case "stats.security": actionId = "audience"; label = "公开召见曹氏人物"; reason = "公开召见曹氏人物可增安全 +2、百官 +2、皇权 +2，并降警戒；另留行动守成。"; break;
+      case "stats.caoAlert": actionId = "appease"; label = "安抚曹氏 · 公开褒奖"; reason = "公开褒奖可降警戒 7，但皇权 −1；避免密令与过度扩权。"; break;
+      case "hidden.leakRisk": return guard(`${prefix}暂无直接清除泄密的常用行动，避免新增密令，可能需要数月修复。`);
+      case "hidden.loyalNetwork":
+        actionId = "secret"; label = "密令联络"; reason = "忠汉网络不能靠守成补足。密联增加网络，同时增加泄密与警戒、降低安全；先核对其余目标。";
+        if (preview.checks.some(item => item.path === "hidden.leakRisk" && state.hidden.leakRisk + 8 > item.max)) {
+          actionId = "audience"; label = "私下召见忠汉人物"; reason = "私下召见忠汉人物增加网络 3、泄密 2，并降安全 1；比密联缓和，仍需守成控制风险。";
+        }
+        break;
+      case "hidden.peopleStability": actionId = "relief"; label = "量力赈济"; reason = "局部赈济需国库 4；提高民间稳定，并留出月末用度。"; break;
+      case "stats.prestige": actionId = "ritual"; label = "整饬朝仪 · 祭告宗庙"; reason = "祭告宗庙可增威望 7、皇权 3，需国库 5，警戒 +2。"; break;
+      case "stats.authority": actionId = "ritual"; label = "整饬朝仪 · 恢复大朝会"; reason = "恢复大朝会可增皇权 5、百官 4，需国库 4，警戒 +3。"; break;
+      case "stats.officials": actionId = "audience"; label = "公开召见人物"; reason = "公开召见可增百官 2，不耗国库；切勿为筹款连续核减冗费。"; break;
+      case "hidden.externalBalance": actionId = "regional"; label = "结交外镇"; reason = "颁诏慰劳可增制衡 4，需国库 1，警戒 +3；先留出月末用度。"; break;
+      default: return guard(`${prefix}请在目标详情中核对所需处分。`);
+    }
+    const required = actionId === "relief" ? 5 : actionId === "ritual" ? (check.path === "stats.prestige" ? 6 : 5) : actionId === "regional" ? 2 : 0;
+    if (state.stats.treasury < required) return { actionId: "revenue", label: "先筹措目标用度", reason: `${prefix}${label}连同月末用度需国库至少 ${required}，当前不足。` };
+    return { actionId, label, reason: prefix + reason };
   }
 
   function renderBriefTab() {

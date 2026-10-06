@@ -1,0 +1,20 @@
+.month-preflight section + section { margin-top: 20px; }
+.month-preflight h3, .save-backups h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.month-preflight p, .save-backups p { line-height: 1.65; }
+.month-preflight table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.month-preflight th, .month-preflight td { padding: 9px 8px; border-bottom: 1px solid rgba(136, 99, 53, .22); text-align: left; }
+.preflight-goals { padding: 0; margin: 12px 0; list-style: none; display: grid; gap: 8px; }
+.preflight-goals li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid rgba(136, 99, 53, .22); border-radius: 10px; }
+.preflight-goals span { font-size: .9rem; }
+.preflight-goals .risk, .preflight-risk, .backup-error { color: #81432d; }
+.preflight-risk { padding: 12px; background: rgba(149, 87, 40, .07); border-radius: 10px; }
+.save-backups article { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 16px 0; border-bottom: 1px solid rgba(136, 99, 53, .22); }
+.save-backups article p { margin: 4px 0; font-size: .88rem; }
+.save-backups article button { flex-shrink: 0; }
+.backup-note { font-size: .84rem; opacity: .8; }
+.start-backups { margin-top: 12px; }
+@media (max-width: 540px) {
+  .save-backups article { align-items: stretch; flex-direction: column; }
+  .save-backups article button { width: 100%; min-height: 44px; }
+  .month-preflight th, .month-preflight td { padding: 8px 4px; }
+}
