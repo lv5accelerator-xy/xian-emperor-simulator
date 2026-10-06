@@ -246,6 +246,7 @@
       score -= Math.max(0, (check.min != null ? 2 : 3) - margin) * 4;
     }
     // The recommendation reads the present position; it never draws future randomness.
+    score += .05 * (next.stats.security - next.stats.caoAlert - next.hidden.leakRisk);
     score -= Math.max(0, 30 - next.stats.security) * 6;
     score -= Math.max(0, next.stats.caoAlert - 72) * 5;
     score -= Math.max(0, next.hidden.leakRisk - 35) * 1.5;

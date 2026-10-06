@@ -48,4 +48,15 @@ assert.ok(capSecurity.sources.some(source => /泄密检验（触发/.test(source
 const pure = run.window.XianMonthlySafety.beginSettlement(before);
 const changed = plain(before); changed.stats.treasury += 2;
 assert.ok(run.window.XianMonthlySafety.finishSettlement(pure, changed).rows.find(row => row.path === "stats.treasury").sources.some(source => source.source === "其他变化（未归类）"));
+// Persisted attribution survives an interruption after the fixed charge, without applying it again.
+const interrupted = harness(); interrupted.window.XianShortChallenges.startCustom({ ...interrupted.window.XianShortChallenges.getChallenges()[0], randomSeed: 20261006 }); interrupted.decide(1);
+const original = interrupted.api.getState();
+interrupted.window.XianWorldSystem = { settleMonth: () => { throw new Error("interrupted settlement"); } };
+assert.throws(() => interrupted.api.endTurn(), /interrupted settlement/);
+assert.ok(interrupted.api.getState().pendingSettlement);
+const continued = harness(interrupted.stores()); continued.node("continue-game-btn").click(); continued.api.endTurn();
+const continuedCore = continued.api.getState(); checkTotals(continuedCore.lastSettlement);
+assert.equal(continuedCore.stats.treasury, original.stats.treasury - 1);
+assert.equal(continuedCore.lastSettlement.rows.find(row => row.path === "stats.treasury").sources.filter(source => source.source === "固定用度与守成").length, 1);
+assert.equal(continuedCore.pendingSettlement, undefined);
 console.log("Settlement attribution, clamps, randomness, quarterly final grading, archive and reload passed.");

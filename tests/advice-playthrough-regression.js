@@ -80,6 +80,10 @@ for (const [id, stats, hidden, forbidden] of [
   const predicted = run.window.XianMonthlySafety.preview(run.window.XianActionPlans.project(state, run.window.XianActionPlans.build(advice.actionId, advice.fields, state)), goals);
   assert.ok(predicted.checks.every(goal => goal.afterPassed), `${id}: choose a feasible improvement without sacrificing another goal`);
 }
+const dominance = ready(); dominance.window.XianShortChallenges.start("xudu_mutiny"); dominance.flush(); dominance.decide(1);
+const advice = dominance.window.XianCommandCenter.recommendAction(dominance.api.getState());
+assert.equal(advice.fields["audience-mode"], "public");
+assert.ok(["cao_cao", "xun_yu"].includes(advice.fields["modal-character-select"]), "equal goal completion should prefer extra security and lower alert");
 for (const cell of report) {
   assert.equal(cell.early, 0, `${cell.challenge}: advice must avoid early collapse for these paired seeds`);
   assert.ok(cell.advisorGoals >= cell.baselineGoals, `${cell.challenge}: actual advisor must not lose goal completion against the same visible event policy`);
