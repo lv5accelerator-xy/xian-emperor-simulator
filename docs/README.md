@@ -7,5 +7,6 @@
 | [AI_INTEGRATION.md](AI_INTEGRATION.md) | 后续接入大语言模型时的安全边界与数据流程 |
 | [MAP_DATA.md](MAP_DATA.md) | 山河舆图的数据来源、历史近似边界与维护方法 |
 | [BALANCE_V216.md](BALANCE_V216.md) | 短局策略对照、可达性与复现命令 |
+| [SHORT_REVIEW.md](SHORT_REVIEW.md) | 短局复盘数据、历史记录与验证方式 |
 
 累计更新记录位于 [CHANGELOG.md](../CHANGELOG.md)，独立版本说明位于 [patch-notes](../patch-notes/README.md)。

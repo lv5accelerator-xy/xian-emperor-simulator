@@ -82,12 +82,15 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.16.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.17.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
-for (const resource of ["data.js", "game.js", "short-challenges.js", "decree-confirmation.js", "monthly-flow.js", "decree-helper.js", "decree-helper.css"]) {
+for (const resource of ["data.js", "game.js", "short-challenges.js", "short-challenges.css", "short-review.js"]) {
   assert.ok(read("index.html").includes(`src/${resource}?v=${expectedVersion}`), `${resource} must be shipped with the release`);
+}
+for (const resource of ["decree-confirmation.js", "monthly-flow.js", "decree-helper.js", "decree-helper.css"]) {
+  assert.ok(read("index.html").includes(`src/${resource}?v=2.16.0`), `${resource} must remain available`);
 }
 for (const resource of ["action-feedback.js", "action-feedback.css", "monthly-report.js", "weekly-challenge.js", "world-system.js", "strategy-network.js", "army-system.js", "court-politics.js", "campaign-evolution.js"]) {
   assert.ok(read("index.html").includes(`src/${resource}?v=2.15.0`), `${resource} must remain available`);
@@ -150,11 +153,13 @@ for (const resource of [
   "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.0.0-r2",
   "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.16.0",
   "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.2.0",
-  "short-challenges.css?v=2.3.0", "short-challenges.js?v=2.16.0",
+  "short-challenges.css?v=2.17.0", "short-challenges.js?v=2.17.0", "short-review.js?v=2.17.0",
   "weekly-challenge.css?v=2.4.0", "weekly-challenge.js?v=2.15.0",
   "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.5.0",
 ]) assert.ok(read("index.html").includes(resource), `${resource} should be referenced`);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
+assert.ok(read("index.html").indexOf("src/short-review.js") < read("index.html").indexOf("src/short-challenges.js"), "short review must load before challenge tracking");
+assert.match(read("index.html"), /id="short-ending-review"/);
 assert.match(read("src/game.js"), /schemaVersion:\s*101/);
 assert.match(read("src/game.js"), /__xianFullSaveImporting\s*=\s*true/);
 for (const file of [

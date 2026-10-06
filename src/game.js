@@ -712,6 +712,7 @@
     state.recentEventIds = state.recentEventIds.slice(-4);
     addChronicle(formatReignDate(state.year, state.month), choice.chronicle);
     addReport(event.title, `${choice.chronicle}${deltaText ? `｜${deltaText}` : ""}`, "decision", {
+      choiceLabel: choice.label,
       outcome: buildActionOutcome(before, choice, "decision"),
     });
     showToast("本月奏报已裁决。", "success");
@@ -1822,10 +1823,13 @@
   function displayEnding(ending) {
     el["ending-title"].textContent = ending.title;
     el["ending-text"].textContent = ending.text;
-    const challenge = calculateScenarioChallenge(getActiveScenario(), state);
+    const short = window.XianShortChallenges?.getResultForGame?.(state.createdAt);
+    const challenge = short ? { title: `乱世短局 · ${short.name}`, completed: !short.endedEarly && short.completed === short.total }
+      : calculateScenarioChallenge(getActiveScenario(), state);
     el["ending-stats"].innerHTML = Object.entries(DATA.statMeta)
       .map(([key, meta]) => `<div><span>${meta.name}</span><strong>${Math.round(state.stats[key])}</strong></div>`)
-      .join("") + `<div class="scenario-result ${challenge.completed ? "complete" : "incomplete"}"><span>${escapeHtml(challenge.title)}</span><strong>${challenge.completed ? "挑战完成" : "尚未完成"}</strong></div>`;
+      .join("") + `<div class="scenario-result ${challenge.completed ? "complete" : "incomplete"}"><span>${escapeHtml(challenge.title)}</span><strong>${short ? `${short.completed}/${short.total} 项目标${short.endedEarly ? " · 提前终局" : ""}` : challenge.completed ? "挑战完成" : "尚未完成"}</strong></div>`;
+    window.XianShortChallenges?.renderEndingReview?.(state);
     el["ending-chronicle"].innerHTML = state.chronicle
       .slice(-8)
       .map((entry) => `<p><strong>${escapeHtml(entry.date)}</strong>　${escapeHtml(entry.text)}</p>`)
@@ -2150,6 +2154,8 @@
       "终局数值：",
       ...Object.entries(DATA.statMeta).map(([key, meta]) => `${meta.name}：${Math.round(state.stats[key])}`),
     ];
+    const shortReview = window.XianShortChallenges?.formatReviewText?.(state);
+    if (shortReview) lines.push("", shortReview);
     const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
     downloadBlob(blob, `${scenario.id}-chronicle.txt`);
   }

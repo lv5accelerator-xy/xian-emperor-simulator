@@ -56,7 +56,13 @@
   let finishing = false;
 
   document.addEventListener("DOMContentLoaded", init, { once: true });
-  document.addEventListener("xian:month-settled", () => checkChallengeEnd());
+  document.addEventListener("xian:core-saved", () => trackProgress());
+  document.addEventListener("xian:game-entered", () => {
+    const core = window.XianEmperorGame?.getState?.();
+    if (core?.ended) recordResult({ state: core });
+    else trackProgress();
+  });
+  document.addEventListener("xian:month-settled", () => { trackProgress(true); checkChallengeEnd(); });
   document.addEventListener("xian:campaign-concluded", event => recordResult(event.detail || {}));
 
   function init() {
@@ -88,6 +94,7 @@
       report: { title: `短局·${definition.name}`, text: `${definition.intro}本局持续 ${definition.duration} 个月。`, type: "important" },
       chronicle: `天子进入短局挑战“${definition.name}”。`,
     });
+    beginReview();
     window.XianCommandCenter?.close?.();
     return true;
   }
@@ -112,8 +119,28 @@
       report: { title: custom.name, text: custom.intro || "所有玩家面对相同事件顺序。", type: "important" },
       chronicle: `天子进入挑战“${custom.name}”。`,
     });
+    beginReview();
     window.XianCommandCenter?.close?.();
     return true;
+  }
+
+  function beginReview() {
+    const core = window.XianEmperorGame?.getState?.();
+    if (!core || !store.active || !window.XianShortReview) return;
+    store.active.reviewLog = window.XianShortReview.createLog(core, true);
+    saveStore();
+  }
+
+  function trackProgress(settled = false) {
+    const core = window.XianEmperorGame?.getState?.();
+    const active = store.active;
+    if (!window.XianShortReview || !core || !active?.gameCreatedAt || active.gameCreatedAt !== core.createdAt) return;
+    const before = JSON.stringify(active.reviewLog);
+    // A missing log is an older run. Its original baseline must remain unknown.
+    active.reviewLog ||= window.XianShortReview.createLog(core, false);
+    window.XianShortReview.capture(active.reviewLog, core);
+    if (settled) window.XianShortReview.settle(active.reviewLog, core);
+    if (JSON.stringify(active.reviewLog) !== before) saveStore();
   }
 
   function selectEventId(context = {}) {
@@ -157,11 +184,16 @@
       score: grade.score,
       checks: grade.checks,
       endedEarly,
+      finalTurn: detail.state.turn,
+      endingTitle: detail.state.ending?.title || "",
       rulesVersion: 216,
       randomSeed: detail.state.random?.seed ?? null,
       reward: definition.reward || "无名史签",
       completedAt: new Date().toISOString(),
     };
+    const log = store.active.reviewLog || (window.XianShortReview && window.XianShortReview.createLog(detail.state, false));
+    window.XianShortReview?.capture(log, detail.state);
+    result.review = window.XianShortReview?.build(result, definition, detail.state, log) || null;
     store.results.unshift(result);
     store.results = store.results.slice(0, 40);
     const old = store.best[definition.id];
@@ -169,7 +201,6 @@
     if (grade.medal !== "none" && !store.rewards.includes(result.reward)) store.rewards.push(result.reward);
     store.active = null;
     saveStore();
-    installEndingBadge(result);
     window.XianCommandCenter?.refresh?.();
     document.dispatchEvent(new CustomEvent("xian:short-challenge-completed", { detail: { ...result } }));
   }
@@ -213,7 +244,8 @@
       ${active && activeDef ? renderActive(activeDef) : `<div class="short-intro"><span>不增加永久倍率</span><strong>一局只解决一种危机</strong><p>固定月份与事件顺序，适合在十至二十分钟内完成。奖励仅为史签与纪念物。</p></div>`}
       ${sagaActive ? '<div class="short-warning">汉祚长卷进行中，完成或退出长卷后才能开启短局。</div>' : ""}
       <section class="short-grid">${CHALLENGES.map(item => renderCard(item, sagaActive || Boolean(active))).join("")}</section>
-      <section class="short-rewards"><h3>短局纪念物</h3><div>${store.rewards.length ? store.rewards.map(item => `<span>${escapeHtml(item)}</span>`).join("") : "<p>完成至少一项目标即可获得纪念物。</p>"}</div></section>`;
+      <section class="short-rewards"><h3>短局纪念物</h3><div>${store.rewards.length ? store.rewards.map(item => `<span>${escapeHtml(item)}</span>`).join("") : "<p>完成至少一项目标即可获得纪念物。</p>"}</div></section>
+      ${store.results.length ? `<section class="short-history"><h3>最近短局 · 点击查看复盘</h3>${store.results.slice(0, 6).map(result => `<details><summary>${escapeHtml(result.name)} · ${medalName(result.medal)} · ${result.completed}/${result.total}${result.endedEarly ? " · 提前终局" : ""}</summary><div class="short-ending-review">${reviewHtml(result)}</div></details>`).join("")}</section>` : ""}`;
   }
 
   function renderActive(definition) {
@@ -231,15 +263,36 @@
     root.querySelectorAll("[data-short-start]").forEach(button => button.addEventListener("click", () => start(button.dataset.shortStart)));
   }
 
-  function installEndingBadge(result) {
-    setTimeout(() => {
-      const scroll = document.querySelector("#end-screen .ending-scroll");
-      if (!scroll || scroll.querySelector(".short-ending-badge")) return;
-      const badge = document.createElement("section");
-      badge.className = `short-ending-badge ${result.medal}`;
-      badge.innerHTML = `<span>乱世短局 · ${result.endedEarly ? "提前终局" : "月末核验"}</span><strong>${medalName(result.medal)}</strong><p>完成 ${result.completed}/${result.total} 项目标${result.medal === "none" ? " · 未收录纪念物" : ` · 收录“${escapeHtml(result.reward)}”`}</p><p>${(result.checks || []).map(goal => `${goal.passed ? "✓" : "○"} ${escapeHtml(goal.label)}（${Math.round(goal.value)}）`).join(" · ")}</p>`;
-      scroll.querySelector(".ending-actions")?.before(badge);
-    }, 30);
+  function getResultForGame(createdAt) { return store.results.find(result => result.gameCreatedAt === createdAt) || null; }
+
+  function getReview(result, core = {}) {
+    return result?.review || window.XianShortReview?.build(result, challengeById(result.challengeId) || store.customDefinitions[result.challengeId], core);
+  }
+
+  function reviewHtml(result, core = {}) {
+    const review = getReview(result, core);
+    return review ? window.XianShortReview.html(review) : `<p>完成 ${result.completed}/${result.total} 项目标。</p>`;
+  }
+
+  function renderEndingReview(core) {
+    const panel = document.getElementById("short-ending-review");
+    if (!panel) return;
+    const result = core?.ended ? getResultForGame(core.createdAt) : null;
+    panel.hidden = !result;
+    if (!result) { panel.innerHTML = ""; return; }
+    const definition = challengeById(result.challengeId) || store.customDefinitions[result.challengeId];
+    panel.innerHTML = reviewHtml(result, core) + `<p class="short-review-reward">${result.medal === "none" ? "未收录纪念物" : `收录“${escapeHtml(result.reward)}”`}</p>`
+      + (definition ? `<button type="button" class="primary-button" data-short-retry="">再试此短局</button>` : "");
+    panel.querySelector("[data-short-retry]")?.addEventListener("click", () => {
+      if (challengeById(result.challengeId)) start(result.challengeId);
+      else startCustom(definition);
+    });
+  }
+
+  function formatReviewText(core) {
+    const result = core && getResultForGame(core.createdAt);
+    const review = result && getReview(result, core);
+    return review ? window.XianShortReview.text(review) : "";
   }
 
   function syncStartSelectors(definition) {
@@ -257,13 +310,16 @@
   function loadStore() { try { const value = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); return { ...defaultStore(), ...(value || {}), results: Array.isArray(value?.results) ? value.results : [], best: value?.best || {}, rewards: Array.isArray(value?.rewards) ? value.rewards : [], customDefinitions: value?.customDefinitions || {} }; } catch (_) { return defaultStore(); } }
   function saveStore() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (error) { console.warn("短局挑战保存失败", error); } }
   function readCore() { try { const value = JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
-  function escapeHtml(value) { return window.XianCommandCenter?.escapeHtml?.(value) || String(value ?? ""); }
+  function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]); }
 
   window.XianShortChallenges = Object.freeze({
     selectEventId,
     evaluateChallenge,
     getActiveStatus,
     refreshStatus,
+    getResultForGame,
+    renderEndingReview,
+    formatReviewText,
     start,
     startCustom,
     getChallenges: () => JSON.parse(JSON.stringify(CHALLENGES)),

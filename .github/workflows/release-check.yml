@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.16.0' index.html
+          grep -q 'v2.17.0' index.html
           grep -q 'src/action-feedback.js?v=2.15.0' index.html
           grep -q 'src/action-feedback.css?v=2.15.0' index.html
           grep -q 'src/audio.css' index.html
@@ -281,8 +281,10 @@ jobs:
           grep -q 'src/monthly-flow.js?v=2.16.0' index.html
           grep -q 'src/consequence-echoes.css?v=2.2.0' index.html
           grep -q 'src/consequence-echoes.js?v=2.2.0' index.html
-          grep -q 'src/short-challenges.css?v=2.3.0' index.html
-          grep -q 'src/short-challenges.js?v=2.16.0' index.html
+          grep -q 'src/short-challenges.css?v=2.17.0' index.html
+          grep -q 'src/short-challenges.js?v=2.17.0' index.html
+          grep -q 'src/short-review.js?v=2.17.0' index.html
+          grep -q 'id="short-ending-review"' index.html
           grep -q 'src/weekly-challenge.css?v=2.4.0' index.html
           grep -q 'src/weekly-challenge.js?v=2.15.0' index.html
           grep -q 'src/final-verdict.css?v=2.5.0' index.html
@@ -345,6 +347,7 @@ jobs:
           test -f src/consequence-echoes.js
           test -f src/short-challenges.css
           test -f src/short-challenges.js
+          test -f src/short-review.js
           test -f src/weekly-challenge.css
           test -f src/weekly-challenge.js
           test -f src/final-verdict.css
@@ -412,6 +415,7 @@ jobs:
           test -f patch-notes/v2.13.0.txt
           test -f patch-notes/v2.14.0.txt
           test -f patch-notes/v2.16.0.txt
+          test -f patch-notes/v2.17.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -452,8 +456,11 @@ jobs:
       - name: Run decree and resume regression
         run: node tests/decree-resume-regression.js
 
+      - name: Run short review regression
+        run: node tests/short-review-regression.js
+
       - name: Run strategy balance regression
         run: node tests/balance-regression.js
 
       - name: Run release regression
-        run: EXPECTED_VERSION=2.16.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.17.0 node tests/release-regression.js
