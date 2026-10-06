@@ -358,6 +358,8 @@
       chronicle: [],
       totalActions: 0,
       edictsIssued: 0,
+      decreeDraft: "",
+      decreeWorkspaceOpen: false,
       externalSequence: 0,
       monthlySettledTurn: 0,
       random: Number.isInteger(options.randomSeed) ? createRandomState(options.randomSeed) : null,
@@ -410,11 +412,13 @@
     saveGame(true);
   }
 
-  function enterGame() {
+  function enterGame(resume = false) {
     el["start-screen"].classList.add("hidden");
     el["end-screen"].classList.add("hidden");
     el["game-shell"].classList.remove("hidden");
+    el["decree-input"].value = state.decreeDraft || "";
     renderAll();
+    document.dispatchEvent(new CustomEvent("xian:game-entered", { detail: { resume, turn: state.turn, createdAt: state.createdAt } }));
   }
 
   function prepareTurn() {
@@ -495,6 +499,9 @@
     renderDangerBanner();
     updateActionWorkspace();
     window.XianActionFeedback?.render?.(state);
+    window.XianDecreeHelper?.refresh?.();
+    window.XianMonthlyFlow?.refresh?.();
+    window.XianShortChallenges?.refreshStatus?.(state);
   }
 
   function renderHeader() {
@@ -502,7 +509,8 @@
     el["scenario-name"].textContent = scenario.name;
     if (el["chronicle-title"]) el["chronicle-title"].textContent = `《${scenario.recordTitle}·御前本》`;
     el["date-label"].textContent = `${formatReignDate(state.year, state.month)}`;
-    el["turn-label"].textContent = `第 ${state.turn} / ${state.maxTurns} 月`;
+    const short = window.XianShortChallenges?.getActiveStatus?.(state);
+    el["turn-label"].textContent = `第 ${state.turn} / ${short?.duration || state.maxTurns} 月${short ? ` · ${short.name}` : ""}`;
     el["ap-label"].textContent = `可行动 ${state.actionPoints}`;
   }
 
@@ -827,14 +835,15 @@
   }
 
   function updateControls() {
-    const noActions = state.actionPoints <= 0 || state.ended;
+    const noActions = state.actionPoints <= 0 || state.ended || state.monthlySettledTurn >= state.turn;
     el["issue-decree-btn"].disabled = noActions || !state.eventResolved;
-    el["decree-input"].disabled = noActions || !state.eventResolved;
+    el["decree-input"].disabled = state.ended;
     el["action-grid"].querySelectorAll(".action-button").forEach((button) => {
       button.disabled = noActions || !state.eventResolved;
     });
     el["end-turn-btn"].disabled = !state.eventResolved || state.ended;
-    el["end-turn-btn"].textContent = state.turn >= state.maxTurns ? "完成终局结算" : "结束本月";
+    const short = window.XianShortChallenges?.getActiveStatus?.(state);
+    el["end-turn-btn"].textContent = short && state.turn >= short.duration ? "完成短局结算" : state.turn >= state.maxTurns ? "完成终局结算" : "结束本月";
   }
 
   function openAction(actionId) {
@@ -854,6 +863,10 @@
 
   function canAct() {
     if (!state || state.ended) return false;
+    if (state.monthlySettledTurn >= state.turn) {
+      showToast("本月已经结算，请完成月末核验。", "warning");
+      return false;
+    }
     if (!state.eventResolved) {
       showToast("请先裁决本月奏报。", "warning");
       return false;
@@ -1322,25 +1335,19 @@
   function issueFreeformEdict() {
     if (!canAct()) return;
     const text = el["decree-input"].value.trim();
-    if (text.length < 4) {
-      showToast("圣旨内容过短，请写明对象和目的。", "warning");
+    const preview = previewEdict(text);
+    if (!preview.ok) {
+      showToast(preview.reason, "warning");
       return;
     }
-    if (text.length > 600) {
-      showToast("本版圣旨最多 600 字。", "warning");
-      return;
-    }
-
-    const interpretation = interpretEdict(text);
-    if (interpretation.blocked) {
-      showToast(interpretation.warnings.join(" ") || "请写明一项可以执行的正面政令。", "warning");
-      return;
-    }
+    const interpretation = preview.interpretation;
     const efficiency = calculateEdictEfficiency(interpretation);
     const result = buildEdictOutcome(text, interpretation, efficiency);
     state.edictsIssued += 1;
-    completeAction(result);
+    state.decreeDraft = "";
+    state.decreeWorkspaceOpen = false;
     el["decree-input"].value = "";
+    completeAction(result);
   }
 
   function interpretEdict(text) {
@@ -1381,11 +1388,23 @@
   }
 
   function previewEdict(text, gameState = state) {
+    text = String(text || "").trim();
     const interpretation = interpretEdict(text);
-    if (!gameState || interpretation.blocked) return { ok: false, interpretation };
+    const reject = reason => ({ ok: false, reason, interpretation, actionCost: 1 });
+    if (!gameState) return reject("请先开启或继续一局。");
+    if (text.length < 4) return reject("圣旨内容过短，请写明对象和目的。");
+    if (text.length > 600) return reject("本版圣旨最多 600 字，请删减后再复核。");
+    if (interpretation.blocked) return reject(interpretation.warnings.join(" ") || "请写明一项可以执行的正面政令。");
     const efficiency = calculateEdictEfficiency(interpretation, gameState, 0.5);
     const outcome = buildEdictOutcome(text, interpretation, efficiency, gameState);
-    return { ok: true, interpretation, actionCost: 1, treasuryCost: Math.max(0, -Number(outcome.effects.treasury || 0)), outcome };
+    const treasuryCost = Math.max(0, -Number(outcome.effects.treasury || 0));
+    let reason = "";
+    if (gameState.ended) reason = "本局已经结束，请开启新局后拟旨。";
+    else if (gameState.monthlySettledTurn >= gameState.turn) reason = "本月已经结算，请完成月末核验。";
+    else if (gameState.eventResolved === false) reason = "请先裁决本月奏报，草稿可以保留。";
+    else if (Number.isFinite(gameState.actionPoints) && gameState.actionPoints <= 0) reason = "本月行动次数已用尽，草稿可留待下月。";
+    else if (gameState.stats.treasury < treasuryCost) reason = `国库不足：此旨需 ${treasuryCost}，当前仅 ${gameState.stats.treasury}；请先筹措钱粮或修改政令。`;
+    return { ok: !reason, reason, interpretation, actionCost: 1, treasuryCost, outcome };
   }
 
   function buildEdictOutcome(originalText, interpretation, efficiency, gameState = state) {
@@ -1475,13 +1494,6 @@
       if (character.faction === "regional_lords") add(hidden, "externalBalance", positive ? 3 / targetCount : -2 / targetCount);
       if (targetId === "cao_cao") add(effects, "caoAlert", positive ? -3 / targetCount : 7 / targetCount);
     });
-
-    if ((effects.treasury || 0) < 0 && gameState.stats.treasury < Math.abs(effects.treasury)) {
-      const shortfall = Math.abs(effects.treasury) - gameState.stats.treasury;
-      effects.treasury = -Math.max(0, gameState.stats.treasury - 1);
-      add(effects, "prestige", -Math.ceil(shortfall / 2));
-      add(effects, "officials", -2);
-    }
 
     const status = efficiency >= 0.76 ? "大部执行" : efficiency >= 0.55 ? "部分落实" : "层层折损";
     const targetNames = interpretation.targets.map((id) => getCharacter(id)?.name).filter(Boolean);
@@ -2024,7 +2036,7 @@
       const loaded = JSON.parse(raw);
       if (!validateSave(loaded)) throw new Error("Invalid save");
       state = migrateSave(loaded);
-      enterGame();
+      enterGame(true);
       if (state.ended && state.ending) displayEnding(state.ending);
       if (!silent) showToast("存档读取成功。", "success");
       return true;
@@ -2045,6 +2057,8 @@
       ...save,
       version: DATA.version,
       schemaVersion: 101,
+      decreeDraft: typeof save.decreeDraft === "string" ? save.decreeDraft.slice(0, 600) : "",
+      decreeWorkspaceOpen: save.decreeWorkspaceOpen === true,
       scenarioId: save.scenarioId || "jianan_196",
       stats: { ...STARTING_STATS, ...(save.stats || {}) },
       hidden: { ...STARTING_HIDDEN, ...(save.hidden || {}) },
@@ -2377,6 +2391,16 @@
   }
 
   document.addEventListener("xian:quarterly-agenda-updated", () => { if (state) updateActionWorkspace(); });
+  function setDecreeDraft(text, open = true) {
+    if (!state || state.ended) return false;
+    const draft = String(text || "").slice(0, 600);
+    if (state.decreeDraft === draft && state.decreeWorkspaceOpen === Boolean(open)) return true;
+    state.decreeDraft = draft;
+    state.decreeWorkspaceOpen = Boolean(open);
+    saveGame(true);
+    return true;
+  }
+
   window.XianEmperorGame = Object.freeze({
     applyExternalPackage,
     performExternalAction,
@@ -2384,7 +2408,7 @@
     endTurn,
     startNewGame,
     getCurrentEvent: () => {
-      const event = getCurrentEvent();
+      const event = state ? getCurrentEvent() : null;
       return event ? JSON.parse(JSON.stringify(event)) : null;
     },
     getScenarioById: (id) => JSON.parse(JSON.stringify(getScenarioById(id))),
@@ -2394,6 +2418,7 @@
     formatReignDate,
     interpretEdict,
     previewEdict,
+    setDecreeDraft,
     getRandomKey,
     updateCausality,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,

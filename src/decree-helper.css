@@ -1,0 +1,46 @@
+/* v2.16.0 · 拟旨与触屏朝会。 */
+.decree-helper-fields { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin: 12px 0; }
+.decree-helper-fields label { display: grid; gap: 5px; color: #d6c5a4; font-size: .8rem; min-width: 0; }
+.decree-helper-fields select { width: 100%; min-width: 0; min-height: 44px; padding: 8px; color: #eee2cb; background: #18140f; border: 1px solid #6f5736; border-radius: 8px; font: inherit; }
+.decree-helper-note { color: #c1b5a0; font-size: .8rem; }
+#decree-generate { width: 100%; min-height: 44px; margin-bottom: 12px; }
+#decree-draft-preview { padding: 12px; margin: 12px 0; border: 1px solid #6f5736; border-radius: 10px; color: #d6c5a4; font-size: .82rem; overflow-wrap: anywhere; }
+#decree-draft-preview p { margin: 6px 0; }
+.decree-preview-head { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.decree-preview-head strong { color: #d0dfc3; }
+.decree-preview-reason { color: #f1c184; }
+.decree-panel.is-drafting { scroll-margin-top: 20px; }
+body.xian-flow-simple .decree-panel.is-drafting { display: block; }
+.decree-panel .panel-heading > button, #decree-helper-open { min-height: 44px; padding: 8px 12px; }
+#decree-helper-close { display: none; }
+body.xian-flow-simple #decree-helper-close { display: inline-block; }
+.decree-helper-note + textarea { margin-top: 8px; }
+.short-status { margin: 12px 0; padding: 12px 16px; border: 1px solid #7b613d; border-radius: 12px; background: #221c17; }
+.short-status[hidden] { display: none; }
+.short-status-heading, .short-status-goals { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.short-status-heading { justify-content: space-between; color: #eed6a6; }
+.short-status-heading span, .short-status p { color: #c1b5a0; font-size: .8rem; }
+.short-status-goals { margin: 8px 0; font-size: .8rem; }
+.short-status-goals > span { padding: 4px 8px; border: 1px solid #61523c; border-radius: 6px; }
+.short-status-goals .pending { color: #f1c184; }
+.short-status-goals .passed { color: #c9dbb7; }
+.short-status p { margin: 6px 0 0; }
+@media (max-width: 720px) {
+  .decree-helper-fields { grid-template-columns: 1fr; }
+  .decree-helper-fields select, #decree-input { font-size: 16px; }
+  .choice-button { width: 100%; min-height: 56px; text-align: left; touch-action: manipulation; }
+  .choice-button > span:last-child { min-width: 0; width: 100%; }
+  .option-cards label { min-height: 52px; cursor: pointer; }
+  .decree-footer { display: grid; gap: 10px; }
+  #issue-decree-btn, #modal-confirm, #modal-cancel, #decree-confirmation-confirm, #decree-confirmation-edit { min-height: 48px; touch-action: manipulation; }
+  .modal-backdrop { padding: 8px; align-items: end; }
+  .modal { display: grid; grid-template-rows: auto minmax(0,1fr) auto; max-height: 94vh; max-height: 94dvh; }
+  .modal-body { min-height: 0; overscroll-behavior: contain; }
+  .modal > footer { display: grid; grid-template-columns: 1fr 1.5fr; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .modal > footer button { width: 100%; }
+  .decree-confirmation-overlay { align-items: end; padding: 8px; }
+  .decree-confirmation-window { width: 100%; max-height: 94vh; max-height: 94dvh; }
+  .decree-confirmation-window > footer { display: grid; grid-template-columns: 1fr 1.5fr; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .decree-confirmation-window > footer button { width: 100%; }
+  .monthly-flow-bar, .event-panel, .action-panel, #end-turn-btn { scroll-margin-block: 12px 90px; }
+}

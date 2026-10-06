@@ -84,8 +84,10 @@
     const primaryOrder = API.choosePrimaryOrder?.(orders) || choosePrimaryOrder(orders);
     const routeIds = API.resolveOrderedPath?.(cityIds, lordIds) || resolvePath(cityIds, lordIds);
     const route = buildRouteSummary(cityIds, lordIds, routeIds);
-    const execution = estimateExecution(effectiveText);
+    const recordedPreview = costPreview?.outcome?.execution?.value;
+    const execution = Number.isFinite(recordedPreview) ? { low: clamp(recordedPreview - 6, 28, 94), mid: recordedPreview, high: clamp(recordedPreview + 6, 28, 94) } : estimateExecution(effectiveText);
     const warnings = [...(interpretation?.warnings || [])];
+    if (costPreview?.reason) warnings.push(costPreview.reason);
     if (interpretation?.targets.length > 1) warnings.push("人物关系与外部制衡共用一份行动收益，不按名字数量倍增。" );
     const armies = Object.values(window.XianArmySystem?.getState?.()?.armies || {});
     lordIds.forEach(id => {
@@ -132,7 +134,8 @@
     const orderNames = analysis.orders.map(orderLabel);
     const promiseNames = analysis.promises.map(promiseLabel);
     const confirm = document.getElementById("decree-confirmation-confirm");
-    if (confirm) { confirm.disabled = Boolean(analysis.interpretation?.blocked); confirm.textContent = analysis.interpretation?.blocked ? "请拆分或修改诏文" : "确认用玺 · 行动1次"; }
+    const blocked = analysis.interpretation?.blocked || analysis.costPreview?.ok === false;
+    if (confirm) { confirm.disabled = Boolean(blocked); confirm.textContent = blocked ? "暂不能用玺" : "确认用玺 · 行动1次"; }
 
     content.innerHTML = `
       <blockquote>${escapeHtml(analysis.text)}</blockquote>
@@ -160,7 +163,13 @@
 
   function confirmIssue() {
     const analysis = currentAnalysis;
-    if (!analysis?.button || analysis.interpretation?.blocked) return;
+    if (!analysis?.button) return;
+    // Recheck the current text and resources immediately before spending an action.
+    const input = document.getElementById("decree-input");
+    const fresh = analyzeEdict(input ? input.value.trim() : analysis.text, analysis.button);
+    if (fresh.text !== analysis.text || fresh.interpretation?.blocked || fresh.costPreview?.ok === false) {
+      currentAnalysis = fresh; renderAnalysis(fresh); return;
+    }
     closeOverlay();
     bypassNextClick = true;
     analysis.button.click();

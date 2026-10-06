@@ -1,0 +1,377 @@
+{
+  "samples": 24,
+  "policies": {
+    "cautious": "守成",
+    "welfare": "民生",
+    "intrigue": "密谋"
+  },
+  "cells": [
+    {
+      "challenge": "white_horse",
+      "name": "白马解围",
+      "policy": "cautious",
+      "policyName": "守成",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24,
+      "spent": 5,
+      "raised": 16,
+      "actions": 0,
+      "stability": 60,
+      "network": 21,
+      "leak": 0,
+      "treasury": 47,
+      "failedGoals": {
+        "皇权≥32": 0,
+        "国库≥25": 0,
+        "曹氏警戒≤78": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "white_horse",
+      "name": "白马解围",
+      "policy": "welfare",
+      "policyName": "民生",
+      "samples": 24,
+      "gold": 0,
+      "completed": 24,
+      "spent": 29,
+      "raised": 8,
+      "actions": 6,
+      "stability": 85,
+      "network": 21,
+      "leak": 4,
+      "treasury": 15,
+      "failedGoals": {
+        "皇权≥32": 0,
+        "国库≥25": 24,
+        "曹氏警戒≤78": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "white_horse",
+      "name": "白马解围",
+      "policy": "intrigue",
+      "policyName": "密谋",
+      "samples": 24,
+      "gold": 21,
+      "completed": 24,
+      "spent": 3,
+      "raised": 16,
+      "actions": 6,
+      "stability": 60,
+      "network": 78,
+      "leak": 45.2,
+      "treasury": 49,
+      "failedGoals": {
+        "皇权≥32": 0,
+        "国库≥25": 0,
+        "曹氏警戒≤78": 3
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "girdle_edict",
+      "name": "衣带诏影",
+      "policy": "cautious",
+      "policyName": "守成",
+      "samples": 24,
+      "gold": 0,
+      "completed": 24,
+      "spent": 0,
+      "raised": 6,
+      "actions": 0,
+      "stability": 48,
+      "network": 25,
+      "leak": 0,
+      "treasury": 44,
+      "failedGoals": {
+        "忠汉网络≥28": 24,
+        "泄密风险≤58": 0,
+        "宫廷安全≥34": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "girdle_edict",
+      "name": "衣带诏影",
+      "policy": "welfare",
+      "policyName": "民生",
+      "samples": 24,
+      "gold": 0,
+      "completed": 24,
+      "spent": 24,
+      "raised": 6,
+      "actions": 6,
+      "stability": 72,
+      "network": 25,
+      "leak": 0,
+      "treasury": 20,
+      "failedGoals": {
+        "忠汉网络≥28": 24,
+        "泄密风险≤58": 0,
+        "宫廷安全≥34": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "girdle_edict",
+      "name": "衣带诏影",
+      "policy": "intrigue",
+      "policyName": "密谋",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24,
+      "spent": 2,
+      "raised": 6,
+      "actions": 6,
+      "stability": 48,
+      "network": 95.6,
+      "leak": 42.7,
+      "treasury": 42,
+      "failedGoals": {
+        "忠汉网络≥28": 0,
+        "泄密风险≤58": 0,
+        "宫廷安全≥34": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "eastward_return",
+      "name": "衣冠东归",
+      "policy": "cautious",
+      "policyName": "守成",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24,
+      "spent": 3,
+      "raised": 5,
+      "actions": 0,
+      "stability": 51,
+      "network": 22,
+      "leak": 0,
+      "treasury": 21,
+      "failedGoals": {
+        "宫廷安全≥36": 0,
+        "民间稳定≥40": 0,
+        "百官支持≥35": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "eastward_return",
+      "name": "衣冠东归",
+      "policy": "welfare",
+      "policyName": "民生",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24,
+      "spent": 29,
+      "raised": 18,
+      "actions": 6,
+      "stability": 71,
+      "network": 22,
+      "leak": 3.2,
+      "treasury": 8,
+      "failedGoals": {
+        "宫廷安全≥36": 0,
+        "民间稳定≥40": 0,
+        "百官支持≥35": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "eastward_return",
+      "name": "衣冠东归",
+      "policy": "intrigue",
+      "policyName": "密谋",
+      "samples": 24,
+      "gold": 0,
+      "completed": 24,
+      "spent": 13,
+      "raised": 2,
+      "actions": 6,
+      "stability": 51,
+      "network": 85.4,
+      "leak": 50.3,
+      "treasury": 8,
+      "failedGoals": {
+        "宫廷安全≥36": 0,
+        "民间稳定≥40": 0,
+        "百官支持≥35": 24
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "xudu_mutiny",
+      "name": "许都夜变",
+      "policy": "cautious",
+      "policyName": "守成",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24,
+      "spent": 11,
+      "raised": 0,
+      "actions": 0,
+      "stability": 48,
+      "network": 19,
+      "leak": 0,
+      "treasury": 28,
+      "failedGoals": {
+        "宫廷安全≥42": 0,
+        "百官支持≥42": 0,
+        "曹氏警戒≤82": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "xudu_mutiny",
+      "name": "许都夜变",
+      "policy": "welfare",
+      "policyName": "民生",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24,
+      "spent": 31,
+      "raised": 0,
+      "actions": 5,
+      "stability": 68,
+      "network": 19,
+      "leak": 0,
+      "treasury": 8,
+      "failedGoals": {
+        "宫廷安全≥42": 0,
+        "百官支持≥42": 0,
+        "曹氏警戒≤82": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "xudu_mutiny",
+      "name": "许都夜变",
+      "policy": "intrigue",
+      "policyName": "密谋",
+      "samples": 24,
+      "gold": 23,
+      "completed": 24,
+      "spent": 10,
+      "raised": 0,
+      "actions": 5,
+      "stability": 48,
+      "network": 74.4,
+      "leak": 37.3,
+      "treasury": 27,
+      "failedGoals": {
+        "宫廷安全≥42": 0,
+        "百官支持≥42": 0,
+        "曹氏警戒≤82": 1
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "abdication_eve",
+      "name": "禅代前夜",
+      "policy": "cautious",
+      "policyName": "守成",
+      "samples": 24,
+      "gold": 0,
+      "completed": 24,
+      "spent": 1,
+      "raised": 8,
+      "actions": 0,
+      "stability": 56,
+      "network": 10,
+      "leak": 8.5,
+      "treasury": 53,
+      "failedGoals": {
+        "汉室威望≥54": 0,
+        "皇权≥32": 24,
+        "宫廷安全≥28": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "abdication_eve",
+      "name": "禅代前夜",
+      "policy": "welfare",
+      "policyName": "民生",
+      "samples": 24,
+      "gold": 0,
+      "completed": 24,
+      "spent": 23,
+      "raised": 0,
+      "actions": 4,
+      "stability": 72,
+      "network": 10,
+      "leak": 12.5,
+      "treasury": 23,
+      "failedGoals": {
+        "汉室威望≥54": 0,
+        "皇权≥32": 24,
+        "宫廷安全≥28": 0
+      },
+      "earlyEndings": {}
+    },
+    {
+      "challenge": "abdication_eve",
+      "name": "禅代前夜",
+      "policy": "intrigue",
+      "policyName": "密谋",
+      "samples": 24,
+      "gold": 0,
+      "completed": 24,
+      "spent": 6,
+      "raised": 0,
+      "actions": 4,
+      "stability": 56,
+      "network": 42.4,
+      "leak": 38,
+      "treasury": 40,
+      "failedGoals": {
+        "汉室威望≥54": 0,
+        "皇权≥32": 24,
+        "宫廷安全≥28": 0
+      },
+      "earlyEndings": {}
+    }
+  ],
+  "controls": [
+    {
+      "challenge": "white_horse",
+      "name": "白马解围",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24
+    },
+    {
+      "challenge": "girdle_edict",
+      "name": "衣带诏影",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24
+    },
+    {
+      "challenge": "eastward_return",
+      "name": "衣冠东归",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24
+    },
+    {
+      "challenge": "xudu_mutiny",
+      "name": "许都夜变",
+      "samples": 24,
+      "gold": 24,
+      "completed": 24
+    },
+    {
+      "challenge": "abdication_eve",
+      "name": "禅代前夜",
+      "samples": 24,
+      "gold": 23,
+      "completed": 24
+    }
+  ]
+}

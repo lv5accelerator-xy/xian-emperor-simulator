@@ -18,6 +18,13 @@
   document.addEventListener("xian:core-saved", () => queueRefresh());
   document.addEventListener("xian:quarterly-agenda-updated", () => queueRefresh());
   document.addEventListener("xian:decision-resolved", event => rememberDecision(event.detail || {}));
+  document.addEventListener("xian:game-entered", event => {
+    refresh();
+    const core = readCore();
+    if (!event.detail?.resume || !core || core.ended) return;
+    const target = core.decreeWorkspaceOpen ? "decree" : getStepState(core).current === 1 ? "event" : getStepState(core).current === 2 ? "actions" : "end";
+    jump(target);
+  });
 
   function init() {
     installBar();
@@ -65,7 +72,7 @@
     if (!core) return { current: 1, resolved: false, acted: false };
     const resolved = Boolean(core.eventResolved);
     const acted = Number(core.actionPoints || 0) < 2;
-    return { current: !resolved ? 1 : !acted ? 2 : 3, resolved, acted };
+    return { current: Number(core.monthlySettledTurn || 0) >= Number(core.turn) ? 3 : !resolved ? 1 : !acted ? 2 : 3, resolved, acted };
   }
 
   function refresh() {
@@ -104,7 +111,7 @@
 
   function jump(target) {
     if (target === "overview") return window.XianCommandCenter?.open?.("monthly");
-    const selectors = { event: ".event-panel", actions: ".action-panel", end: "#end-turn-btn" };
+    const selectors = { event: ".event-panel", actions: ".action-panel", decree: ".decree-panel", end: "#end-turn-btn" };
     const element = document.querySelector(selectors[target]);
     element?.scrollIntoView({ behavior: "smooth", block: "center" });
     element?.classList.add("monthly-flow-pulse");
@@ -189,12 +196,13 @@
   function defaultStore() { return { version: 1, mode: "simple", lastDecision: null }; }
   function loadStore() { try { return { ...defaultStore(), ...(JSON.parse(localStorage.getItem(STORE_KEY) || "null") || {}) }; } catch (_) { return defaultStore(); } }
   function saveStore() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (error) { console.warn("月度流程设置保存失败", error); } }
-  function readCore() { try { const value = JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
+  function readCore() { try { const value = window.XianEmperorGame?.getState?.() || JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
   function escapeHtml(value) { return window.XianCommandCenter?.escapeHtml?.(value) || String(value ?? ""); }
 
   window.XianMonthlyFlow = Object.freeze({
     buildChoiceImpact,
     getStepState,
+    refresh,
     getMode: () => store.mode,
     setMode,
   });

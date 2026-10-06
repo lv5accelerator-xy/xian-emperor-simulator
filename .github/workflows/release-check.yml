@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.15.0' index.html
+          grep -q 'v2.16.0' index.html
           grep -q 'src/action-feedback.js?v=2.15.0' index.html
           grep -q 'src/action-feedback.css?v=2.15.0' index.html
           grep -q 'src/audio.css' index.html
@@ -246,7 +246,9 @@ jobs:
           grep -q 'src/strategy-network-data.js' index.html
           grep -q 'src/strategy-network.js' index.html
           grep -q 'src/decree-confirmation.css' index.html
-          grep -q 'src/decree-confirmation.js' index.html
+          grep -q 'src/decree-confirmation.js?v=2.16.0' index.html
+          grep -q 'src/decree-helper.js?v=2.16.0' index.html
+          grep -q 'src/decree-helper.css?v=2.16.0' index.html
           grep -q 'src/army-system.css' index.html
           grep -q 'src/army-data.js' index.html
           grep -q 'src/army-system.js' index.html
@@ -276,11 +278,11 @@ jobs:
           grep -q 'src/dynasty-saga.css?v=2.0.0' index.html
           grep -q 'src/dynasty-saga.js?v=2.0.0-r2' index.html
           grep -q 'src/monthly-flow.css?v=2.1.0' index.html
-          grep -q 'src/monthly-flow.js?v=2.14.0' index.html
+          grep -q 'src/monthly-flow.js?v=2.16.0' index.html
           grep -q 'src/consequence-echoes.css?v=2.2.0' index.html
           grep -q 'src/consequence-echoes.js?v=2.2.0' index.html
           grep -q 'src/short-challenges.css?v=2.3.0' index.html
-          grep -q 'src/short-challenges.js?v=2.15.0' index.html
+          grep -q 'src/short-challenges.js?v=2.16.0' index.html
           grep -q 'src/weekly-challenge.css?v=2.4.0' index.html
           grep -q 'src/weekly-challenge.js?v=2.15.0' index.html
           grep -q 'src/final-verdict.css?v=2.5.0' index.html
@@ -409,7 +411,7 @@ jobs:
           test -f patch-notes/v2.12.0.txt
           test -f patch-notes/v2.13.0.txt
           test -f patch-notes/v2.14.0.txt
-          test -f patch-notes/v2.15.0.txt
+          test -f patch-notes/v2.16.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -447,5 +449,11 @@ jobs:
       - name: Run settlement and replay regression
         run: node tests/settlement-replay-regression.js
 
+      - name: Run decree and resume regression
+        run: node tests/decree-resume-regression.js
+
+      - name: Run strategy balance regression
+        run: node tests/balance-regression.js
+
       - name: Run release regression
-        run: EXPECTED_VERSION=2.15.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.16.0 node tests/release-regression.js

@@ -12,6 +12,7 @@
       setup: { effects: { treasury: -4, prestige: 3, caoAlert: 4 }, hidden: { externalBalance: 5 } },
       goals: [{ path: "stats.authority", min: 32, label: "皇权≥32" }, { path: "stats.treasury", min: 25, label: "国库≥25" }, { path: "stats.caoAlert", max: 78, label: "曹氏警戒≤78" }],
       reward: "白马羽檄",
+      advice: "保住钱粮是本局要务。赈济前留出国库目标与月末用度；吃紧时可先筹措。",
     },
     {
       id: "girdle_edict", name: "衣带诏影", subtitle: "秘密与忠诚的六个月", scenarioId: "jianan_196", duration: 6,
@@ -20,6 +21,7 @@
       setup: { effects: { security: -3, caoAlert: 5 }, hidden: { loyalNetwork: 8, leakRisk: 7 } },
       goals: [{ path: "hidden.loyalNetwork", min: 28, label: "忠汉网络≥28" }, { path: "hidden.leakRisk", max: 58, label: "泄密风险≤58" }, { path: "stats.security", min: 34, label: "宫廷安全≥34" }],
       reward: "缄书铜印",
+      advice: "守成不能代替忠汉网络。择机密联，再留出守成或公开召见的月份，控制泄密风险。",
     },
     {
       id: "eastward_return", name: "衣冠东归", subtitle: "流亡朝廷的六个月", scenarioId: "xingping_195", duration: 6,
@@ -28,6 +30,7 @@
       setup: { effects: { treasury: -4, security: -2 }, hidden: { peopleStability: -4, escapeRoute: 6 } },
       goals: [{ path: "stats.security", min: 36, label: "宫廷安全≥36" }, { path: "hidden.peopleStability", min: 40, label: "民间稳定≥40" }, { path: "stats.officials", min: 35, label: "百官支持≥35" }],
       reward: "东归车铃",
+      advice: "安民与宫禁同样重要。量力赈济并照顾百官，缺钱时先筹措，避免连续密令。",
     },
     {
       id: "xudu_mutiny", name: "许都夜变", subtitle: "五个月内稳定宫城", scenarioId: "jianan_196", duration: 5,
@@ -36,6 +39,7 @@
       setup: { effects: { security: -12, officials: -3, caoAlert: 6 } },
       goals: [{ path: "stats.security", min: 42, label: "宫廷安全≥42" }, { path: "stats.officials", min: 42, label: "百官支持≥42" }, { path: "stats.caoAlert", max: 82, label: "曹氏警戒≤82" }],
       reward: "宫门夜牌",
+      advice: "优先恢复宿卫、保留百官支持。可以留下行动守成，不必每月用尽两次行动。",
     },
     {
       id: "abdication_eve", name: "禅代前夜", subtitle: "最后四个月的名分", scenarioId: "yankang_220", duration: 4,
@@ -44,6 +48,7 @@
       setup: { effects: { authority: -4, prestige: 4, caoAlert: 7 } },
       goals: [{ path: "stats.prestige", min: 54, label: "汉室威望≥54" }, { path: "stats.authority", min: 32, label: "皇权≥32" }, { path: "stats.security", min: 28, label: "宫廷安全≥28" }],
       reward: "残汉玉册",
+      advice: "守成难以补足皇权。选择适量朝仪或任官，接近目标后留意曹氏警戒，不必连续加码。",
     },
   ];
 
@@ -152,7 +157,7 @@
       score: grade.score,
       checks: grade.checks,
       endedEarly,
-      rulesVersion: 215,
+      rulesVersion: 216,
       randomSeed: detail.state.random?.seed ?? null,
       reward: definition.reward || "无名史签",
       completedAt: new Date().toISOString(),
@@ -178,6 +183,26 @@
     const ratio = completed / Math.max(1, checks.length);
     const medal = ratio >= 1 ? "gold" : ratio >= .66 ? "silver" : ratio >= .33 ? "bronze" : "none";
     return { checks, completed, total: checks.length, medal, score: Math.round(ratio * 1000 + Number(core.stats?.prestige || 0) * 2 + Number(core.stats?.authority || 0)) };
+  }
+
+  function getActiveStatus(core = readCore()) {
+    const definition = activeDefinition();
+    if (!core || core.ended || !store.active || !definition || (store.active.gameCreatedAt && store.active.gameCreatedAt !== core.createdAt)) return null;
+    return { id: definition.id, name: definition.name, duration: definition.duration, advice: definition.advice || "最终目标在最后一月结算后核验。",
+      checks: evaluateChallenge(definition, core).checks };
+  }
+
+  function refreshStatus(core = readCore()) {
+    const panel = document.getElementById("short-challenge-status");
+    if (!panel) return;
+    const status = getActiveStatus(core);
+    panel.hidden = !status;
+    if (!status) return;
+    panel.innerHTML = `<div class="short-status-heading"><strong>${escapeHtml(status.name)}</strong><span>第 ${core.turn}/${status.duration} 月 · 最后 ${Math.max(1, status.duration - core.turn + 1)} 个月</span></div>
+      <div class="short-status-goals">${status.checks.map(check => {
+        const gap = check.min != null ? Math.max(0, check.min - check.value) : Math.max(0, check.value - check.max);
+        return `<span class="${check.passed ? "passed" : "pending"}">${escapeHtml(check.label)} · 当前 ${check.value}${gap ? ` · ${check.min != null ? "尚差" : "须降低"} ${gap}` : " · 已达当前目标"}</span>`;
+      }).join("")}</div><p>${escapeHtml(status.advice)} 当前值供理政参考，奖章以最后一月结算后的结果为准。</p>`;
   }
 
   function renderTab() {
@@ -237,6 +262,8 @@
   window.XianShortChallenges = Object.freeze({
     selectEventId,
     evaluateChallenge,
+    getActiveStatus,
+    refreshStatus,
     start,
     startCustom,
     getChallenges: () => JSON.parse(JSON.stringify(CHALLENGES)),
