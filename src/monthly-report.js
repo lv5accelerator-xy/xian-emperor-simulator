@@ -13,16 +13,25 @@
   const SNAPSHOT_STORE_KEY = "xian_emperor_month_snapshot_v011";
   const MAX_REPORTS = 36;
 
-  let originalEndTurnButton = null;
-  let visibleEndTurnButton = null;
-  let originalObserver = null;
 
   document.addEventListener("DOMContentLoaded", initMonthlyReports);
 
   function initMonthlyReports() {
     injectStyles();
     installArchiveButton();
-    wrapEndTurnButton();
+    document.addEventListener("xian:settlement-completed", event => {
+      const { before, after } = event.detail;
+      const report = buildMonthlyReport(before, after, getMonthStartSnapshot(before));
+      saveMonthlyReport(report, before.createdAt || null);
+      if (!after.ended) showMonthlyReport(report, { campaignEnded: false });
+    });
+    document.addEventListener("xian:core-saved", () => setTimeout(() => ensureCurrentMonthSnapshot(), 0));
+    document.getElementById("ending-audit-btn")?.addEventListener("click", () => {
+      const settlement = window.XianEmperorGame.getState()?.lastSettlement;
+      if (!settlement) return showAddonToast("本存档尚无结算对账记录。", "warning");
+      window.XianEmperorGame.openUtilityModal({ title: "终月结算对账", body: window.XianMonthlySafety.renderSettlement(settlement),
+        confirmText: "关闭", cancelHidden: true, wide: true, onConfirm: window.XianEmperorGame.closeUtilityModal });
+    });
     bindSnapshotHooks();
     ensureCurrentMonthSnapshot();
   }
@@ -126,34 +135,6 @@
     nav.insertBefore(button, helpButton || null);
   }
 
-  function wrapEndTurnButton() {
-    originalEndTurnButton = document.getElementById("end-turn-btn");
-    if (!originalEndTurnButton || originalEndTurnButton.dataset.monthlyReportWrapped === "true") return;
-
-    const clone = originalEndTurnButton.cloneNode(true);
-    clone.dataset.monthlyReportWrapped = "true";
-    originalEndTurnButton.replaceWith(clone);
-    visibleEndTurnButton = clone;
-
-    clone.addEventListener("click", handleMonthEndClick);
-
-    syncEndTurnButton();
-    originalObserver = new MutationObserver(syncEndTurnButton);
-    originalObserver.observe(originalEndTurnButton, {
-      attributes: true,
-      childList: true,
-      characterData: true,
-      subtree: true,
-    });
-  }
-
-  function syncEndTurnButton() {
-    if (!originalEndTurnButton || !visibleEndTurnButton) return;
-    visibleEndTurnButton.disabled = originalEndTurnButton.disabled;
-    visibleEndTurnButton.textContent = originalEndTurnButton.textContent;
-    visibleEndTurnButton.className = originalEndTurnButton.className;
-  }
-
   function bindSnapshotHooks() {
     const resetForNewGame = () => {
       localStorage.removeItem(REPORT_STORE_KEY);
@@ -171,36 +152,6 @@
     document.getElementById("import-file")?.addEventListener("change", () => {
       setTimeout(() => ensureCurrentMonthSnapshot(true), 80);
     });
-  }
-
-  function handleMonthEndClick() {
-    if (!originalEndTurnButton || originalEndTurnButton.disabled) return;
-
-    const before = readGameState();
-    if (!before) {
-      originalEndTurnButton.click();
-      syncEndTurnButton();
-      return;
-    }
-
-    const beforeKey = stateMonthKey(before);
-    const monthStart = getMonthStartSnapshot(before);
-
-    originalEndTurnButton.click();
-    syncEndTurnButton();
-
-    const after = readGameState();
-    if (!after) return;
-
-    const monthChanged = stateMonthKey(after) !== beforeKey;
-    const campaignEnded = Boolean(after.ended);
-    if (!monthChanged && !campaignEnded) return;
-
-    const report = buildMonthlyReport(before, after, monthStart);
-    saveMonthlyReport(report, before.createdAt || null);
-
-    if (!campaignEnded) writeMonthSnapshot(after);
-    showMonthlyReport(report, { campaignEnded });
   }
 
   function getMonthStartSnapshot(before) {
@@ -298,6 +249,7 @@
       counts,
       statChanges,
       hiddenTrends,
+      settlement: after.lastSettlement?.gameCreatedAt === before.createdAt && after.lastSettlement.turn === before.turn ? after.lastSettlement : null,
       monthEndNotes: dynamics.notes.length ? dynamics.notes : ["朝廷庶务照常运转，未见另项异常。"],
       monthEndSummary: dynamics.summary || "尚书台未列额外公开数值变化。",
       baselinePartial: Boolean(monthStart.partial),
@@ -689,6 +641,7 @@
         </section>
 
         <section class="monthly-addon-section">
+          ${window.XianMonthlySafety?.renderSettlement?.(report.settlement) || ""}
           <h3>三、月末庶务与异常</h3>
           <ul>${report.monthEndNotes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
           <p class="monthly-addon-dynamics">${escapeHtml(report.monthEndSummary)}</p>

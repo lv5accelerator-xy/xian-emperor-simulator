@@ -59,6 +59,7 @@ function loadGameApi() {
     window: {},
   };
   vm.runInNewContext(read("src/data.js"), context, { filename: "data.js" });
+  vm.runInNewContext(read("src/action-plans.js"), context, { filename: "action-plans.js" });
   vm.runInNewContext(read("src/game.js"), context, { filename: "game.js" });
   return { api: context.window.XianEmperorGame, data: context.window.GAME_DATA };
 }
@@ -82,11 +83,11 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.18.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.19.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
-for (const resource of ["data.js", "game.js", "short-challenges.js", "command-center.js", "dynasty-saga.js", "monthly-safety.js", "monthly-safety.css", "save-backups.js"]) {
+for (const resource of ["data.js", "game.js", "action-plans.js", "monthly-report.js", "short-challenges.js", "command-center.js", "dynasty-saga.js", "monthly-safety.js", "monthly-safety.css", "save-backups.js"]) {
   assert.ok(read("index.html").includes(`src/${resource}?v=${expectedVersion}`), `${resource} must be shipped with the release`);
 }
 for (const resource of ["short-challenges.css", "short-review.js"]) {
@@ -95,12 +96,13 @@ for (const resource of ["short-challenges.css", "short-review.js"]) {
 for (const resource of ["decree-confirmation.js", "monthly-flow.js", "decree-helper.js", "decree-helper.css"]) {
   assert.ok(read("index.html").includes(`src/${resource}?v=2.16.0`), `${resource} must remain available`);
 }
-for (const resource of ["action-feedback.js", "action-feedback.css", "monthly-report.js", "weekly-challenge.js", "world-system.js", "strategy-network.js", "army-system.js", "court-politics.js", "campaign-evolution.js"]) {
+for (const resource of ["action-feedback.js", "action-feedback.css", "weekly-challenge.js", "world-system.js", "strategy-network.js", "army-system.js", "court-politics.js", "campaign-evolution.js"]) {
   assert.ok(read("index.html").includes(`src/${resource}?v=2.15.0`), `${resource} must remain available`);
 }
 for (const resource of ["edict-rules.js", "gameplay-polish.js", "gameplay-polish.css"]) {
   assert.ok(read("index.html").includes(`src/${resource}?v=2.14.0`), `${resource} must remain available`);
 }
+assert.ok(read("index.html").indexOf("src/action-plans.js") < read("index.html").indexOf("src/game.js"), "shared action plans must load before the core");
 assert.ok(read("index.html").indexOf("src/monthly-safety.js") < read("index.html").indexOf("src/game.js"), "shared monthly rules must load before the core");
 assert.ok(read("index.html").indexOf("src/save-backups.js") > read("index.html").indexOf("src/army-system.js"), "backup guard must load after system watchers");
 assert.ok(read("index.html").indexOf("src/edict-rules.js") < read("index.html").indexOf("src/game.js"), "shared decree rules must load before the core");
@@ -151,14 +153,14 @@ for (const illustration of [
   assert.ok(fs.statSync(path.join(root, "assets", "images", "illustrations", illustration)).size > 40000, `${illustration} should contain a real WebP illustration`);
 }
 for (const resource of [
-  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.18.0",
+  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.19.0",
   "character-memory.css?v=1.7.0", "character-memory.js?v=1.7.0",
   "world-marks.css?v=1.8.0", "world-marks.js?v=2.14.0",
   "historian.css?v=1.9.0", "historian.js?v=1.9.0",
-  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.18.0",
+  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.19.0",
   "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.16.0",
   "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.2.0",
-  "short-challenges.css?v=2.17.0", "short-challenges.js?v=2.18.0", "short-review.js?v=2.17.0",
+  "short-challenges.css?v=2.17.0", "short-challenges.js?v=2.19.0", "short-review.js?v=2.17.0",
   "weekly-challenge.css?v=2.4.0", "weekly-challenge.js?v=2.15.0",
   "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.5.0",
 ]) assert.ok(read("index.html").includes(resource), `${resource} should be referenced`);

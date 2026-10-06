@@ -195,7 +195,7 @@
     return { title: "本月行动已经用尽", detail: "检查警告后即可结束本月，未处理的扩展页面不会产生惩罚。", target: "end", button: "结束本月" };
   }
 
-  function recommendAction(state) {
+  function recommendActionCategory(state) {
     const stats = state?.stats || {};
     const hidden = state?.hidden || {};
     if (!state?.eventResolved) return { actionId: "event", label: "裁决奏报", reason: "所有行动都要在本月奏报裁决后进行。" };
@@ -237,39 +237,67 @@
     return { actionId: "audience", label: "召见人物", reason: "当前没有迫近的数值危机，适合经营关键人物关系。" };
   }
 
+  function planScore(state, next, goals) {
+    const checks = window.XianMonthlySafety.preview(next, goals).checks;
+    let score = 0;
+    for (const check of checks) {
+      const margin = check.min != null ? check.after - check.min : check.max - check.after;
+      score -= check.gap * 18 + (check.afterPassed ? 0 : 90);
+      score -= Math.max(0, (check.min != null ? 2 : 3) - margin) * 4;
+    }
+    // The recommendation reads the present position; it never draws future randomness.
+    score -= Math.max(0, 30 - next.stats.security) * 6;
+    score -= Math.max(0, next.stats.caoAlert - 72) * 5;
+    score -= Math.max(0, next.hidden.leakRisk - 35) * 1.5;
+    score -= Math.max(0, 18 - next.stats.prestige) * 6;
+    const short = window.XianShortChallenges?.getActiveStatus?.(state);
+    const reserve = short ? Math.max(1, short.duration - state.turn + 1) : 1;
+    score -= Math.max(0, reserve - next.stats.treasury) * 8;
+    score -= Math.max(0, state.stats.treasury - next.stats.treasury) * .4;
+    return score;
+  }
+
+  function concreteAdvice(state, plan, prefix, goals = []) {
+    const before = window.XianMonthlySafety.preview(state, goals);
+    const next = window.XianActionPlans.project(state, plan);
+    const after = window.XianMonthlySafety.preview(next, goals);
+    const changed = after.checks.filter((item, index) => item.after !== before.checks[index].after)
+      .map((item, index) => `${item.label}预计 ${Math.round(before.checks.find(check => check.path === item.path).after)} → ${Math.round(item.after)}`);
+    const names = { ...Object.fromEntries(Object.entries(window.GAME_DATA.statMeta).map(([key, value]) => [key, value.name])), leakRisk: "泄密风险", peopleStability: "民间稳定", loyalNetwork: "忠汉网络", externalBalance: "外部制衡" };
+    const costs = [["stats", plan.effects], ["hidden", plan.hidden]].flatMap(([group, changes]) => Object.entries(changes)
+      .filter(([key, delta]) => key === "caoAlert" || key === "leakRisk" ? delta > 0 : delta < 0)
+      .map(([key, delta]) => `${names[key] || key}${delta > 0 ? "+" : ""}${delta}`));
+    return { actionId: plan.actionId, fields: { ...plan.fields }, label: plan.label,
+      reason: `${prefix}${changed.length ? changed.join("；") + "。" : ""}${costs.length ? "代价：" + costs.join("、") + "。" : "不耗国库。"}比较已计入固定月末用度；即时回响与随机风险仍会改变结果。` };
+  }
+
+  function recommendAction(state) {
+    const recommendation = recommendActionCategory(state);
+    if (recommendation.fields || ["event", "end"].includes(recommendation.actionId) || !window.XianActionPlans) return recommendation;
+    const short = window.XianShortChallenges?.getActiveStatus?.(state);
+    let plans = window.XianActionPlans.list(state).filter(plan => plan.actionId === recommendation.actionId && plan.affordable);
+    if (recommendation.label.includes("修复宿卫")) plans = plans.filter(plan => plan.fields["appease-type"] === "military");
+    if (recommendation.label.includes("祭告宗庙")) plans = plans.filter(plan => plan.fields["ritual-type"] === "temple");
+    const goals = short?.checks || [];
+    const weights = { authority: 1, prestige: .7, security: 1.4, officials: .8, treasury: .3, caoAlert: -1.5,
+      leakRisk: -1, loyalNetwork: .3, peopleStability: .5, externalBalance: .5 };
+    const scored = plans.map(plan => ({ plan, score: goals.length ? planScore(state, window.XianActionPlans.project(state, plan), goals)
+      : Object.entries({ ...plan.effects, ...plan.hidden }).reduce((sum, [key, delta]) => sum + delta * (weights[key] || 0), 0) }));
+    scored.sort((a, b) => b.score - a.score || a.plan.cost - b.plan.cost);
+    return scored[0] ? concreteAdvice(state, scored[0].plan, recommendation.reason, goals) : recommendation;
+  }
+
   function recommendShortAction(state, short) {
     const preview = window.XianMonthlySafety.preview(state, short.checks);
     const guard = reason => ({ actionId: "end", label: "留行动守成", reason: `${reason}余下 ${state.actionPoints} 次行动可换安全与泄密控制。先查看月末预检；随机风险仍需留意。` });
     const ample = preview.checks.every(check => check.afterPassed && (check.min == null || check.after >= check.min + 2) && (check.max == null || check.after <= check.max - 3));
     if (ample && state.hidden.leakRisk < 55) return guard("短局目标在固定结算后均有余量。可保住现有成果。");
-    const deficits = preview.checks.filter(check => !check.afterPassed).sort((a, b) => b.gap - a.gap);
-    const thin = preview.checks.filter(check => !deficits.includes(check)).sort((a, b) =>
-      (a.min != null ? a.after - a.min : a.max - a.after) - (b.min != null ? b.after - b.min : b.max - b.after));
-    const check = deficits[0] || thin[0];
-    if (!check) return guard("当前没有待补的短局目标。");
-    const prefix = `${short.name}：${check.label}，固定结算后预计 ${Math.round(check.after)}${check.gap ? `，还差 ${Math.ceil(check.gap)}` : "，余量较小"}。`;
-    let actionId, label, reason;
-    switch (check.path) {
-      case "stats.treasury": actionId = "revenue"; label = "筹措钱粮"; reason = "先计入月末国库 −1；比较节流、催贡与借调的代价，避免伤及其他目标。"; break;
-      case "stats.security": actionId = "audience"; label = "公开召见曹氏人物"; reason = "公开召见曹氏人物可增安全 +2、百官 +2、皇权 +2，并降警戒；另留行动守成。"; break;
-      case "stats.caoAlert": actionId = "appease"; label = "安抚曹氏 · 公开褒奖"; reason = "公开褒奖可降警戒 7，但皇权 −1；避免密令与过度扩权。"; break;
-      case "hidden.leakRisk": return guard(`${prefix}暂无直接清除泄密的常用行动，避免新增密令，可能需要数月修复。`);
-      case "hidden.loyalNetwork":
-        actionId = "secret"; label = "密令联络"; reason = "忠汉网络不能靠守成补足。密联增加网络，同时增加泄密与警戒、降低安全；先核对其余目标。";
-        if (preview.checks.some(item => item.path === "hidden.leakRisk" && state.hidden.leakRisk + 8 > item.max)) {
-          actionId = "audience"; label = "私下召见忠汉人物"; reason = "私下召见忠汉人物增加网络 3、泄密 2，并降安全 1；比密联缓和，仍需守成控制风险。";
-        }
-        break;
-      case "hidden.peopleStability": actionId = "relief"; label = "量力赈济"; reason = "局部赈济需国库 4；提高民间稳定，并留出月末用度。"; break;
-      case "stats.prestige": actionId = "ritual"; label = "整饬朝仪 · 祭告宗庙"; reason = "祭告宗庙可增威望 7、皇权 3，需国库 5，警戒 +2。"; break;
-      case "stats.authority": actionId = "ritual"; label = "整饬朝仪 · 恢复大朝会"; reason = "恢复大朝会可增皇权 5、百官 4，需国库 4，警戒 +3。"; break;
-      case "stats.officials": actionId = "audience"; label = "公开召见人物"; reason = "公开召见可增百官 2，不耗国库；切勿为筹款连续核减冗费。"; break;
-      case "hidden.externalBalance": actionId = "regional"; label = "结交外镇"; reason = "颁诏慰劳可增制衡 4，需国库 1，警戒 +3；先留出月末用度。"; break;
-      default: return guard(`${prefix}请在目标详情中核对所需处分。`);
-    }
-    const required = actionId === "relief" ? 5 : actionId === "ritual" ? (check.path === "stats.prestige" ? 6 : 5) : actionId === "regional" ? 2 : 0;
-    if (state.stats.treasury < required) return { actionId: "revenue", label: "先筹措目标用度", reason: `${prefix}${label}连同月末用度需国库至少 ${required}，当前不足。` };
-    return { actionId, label, reason: prefix + reason };
+    const baseline = planScore(state, state, short.checks);
+    const plans = window.XianActionPlans.list(state).filter(plan => plan.affordable && state.stats.treasury - plan.cost >= 1);
+    const ranked = plans.map(plan => ({ plan, score: planScore(state, window.XianActionPlans.project(state, plan), short.checks) }));
+    ranked.sort((a, b) => b.score - a.score || a.plan.cost - b.plan.cost);
+    if (!ranked.length || ranked[0].score <= baseline + .01) return guard("已比较可行方案，没有比保留行动更稳妥的目标改善。");
+    return concreteAdvice(state, ranked[0].plan, `${short.name}：同时比较全部目标与行动代价。`, short.checks);
   }
 
   function renderBriefTab() {
@@ -293,7 +321,7 @@
       <div class="command-guide-intro"><span class="command-guide-seal">汉</span><div><strong>${escapeHtml(scenario?.name || "献帝朝局")}</strong><p>${escapeHtml(scenario?.summary || "以有限行动维持朝廷，并争取不由他人书写的结局。")}</p></div></div>
       <ol class="command-guide-list">
         <li><strong>先看中央奏报</strong><span>每月只必须处理一件奏报，选项下方已经写明主要收益与代价。</span></li>
-        <li><strong>再用两次行动</strong><span>优先处理御前总览提示的红色风险；天下、军团和政议都是可选深度。</span></li>
+        <li><strong>再安排御前行动</strong><span>优先处理御前总览提示的红色风险；天下、军团和政议都是可选深度。</span></li>
         <li><strong>最后结束本月</strong><span>行动次数可以留空，剩余行动会转化为谨慎守成，不会白白消失。</span></li>
         <li><strong>不必追求全满</strong><span>皇权增长会刺激警戒，强力密令会增加泄密。稳定的取舍才是本作核心。</span></li>
       </ol>

@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 v2.14.0
+ * 天子蒙尘：献帝模拟器 v2.19.0
  * 核心逻辑：纯前端、无外部依赖、可直接部署到 GitHub Pages。
  */
 
@@ -37,6 +37,9 @@
     "xian_emperor_regional_echoes_v2120",
     "xian_emperor_imperial_paths_v2130",
   ];
+  let settlementLedger = null;
+  let settlementStage = "";
+
   const MAX_REPORTS = 10;
   const ACTION_CATEGORIES = [
     { id: "finance", name: "财政", icon: "帑", note: "国库、贡赋与民生" },
@@ -312,7 +315,7 @@
       activeActionCategory = getActionCategory(recommendation.actionId);
       actionCategoryPinned = false;
       updateActionWorkspace();
-      el["action-grid"].querySelector(`[data-action-id="${recommendation.actionId}"]`)?.focus();
+      openRecommendedAction(recommendation);
     });
   }
 
@@ -726,7 +729,8 @@
     renderAll();
   }
 
-  function applyPackage(pkg) {
+  function applyPackage(pkg, trackSettlement = true) {
+    const beforeSettlement = settlementLedger && trackSettlement ? window.XianMonthlySafety.snapshot(state) : null;
     const actualChanges = [];
     if (pkg.effects) {
       Object.entries(pkg.effects).forEach(([key, delta]) => {
@@ -749,6 +753,8 @@
       });
     }
 
+    if (beforeSettlement) window.XianMonthlySafety.recordSettlement(settlementLedger,
+      pkg.settlementSource || settlementStage || "其他变化（未归类）", beforeSettlement, state);
     return actualChanges.join("，");
   }
 
@@ -852,7 +858,7 @@
     el["end-turn-btn"].textContent = short && state.turn >= short.duration ? "完成短局结算" : state.turn >= state.maxTurns ? "完成终局结算" : "结束本月";
   }
 
-  function openAction(actionId) {
+  function openAction(actionId, fields = {}) {
     if (!canAct()) return;
     const handlers = {
       audience: openAudienceModal,
@@ -865,6 +871,23 @@
       regional: openRegionalModal,
     };
     handlers[actionId]?.();
+    for (const [name, value] of Object.entries(fields)) {
+      if (name.startsWith("modal-")) { const input = document.getElementById(name); if (input) input.value = value; }
+      else el["modal-body"].querySelectorAll(`input[name="${name}"]`).forEach(input => { input.checked = input.value === value; });
+    }
+  }
+
+  function openRecommendedAction(recommendation = getRecommendedCommonAction()) {
+    if (recommendation.actionId === "end") return requestEndTurn();
+    if (!canAct()) return false;
+    const plan = recommendation.fields && window.XianActionPlans.build(recommendation.actionId, recommendation.fields, state);
+    openAction(recommendation.actionId, plan?.fields || {});
+    if (plan) {
+      const note = document.createElement("div"); note.className = "recommended-plan-note";
+      note.innerHTML = `<strong>建议方案：${escapeHtml(plan.label)}</strong><p>${escapeHtml(recommendation.reason)}</p>${renderOutcomePreview(plan)}<small>可修改方案，确认后才消耗行动。</small>`;
+      el["modal-body"].prepend(note);
+    }
+    return true;
   }
 
   function canAct() {
@@ -911,33 +934,12 @@
   }
 
   function performAudience(targetId, mode) {
-    const character = getCharacter(targetId);
-    if (!character) return;
-
-    const relationGain = mode === "public" ? 4 : 7;
-    const effects = mode === "public" ? { authority: 2, officials: 2 } : { security: -1, caoAlert: 2 };
-    const hidden = mode === "private" ? { leakRisk: 2 } : null;
-
-    if (character.faction === "cao_group") {
-      effects.caoAlert = (effects.caoAlert || 0) - 3;
-      effects.security = (effects.security || 0) + 2;
-    } else if (character.faction === "regional_lords") {
-      effects.prestige = 2;
-      effects.caoAlert = (effects.caoAlert || 0) + 2;
-    } else if (character.faction === "han_loyalists" && mode === "private") {
-      hidden.loyalNetwork = 3;
-    }
-
-    const advice = getCharacterAdvice(character);
-    completeAction({
+    const character = getCharacter(targetId); if (!character) return;
+    executeActionPlan("audience", { "modal-character-select": targetId, "audience-mode": mode }, {
       title: `召见${character.name}`,
-      text: `${mode === "public" ? "天子于朝堂召见" : "天子于内廷密召"}${character.name}。${advice}`,
+      text: `${mode === "public" ? "天子于朝堂召见" : "天子于内廷密召"}${character.name}。${getCharacterAdvice(character)}`,
       chronicle: `${mode === "public" ? "公开召见" : "私下召见"}${character.name}，君臣有所商议。`,
-      effects,
-      hidden,
-      relations: { [targetId]: relationGain },
     });
-    closeModal();
   }
 
   function openAppointmentModal() {
@@ -972,31 +974,12 @@
   }
 
   function performAppointment(targetId, type) {
-    const character = getCharacter(targetId);
-    if (!character) return;
-
-    const packages = {
-      praise: { effects: { authority: 2, prestige: 2, treasury: -1 }, relation: 5, alert: 1 },
-      office: { effects: { authority: 4, officials: 2, treasury: -3 }, relation: 9, alert: 4 },
-      title: { effects: { prestige: 4, authority: 3, treasury: -5 }, relation: 13, alert: 6 },
-    };
-    const pkg = packages[type];
-    pkg.effects.caoAlert = pkg.alert;
-
-    if (character.faction === "cao_group") pkg.effects.caoAlert -= 6;
-    if (character.faction === "regional_lords") {
-      pkg.effects.prestige += 1;
-      pkg.effects.caoAlert += 2;
-    }
-
-    completeAction({
+    const character = getCharacter(targetId); if (!character) return;
+    executeActionPlan("appointment", { "modal-character-select": targetId, "modal-appointment-type": type }, {
       title: `封赏${character.name}`,
       text: `朝廷对${character.name}${type === "praise" ? "下诏褒奖" : type === "office" ? "加授官职" : "赐爵增秩"}。官爵换来了支持，也引起各方重新估量。`,
       chronicle: `天子${type === "praise" ? "褒奖" : type === "office" ? "加官于" : "赐爵于"}${character.name}。`,
-      effects: pkg.effects,
-      relations: { [targetId]: pkg.relation },
     });
-    closeModal();
   }
 
   function openSecretModal() {
@@ -1033,73 +1016,24 @@
   }
 
   function performSecret(targetId, type) {
-    const character = getCharacter(targetId);
-    if (!character) return;
-
-    const base = {
-      effects: { security: -3, caoAlert: 7 },
-      hidden: { loyalNetwork: 7, leakRisk: 8 },
-      relations: { [targetId]: 7 },
-    };
-
-    if (type === "intelligence") {
-      base.hidden.loyalNetwork += 2;
-      base.hidden.leakRisk += 1;
-    } else if (type === "support") {
-      base.effects.authority = 2;
-      base.hidden.loyalNetwork += 4;
-      base.hidden.leakRisk += 3;
-    } else if (type === "escape") {
-      base.hidden.escapeRoute = 9;
-      base.hidden.externalBalance = 3;
-      base.effects.security -= 1;
-    }
-
-    if (character.faction === "regional_lords") {
-      base.hidden.externalBalance = (base.hidden.externalBalance || 0) + 6;
-      base.effects.caoAlert += 3;
-    }
-
-    completeAction({
+    const character = getCharacter(targetId); if (!character) return;
+    executeActionPlan("secret", { "modal-character-select": targetId, "modal-secret-type": type }, {
       title: `密联${character.name}`,
       text: `一封不署名的密令经数重转手送往${character.name}处。宫中没有留下正式文书，但耳目未必全无所觉。`,
       chronicle: `宫中暗中联络${character.name}，所议不载于尚书台。`,
-      ...base,
     });
-    closeModal();
   }
 
   function buildTreasuryActionPackage(method, currentTreasury = 50) {
-    const emergencyBonus = Number(currentTreasury || 0) <= 18 ? 2 : 0;
-    const packages = {
-      audit: {
-        label: "核减宫中冗费",
-        summary: "少办非急仪典，清点重复支给，以节流补充国库。",
-        effects: { treasury: 4 + emergencyBonus, officials: -2 },
-        hidden: {},
-      },
-      tribute: {
-        label: "催办州郡贡赋",
-        summary: "命尚书台催收拖欠贡赋，钱粮较多，却会加重地方负担。",
-        effects: { treasury: 7 + emergencyBonus, prestige: -3, officials: -1, caoAlert: 1 },
-        hidden: { peopleStability: -4 },
-      },
-      borrow: {
-        label: "向司空府借调",
-        summary: "由司空府先拨粮帛解急，朝廷因此更加依赖外府。",
-        effects: { treasury: 10 + emergencyBonus, authority: -5, officials: -2, caoAlert: -5 },
-        hidden: { externalBalance: -3 },
-      },
+    const summaries = {
+      audit: "少办非急仪典，清点重复支给，以节流补充国库。",
+      tribute: "命尚书台催收拖欠贡赋，钱粮较多，却会加重地方负担。",
+      borrow: "由司空府先拨粮帛解急，朝廷因此更加依赖外府。",
     };
-    const pkg = packages[method] || packages.audit;
-    return {
-      method: packages[method] ? method : "audit",
-      emergencyBonus,
-      label: pkg.label,
-      summary: pkg.summary,
-      effects: { ...pkg.effects },
-      hidden: { ...pkg.hidden },
-    };
+    const chosen = Object.hasOwn(summaries, method) ? method : "audit";
+    const plan = window.XianActionPlans.build("revenue", { "revenue-method": chosen }, { stats: { treasury: Number(currentTreasury || 0) } });
+    return { method: chosen, emergencyBonus: Number(currentTreasury || 0) <= 18 ? 2 : 0, label: plan.label,
+      summary: summaries[chosen], effects: plan.effects, hidden: plan.hidden };
   }
 
   function openRevenueModal() {
@@ -1126,14 +1060,11 @@
 
   function performRevenue(method) {
     const pkg = buildTreasuryActionPackage(method, state.stats.treasury);
-    completeAction({
+    executeActionPlan("revenue", { "revenue-method": pkg.method }, {
       title: pkg.label,
       text: `${pkg.summary}${pkg.emergencyBonus ? " 国库告急，尚书台同时变卖闲置器物，补足部分缺口。" : ""}`,
       chronicle: `朝廷${pkg.label}，以济当月用度。`,
-      effects: pkg.effects,
-      hidden: pkg.hidden,
     });
-    closeModal();
   }
 
   function openReliefModal() {
@@ -1157,31 +1088,12 @@
   }
 
   function performRelief(level) {
-    const scale = {
-      small: { cost: 4, prestige: 3, support: 1, stability: 4, label: "局部赈济" },
-      medium: { cost: 8, prestige: 6, support: 3, stability: 8, label: "州郡减赋" },
-      large: { cost: 13, prestige: 10, support: 4, stability: 13, label: "大开仓廪" },
-    }[level];
-
-    if (state.stats.treasury < scale.cost) {
-      showToast("国库不足，无法按此规模施行。", "error");
-      return;
-    }
-
+    const plan = window.XianActionPlans.build("relief", { "relief-level": level }, state); if (!plan) return;
     const efficiency = clamp((state.stats.authority + state.stats.officials) / 160, 0.45, 1.15);
-    completeAction({
-      title: scale.label,
-      text: `朝廷下诏${scale.label}。依当前执行力，约有${Math.round(efficiency * 100)}%的政令能够落实到地方。`,
-      chronicle: `天子施行${scale.label}，以安流民与灾户。`,
-      effects: {
-        treasury: -scale.cost,
-        prestige: Math.round(scale.prestige * efficiency),
-        officials: scale.support,
-        caoAlert: level === "large" ? 3 : 1,
-      },
-      hidden: { peopleStability: Math.round(scale.stability * efficiency) },
+    executeActionPlan("relief", plan.fields, { title: plan.label,
+      text: `朝廷下诏${plan.label}。依当前执行力，约有${Math.round(efficiency * 100)}%的政令能够落实到地方。`,
+      chronicle: `天子施行${plan.label}，以安流民与灾户。`,
     });
-    closeModal();
   }
 
   function openRitualModal() {
@@ -1201,32 +1113,11 @@
   }
 
   function performRitual(type) {
-    const map = {
-      court: {
-        label: "恢复大朝会",
-        effects: { authority: 5, officials: 4, treasury: -4, caoAlert: 3 },
-      },
-      temple: {
-        label: "祭告宗庙",
-        effects: { prestige: 7, authority: 3, treasury: -5, caoAlert: 2 },
-      },
-      lecture: {
-        label: "开设经筵",
-        effects: { officials: 6, authority: 3, treasury: -3, caoAlert: 2 },
-      },
-    };
-    const pkg = map[type];
-    if (state.stats.treasury < Math.abs(pkg.effects.treasury)) {
-      showToast("国库不足以筹办此项仪典。", "error");
-      return;
-    }
-    completeAction({
-      title: pkg.label,
-      text: `${pkg.label}依汉家旧制举行。礼仪本身不能改变兵权，却让百官与天下再次看见朝廷。`,
-      chronicle: `朝廷${pkg.label}，汉家礼制稍复。`,
-      effects: pkg.effects,
+    const plan = window.XianActionPlans.build("ritual", { "ritual-type": type }, state); if (!plan) return;
+    executeActionPlan("ritual", plan.fields, { title: plan.label,
+      text: `${plan.label}依汉家旧制举行。礼仪本身不能改变兵权，却让百官与天下再次看见朝廷。`,
+      chronicle: `朝廷${plan.label}，汉家礼制稍复。`,
     });
-    closeModal();
   }
 
   function openAppeaseModal() {
@@ -1246,36 +1137,11 @@
   }
 
   function performAppease(type) {
-    const map = {
-      praise: {
-        label: "公开褒奖司空",
-        effects: { caoAlert: -7, prestige: 1, authority: -1 },
-        relation: 6,
-      },
-      military: {
-        label: "暂授军务便宜",
-        effects: { caoAlert: -11, security: 6, authority: -6 },
-        relation: 8,
-      },
-      banquet: {
-        label: "赐宴修好",
-        effects: { caoAlert: -8, security: 3, treasury: -5, officials: 1 },
-        relation: 7,
-      },
-    };
-    const pkg = map[type];
-    if (pkg.effects.treasury && state.stats.treasury < Math.abs(pkg.effects.treasury)) {
-      showToast("国库不足以筹备赐宴。", "error");
-      return;
-    }
-    completeAction({
-      title: pkg.label,
-      text: `${pkg.label}。司空府表面接受天子善意，旧臣则重新评估你的真实意图。`,
-      chronicle: `天子${pkg.label}，许都君臣关系暂缓。`,
-      effects: pkg.effects,
-      relations: { cao_cao: pkg.relation, dong_cheng: -2 },
+    const plan = window.XianActionPlans.build("appease", { "appease-type": type }, state); if (!plan) return;
+    executeActionPlan("appease", plan.fields, { title: plan.label,
+      text: `${plan.label}。司空府表面接受天子善意，旧臣则重新评估你的真实意图。`,
+      chronicle: `天子${plan.label}，许都君臣关系暂缓。`,
     });
-    closeModal();
   }
 
   function openRegionalModal() {
@@ -1305,38 +1171,23 @@
   }
 
   function performRegional(targetId, type) {
-    const character = getCharacter(targetId);
-    if (!character) return;
-    const map = {
-      edict: {
-        effects: { prestige: 3, authority: 1, caoAlert: 3, treasury: -1 },
-        hidden: { externalBalance: 4 },
-        relation: 6,
-        label: "颁诏慰劳",
-      },
-      envoy: {
-        effects: { security: -2, caoAlert: 7, treasury: -3 },
-        hidden: { externalBalance: 8, leakRisk: 5 },
-        relation: 9,
-        label: "派遣密使",
-      },
-      tribute: {
-        effects: { treasury: 7, authority: -1, prestige: 2, caoAlert: 5 },
-        hidden: { externalBalance: 5 },
-        relation: 7,
-        label: "以官爵换取贡赋",
-      },
-    };
-    const pkg = map[type];
-    completeAction({
-      title: `${pkg.label}·${character.name}`,
-      text: `朝廷向${character.name}${pkg.label}。外镇对汉廷的态度有所变化，司空府也注意到使者往来。`,
+    const character = getCharacter(targetId); if (!character) return;
+    const plan = window.XianActionPlans.build("regional", { "modal-character-select": targetId, "regional-type": type }, state); if (!plan) return;
+    const label = plan.label.split("·")[0];
+    executeActionPlan("regional", plan.fields, { title: plan.label,
+      text: `朝廷向${character.name}${label}。外镇对汉廷的态度有所变化，司空府也注意到使者往来。`,
       chronicle: `朝廷与${character.name}往来，以求外镇奉汉。`,
-      effects: pkg.effects,
-      hidden: pkg.hidden,
-      relations: { [targetId]: pkg.relation },
     });
+  }
+
+  function executeActionPlan(actionId, fields, narrative) {
+    if (!canAct()) return false;
+    const plan = window.XianActionPlans.build(actionId, fields, state);
+    if (!plan) return false;
+    if (!plan.affordable) { showToast("国库不足，无法施行此方案。", "error"); return false; }
+    completeAction({ ...plan, ...narrative });
     closeModal();
+    return true;
   }
 
   function issueFreeformEdict() {
@@ -1624,54 +1475,66 @@
     });
   }
 
+  function settlementPhase(source, callback) {
+    const previous = settlementStage; settlementStage = source;
+    try { return callback(); } finally { settlementStage = previous; }
+  }
+
+  function finalizeSettlement() {
+    if (!settlementLedger) return;
+    const ledger = settlementLedger;
+    state.lastSettlement = window.XianMonthlySafety.finishSettlement(ledger, state);
+    const before = { ...JSON.parse(JSON.stringify(state)), stats: { ...ledger.before.stats }, hidden: { ...ledger.before.hidden }, reports: ledger.reportsBefore || state.reports };
+    delete before.pendingSettlement;
+    delete state.pendingSettlement;
+    settlementLedger = null;
+    document.dispatchEvent(new CustomEvent("xian:settlement-completed", { detail: {
+      before, after: JSON.parse(JSON.stringify(state)), settlement: JSON.parse(JSON.stringify(state.lastSettlement)),
+    } }));
+  }
+
   function endTurn() {
-    if (window.__xianFullSaveImporting) return;
-    if (!state || state.ended) return;
-    if (!state.eventResolved) {
-      showToast("请先裁决本月奏报。", "warning");
-      return;
-    }
-
-    if (state.monthlySettledTurn < state.turn) {
-      document.dispatchEvent(new CustomEvent("xian:before-month-end", { detail: { turn: state.turn, createdAt: state.createdAt } }));
-      if (state.ended) return;
-      applyMonthlyDynamics();
+    if (window.__xianFullSaveImporting || !state || state.ended) return;
+    if (!state.eventResolved) return showToast("请先裁决本月奏报。", "warning");
+    const short = window.XianShortChallenges?.getActiveStatus?.(state);
+    settlementLedger = state.pendingSettlement?.gameCreatedAt === state.createdAt && state.pendingSettlement.turn === state.turn
+      ? state.pendingSettlement : window.XianMonthlySafety.beginSettlement(state, short?.checks || []);
+    state.pendingSettlement = settlementLedger;
+    try {
+      if (state.monthlySettledTurn < state.turn) {
+        settlementPhase("旧事与地方回响", () => document.dispatchEvent(new CustomEvent("xian:before-month-end", { detail: { turn: state.turn, createdAt: state.createdAt } })));
+        if (state.ended) return;
+        applyMonthlyDynamics();
+        if (checkImmediateEnding()) return;
+        state.monthlySettledTurn = state.turn;
+        settlementPhase("月末即时反馈", () => saveGame(true));
+      }
+      for (const [system, label] of [[window.XianWorldSystem, "天下局势"], [window.XianStrategyNetwork, "州郡与军路"], [window.XianArmySystem, "军团结算"]]) {
+        settlementPhase(label, () => system?.settleMonth?.());
+        if (state.ended) return;
+      }
       if (checkImmediateEnding()) return;
-      state.monthlySettledTurn = state.turn;
-      saveGame(true);
-    }
-    // Flush dependent worlds before quarter goals, short-run scores and the monthly report snapshot.
-    for (const system of [window.XianWorldSystem, window.XianStrategyNetwork, window.XianArmySystem]) {
-      system?.settleMonth?.();
+      settlementPhase("季度御题与后续回响", () => document.dispatchEvent(new CustomEvent("xian:month-ended", { detail: { turn: state.turn, createdAt: state.createdAt } })));
       if (state.ended) return;
-    }
-    if (checkImmediateEnding()) return;
-    document.dispatchEvent(new CustomEvent("xian:month-ended", { detail: { turn: state.turn, createdAt: state.createdAt } }));
-    if (state.ended) return;
-    // Short challenges grade after monthly dynamics and quarter-end rewards or penalties.
-    document.dispatchEvent(new CustomEvent("xian:month-settled", { detail: { turn: state.turn, createdAt: state.createdAt } }));
-    if (state.ended) return;
-
-    if (state.turn >= state.maxTurns) {
-      finishCampaign();
-      return;
-    }
-
-    advanceCalendar();
-    state.turn += 1;
-    prepareTurn();
-    state.updatedAt = new Date().toISOString();
-    saveGame(true);
-    renderAll();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+      settlementPhase("终值核验", () => document.dispatchEvent(new CustomEvent("xian:month-settled", { detail: { turn: state.turn, createdAt: state.createdAt } })));
+      if (state.ended) return;
+      finalizeSettlement();
+      if (state.turn >= state.maxTurns) { finishCampaign(); return; }
+      advanceCalendar(); state.turn += 1; prepareTurn();
+      saveGame(true); renderAll(); window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally { settlementLedger = null; settlementStage = ""; }
   }
 
   function applyMonthlyDynamics() {
+    const before = window.XianMonthlySafety.snapshot(state);
+    const fixed = window.XianMonthlySafety.snapshot(window.XianMonthlySafety.preview(state).projected);
+    let leaked = false;
     const { effects, hidden, notes } = window.XianMonthlySafety.fixedDynamics(state);
 
     // 泄密检验
     const leakChance = clamp(state.hidden.leakRisk / 150, 0, 0.65);
     if (nextRandom() < leakChance) {
+      leaked = true;
       const severity = Math.ceil(state.hidden.leakRisk / 20);
       effects.security = (effects.security || 0) - (2 + severity);
       effects.caoAlert = (effects.caoAlert || 0) + (3 + severity);
@@ -1682,7 +1545,9 @@
       hidden.leakRisk = (hidden.leakRisk || 0) - 1;
     }
 
-    const summary = applyPackage({ effects, hidden });
+    const summary = applyPackage({ effects, hidden }, false);
+    window.XianMonthlySafety.recordSettlement(settlementLedger, "固定用度与守成", before, fixed);
+    window.XianMonthlySafety.recordSettlement(settlementLedger, leaked ? "泄密检验（触发，含上限影响）" : "泄密检验（未触发）", fixed, state);
     if (notes.length || summary) {
       addReport(
         "月末结算",
@@ -1787,6 +1652,7 @@
   function concludeGame(ending) {
     state.ended = true;
     state.ending = ending;
+    finalizeSettlement();
     state.updatedAt = new Date().toISOString();
     addChronicle(formatReignDate(state.year, state.month), `终局：${ending.title}。${ending.text}`);
     recordScenarioResult();
@@ -2139,14 +2005,21 @@
     }
   }
 
+  function downloadFullSave(bundle, filename) {
+    if (bundle?.format !== "xian-emperor-full-save" || !validateSave(bundle.stores?.[SAVE_KEY])) return false;
+    try {
+      downloadBlob(new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json;charset=utf-8" }), filename);
+      showToast("完整存档包已导出。", "success");
+      return true;
+    } catch (_) { showToast("导出失败，请重新尝试。", "error"); return false; }
+  }
+
   function exportSave() {
     if (!state) return;
     saveGame(true);
     try {
       const bundle = captureFullSave();
-      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json;charset=utf-8" });
-      downloadBlob(blob, `xian-emperor-v${DATA.version}-turn-${state.turn}.json`);
-      showToast("完整存档包已导出，包含军团、政议、方略与收藏。", "success");
+      downloadFullSave(bundle, `xian-emperor-v${DATA.version}-turn-${state.turn}.json`);
     } catch (error) {
       console.error(error);
       showToast("导出失败：存在损坏的系统存档，请先检查备份。", "error");
@@ -2396,7 +2269,7 @@
     if (window.__xianFullSaveImporting) return false;
     if (!state || state.ended) return { applied: false, changes: "" };
     state.externalSequence += 1;
-    const changes = applyPackage(pkg);
+    const changes = applyPackage({ ...pkg, settlementSource: pkg.settlementSource || (settlementStage ? `${settlementStage} · ${pkg.report?.title || pkg.title || "朝局变化"}` : "其他变化（未归类）") });
     if (pkg.report?.title && pkg.report?.text) {
       addReport(pkg.report.title, `${pkg.report.text}${changes ? `｜${changes}` : ""}`, pkg.report.type || "decision");
     }
@@ -2459,7 +2332,10 @@
     concludeExternalEnding,
     endTurn,
     requestEndTurn,
+    openRecommendedAction,
+    getActionPlans: gameState => gameState || state ? window.XianActionPlans.list(gameState || state) : [],
     captureFullSave,
+    downloadFullSave,
     restoreFullSave,
     getPortableStorageKeys: () => [...PORTABLE_STORAGE_KEYS],
     openUtilityModal: openModal,

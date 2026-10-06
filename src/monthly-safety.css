@@ -14,8 +14,22 @@
 .save-backups article button { flex-shrink: 0; }
 .backup-note { font-size: .84rem; opacity: .8; }
 .start-backups { margin-top: 12px; }
+.recommended-plan-note { padding: 12px; line-height: 1.65; border: 1px solid rgba(221,187,105,.3); border-radius: 10px; color: #e5d1a4; }
+.settlement-audit { margin: 18px 0; }
+.settlement-audit p { line-height: 1.6; }
+.settlement-audit details > summary { padding: 12px 0; cursor: pointer; min-height: 44px; }
+.settlement-audit-rows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.settlement-audit-rows article { display: grid; gap: 5px; padding: 12px; border: 1px solid rgba(221,187,105,.2); border-radius: 10px; }
+.settlement-audit-rows span, .settlement-audit-rows small { font-size: .85rem; }
+.settlement-audit-rows p { font-size: .85rem; margin: 3px 0; }
+.backup-actions { display: grid; gap: 8px; flex-shrink: 0; }
+.backup-actions button { min-height: 44px; }
+.backup-compare table { width: 100%; border-collapse: collapse; }
+.backup-compare th, .backup-compare td { padding: 9px 6px; text-align: left; border-bottom: 1px solid rgba(221,187,105,.2); }
+.backup-compare .changed { color: #e5c987; }
 @media (max-width: 540px) {
   .save-backups article { align-items: stretch; flex-direction: column; }
   .save-backups article button { width: 100%; min-height: 44px; }
   .month-preflight th, .month-preflight td { padding: 8px 4px; }
+  .settlement-audit-rows { grid-template-columns: 1fr; }
 }

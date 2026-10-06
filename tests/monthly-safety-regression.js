@@ -60,7 +60,7 @@ assert.equal(last.window.XianShortChallenges.getResultForGame(lastCore.createdAt
 
 const advise = harness(); advise.load("command-center");
 const cases = [["white_horse", { treasury: 25 }, {}, "revenue"], ["girdle_edict", {}, { loyalNetwork: 20 }, "secret"],
-  ["eastward_return", {}, { peopleStability: 30 }, "relief"], ["xudu_mutiny", { officials: 36 }, {}, "audience"],
+  ["eastward_return", {}, { peopleStability: 30 }, "relief"], ["xudu_mutiny", { officials: 36 }, {}, "ritual"],
   ["abdication_eve", { authority: 22 }, {}, "ritual"]];
 for (const [id, stats, hidden, expected] of cases) {
   advise.window.XianShortChallenges.start(id); advise.decide(1);
