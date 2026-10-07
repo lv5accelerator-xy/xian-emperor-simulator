@@ -117,8 +117,8 @@ body.monthly-report-open { overflow: hidden; }
 }
 @media (max-width: 720px) {
   .monthly-flow-steps button { flex-direction: column; padding: 7px 4px; gap: 4px; }
-  body .monthly-flow-steps button .monthly-step-label { display: none; }
-  body .monthly-flow-steps button .monthly-step-short { display: inline; font-size: .85rem; line-height: 1.5; }
+  #monthly-flow-bar .monthly-flow-steps button .monthly-step-label { display: none; }
+  #monthly-flow-bar .monthly-flow-steps button .monthly-step-short { display: inline; font-size: .85rem; line-height: 1.5; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
