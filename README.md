@@ -156,8 +156,10 @@ node tests/settlement-replay-regression.js
 发布检查还需要设置当前预期版本：
 
 ```bash
-EXPECTED_VERSION=2.15.0 node tests/release-regression.js
+EXPECTED_VERSION=2.23.0 node tests/release-regression.js
 ```
+
+统一检查入口为 `node scripts/check.cjs`（Node.js 24，跨 Windows/Linux）；开发约定见 [AGENTS.md](AGENTS.md)，任务交接见 [CODEX_HANDOFF.md](CODEX_HANDOFF.md)。
 
 GitHub Actions 会额外检查脚本语法、音频资源、圣旨目标顺序、军团计算、页面资源引用和独立版本说明。
 
