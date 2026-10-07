@@ -111,6 +111,8 @@ assert.equal(er.endedEarly, true); assert.equal(er.medal, "none");
 assert.equal(er.review.endingTitle, "深宫幽闭"); assert.equal(er.review.months.length, 0);
 assert.match(early.node("short-ending-review").innerHTML, /部分指标达标也不授章/);
 assert.equal(er.review.advice[0].heading, "先避免提前终局");
+assert.match(early.window.XianShortReview.brief(er.review).text, /深宫幽闭/);
+assert.doesNotMatch(early.window.XianShortReview.brief(er.review).text, /首次记录的跌出/);
 
 // Old in-progress and completed saves remain readable without inventing a full-run baseline.
 const legacyStores = { ...checkpoint };

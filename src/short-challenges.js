@@ -166,6 +166,7 @@
     if (!core || core.ended || !definition || core.createdAt !== store.active.gameCreatedAt || Number(core.turn) < Number(definition.duration)) return;
     finishing = true;
     const grade = evaluateChallenge(definition, core);
+    grade.scoreBreakdown = window.XianShortScore?.build({ ...grade, rulesVersion: 216, endedEarly: false }, core) || null;
     store.active.pendingGrade = grade;
     saveStore();
     window.XianEmperorGame?.concludeExternalEnding?.({
@@ -201,6 +202,7 @@
       reward: definition.reward || "无名史签",
       completedAt: new Date().toISOString(),
     };
+    result.scoreBreakdown = grade.scoreBreakdown || window.XianShortScore?.build(result, detail.state) || null;
     const log = store.active.reviewLog || (window.XianShortReview && window.XianShortReview.createLog(detail.state, false));
     window.XianShortReview?.capture(log, detail.state);
     result.review = window.XianShortReview?.build(result, definition, detail.state, log) || null;
@@ -279,10 +281,10 @@
     return result?.review || window.XianShortReview?.build(result, challengeById(result.challengeId) || store.customDefinitions[result.challengeId], core);
   }
 
-  function reviewHtml(result, core = {}) {
+  function reviewHtml(result, core = {}, retry = false) {
     const review = getReview(result, core);
     const comparison = result.kind === "weekly" || result.comparisonIdentity ? window.XianSameChallenge?.html(comparisonFor(result)) || "" : "";
-    return (review ? window.XianShortReview.html(review) : `<p>完成 ${result.completed}/${result.total} 项目标。</p>`) + comparison;
+    return (review ? window.XianShortReview.html(review, { result, retry }) : `<p>完成 ${result.completed}/${result.total} 项目标。</p>`) + comparison;
   }
 
   function comparisonFor(result) { return window.XianSameChallenge?.findPrevious(result, store.results) || { available: false, reason: "尚无对比记录。" }; }
@@ -294,8 +296,7 @@
     panel.hidden = !result;
     if (!result) { panel.innerHTML = ""; return; }
     const definition = challengeById(result.challengeId) || store.customDefinitions[result.challengeId];
-    panel.innerHTML = reviewHtml(result, core) + `<p class="short-review-reward">${result.medal === "none" ? "未收录纪念物" : `收录“${escapeHtml(result.reward)}”`}</p>`
-      + (definition ? `<button type="button" class="primary-button" data-short-retry="">再试此短局</button>` : "");
+    panel.innerHTML = reviewHtml(result, core, Boolean(definition)) + `<p class="short-review-reward">${result.medal === "none" ? "未收录纪念物" : `收录“${escapeHtml(result.reward)}”`}</p>`;
     panel.querySelector("[data-short-retry]")?.addEventListener("click", () => {
       if (challengeById(result.challengeId)) start(result.challengeId);
       else startCustom(definition);
@@ -306,7 +307,7 @@
     const result = core && getResultForGame(core.createdAt);
     const review = result && getReview(result, core);
     const comparison = result && (result.kind === "weekly" || result.comparisonIdentity) ? window.XianSameChallenge?.text(comparisonFor(result)) || "" : "";
-    return review ? window.XianShortReview.text(review) + (comparison ? `\n${comparison}` : "") : "";
+    return review ? window.XianShortReview.text(review) + (window.XianShortScore ? `\n${window.XianShortScore.text(result)}` : "") + (comparison ? `\n${comparison}` : "") : "";
   }
 
   function syncStartSelectors(definition) {

@@ -905,14 +905,20 @@
     if (!comparison?.available) { showToast(comparison?.reason || "当前无法比较方案。", "warning"); return false; }
     const signature = actionComparisonSignature();
     const signed = value => `${value > 0 ? "+" : ""}${Math.round(value * 100) / 100}`;
+    const goalMargin = check => {
+      const margin = Math.min(check.min == null ? Infinity : check.after - check.min, check.max == null ? Infinity : check.max - check.after);
+      const value = Math.round(Math.abs(margin) * 100) / 100;
+      return Number.isFinite(margin) ? margin >= 0 ? `余量 ${value}` : `尚差 ${value}` : "目标边界未记录";
+    };
     openModal({ title: "行动方案比较", wide: true, confirmText: "返回理政", cancelHidden: true, onConfirm: closeModal,
       body: `<div class="action-comparison"><p>打开、比较和返回均不花资源。选定后进入原行动窗口，确认才施行；选择守成会先打开月末预检。</p>
         ${comparison.choices.map((choice, index) => `<article class="${choice.recommended ? "recommended" : ""}"><span>${choice.recommended ? "当前建议" : choice.actionId === "end" ? "守成基准" : "另一种取舍"}</span><h3>${escapeHtml(choice.label)}</h3><p class="comparison-benefit">主要收益：${escapeHtml(choice.benefit)}</p><p class="comparison-cost">代价：${escapeHtml(choice.cost)}</p>
           ${choice.checks.length ? `<p>固定结算后预计 ${choice.checks.filter(check => check.afterPassed).length}/${choice.checks.length} 项目标达标，终月仍须核验。</p>` : ""}
-          <details><summary>查看数值、目标与风险</summary><table><thead><tr><th>项目</th><th>当前</th><th>行动后</th><th>固定月末后</th><th>比守成</th></tr></thead><tbody>${choice.changes.map(row => `<tr><th>${escapeHtml(row.name)}</th><td>${row.before}</td><td>${row.immediate}</td><td>${row.fixed}</td><td>${signed(row.versusGuard)}</td></tr>`).join("")}</tbody></table>
-          ${choice.checks.map(check => `<p>${escapeHtml(check.label)} · 预计 ${check.after} · ${check.afterPassed ? "达到" : "未达到"}</p>`).join("")}
+          ${choice.checks.length ? `<ul class="comparison-goals">${choice.checks.map(check => `<li class="${check.afterPassed ? "safe" : "risk"}"><strong>${escapeHtml(check.label)}</strong><span>固定月末后预计 ${check.after} · ${goalMargin(check)}</span></li>`).join("")}</ul>` : ""}
+          ${choice.leak ? `<p class="comparison-risk">泄密检验约 ${Math.round(choice.leak.chance * 1000) / 10}%；若触发，安全额外 −${choice.leak.securityLoss}、警戒额外 +${choice.leak.alertGain}。</p>` : ""}
+          <details><summary>查看完整数值与人物关系</summary><table><thead><tr><th>项目</th><th>当前</th><th>行动后</th><th>固定月末后</th><th>比守成</th></tr></thead><tbody>${choice.changes.map(row => `<tr><th>${escapeHtml(row.name)}</th><td>${row.before}</td><td>${row.immediate}</td><td>${row.fixed}</td><td>${signed(row.versusGuard)}</td></tr>`).join("")}</tbody></table>
           ${choice.relations.length ? `<p>人物关系：${choice.relations.map(item => `${escapeHtml(item.name)} ${signed(item.delta)}`).join(" · ")}</p>` : ""}
-          ${choice.leak ? `<p>泄密检验约 ${Math.round(choice.leak.chance * 100)}%；若触发，安全额外 −${choice.leak.securityLoss}、警戒额外 +${choice.leak.alertGain}。</p>` : ""}</details>
+          </details>
           <button type="button" data-compare-choice="${index}">${escapeHtml(choice.label)} · ${choice.actionId === "end" ? "查看预检" : "选此方案"}</button></article>`).join("")}
         ${comparison.choices.filter(choice => choice.actionId !== "end" && !choice.recommended).length === 0 ? "<p>当前没有筛出具有不同数值取舍的其他候选，仍可在常用行动中自行选择。</p>" : ""}<p class="comparison-note">${escapeHtml(comparison.note)}</p></div>` });
     el["modal-body"].querySelectorAll("[data-compare-choice]").forEach(button => button.addEventListener("click", () => {
@@ -1733,9 +1739,12 @@
     const short = window.XianShortChallenges?.getResultForGame?.(state.createdAt);
     const challenge = short ? { title: `乱世短局 · ${short.name}`, completed: !short.endedEarly && short.completed === short.total }
       : calculateScenarioChallenge(getActiveScenario(), state);
-    el["ending-stats"].innerHTML = Object.entries(DATA.statMeta)
+    el["end-screen"].classList.toggle("short-ending", Boolean(short));
+    el["ending-stats"].classList.toggle("short-final-stats", Boolean(short));
+    const finalStats = Object.entries(DATA.statMeta)
       .map(([key, meta]) => `<div><span>${meta.name}</span><strong>${Math.round(state.stats[key])}</strong></div>`)
       .join("") + `<div class="scenario-result ${challenge.completed ? "complete" : "incomplete"}"><span>${escapeHtml(challenge.title)}</span><strong>${short ? `${short.completed}/${short.total} 项目标${short.endedEarly ? " · 提前终局" : ""}` : challenge.completed ? "挑战完成" : "尚未完成"}</strong></div>`;
+    el["ending-stats"].innerHTML = short ? `<details><summary>终局国势 · 六项指标</summary><div class="ending-final-grid">${finalStats}</div></details>` : finalStats;
     window.XianShortChallenges?.renderEndingReview?.(state);
     el["ending-chronicle"].innerHTML = state.chronicle
       .slice(-8)

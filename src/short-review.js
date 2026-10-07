@@ -182,16 +182,30 @@
   }
   function changeText(change) { return `${name(change.path)} ${change.before} → ${change.after}（${signed(change.delta)}）`; }
 
-  function html(review) {
+  function brief(review) {
+    if (review.endedEarly) return { heading: "本局中止", text: `第 ${review.turn} 月提前终局${review.endingTitle ? `：${review.endingTitle}` : ""}；未完成 ${review.duration} 个月限时核验，部分指标达标也不授章。` };
+    const rank = { "首次记录的跌出": 0, "首个已记录月末未达": 1, "余量最小的一月": 2 };
+    const margin = point => review.goals.find(goal => goal.path === point.path)?.margin ?? Infinity;
+    const point = [...(review.turningPoints || [])].sort((a, b) => Number(a.finalPassed) - Number(b.finalPassed)
+      || (rank[a.kind] ?? 3) - (rank[b.kind] ?? 3) || margin(a) - margin(b) || a.turn - b.turn)[0];
+    return point ? { heading: "关键记录", text: `${point.label} · 第 ${point.turn} 月${point.kind}。${point.source}：${point.before} → ${point.after}；终局${point.finalPassed ? "已达标" : "未达标"}${point.partial ? "，本月记录有限" : ""}。` }
+      : { heading: "关键记录", text: "旧复盘未保存转折来源，不能推断关键原因。" };
+  }
+
+  function html(review, { result = null, retry = false } = {}) {
+    const summary = brief(review), advice = review.advice[0];
     const coverage = review.fromStart ? `记录覆盖开局至终局，已保存 ${review.months.length} 次月末核验。` : "旧局或中途接续的记录有限；未记录的开局值与月份不作推断。";
-    return `<header class="short-review-heading"><div><span>乱世短局 · ${review.endedEarly ? "提前终局" : "终月核验"}</span><h2>本局复盘</h2></div><strong>${escapeHtml(medalName(review.medal))} · ${review.completed}/${review.total}</strong></header>
-      ${review.endedEarly ? `<p class="short-review-warning">第 ${review.turn} 月提前终局${review.endingTitle ? `：${escapeHtml(review.endingTitle)}` : ""}，未完成 ${review.duration} 个月限时核验。部分指标达标也不授章。</p>` : ""}
+    return `<header class="short-review-heading"><div><span>乱世短局 · ${review.endedEarly ? "提前终局" : "终月核验"}</span><h2>本局复盘</h2></div><strong>${escapeHtml(medalName(review.medal))} · ${review.completed}/${review.total}${Number.isFinite(result?.score) ? ` · ${result.score} 分` : ""}</strong></header>
+      <div class="short-review-brief${review.endedEarly ? " short-review-warning" : ""}"><strong>${escapeHtml(summary.heading)}</strong><p>${escapeHtml(summary.text)}</p>${advice ? `<strong>下一局 · ${escapeHtml(advice.heading)}</strong><p>${escapeHtml(advice.text)}</p>` : ""}</div>
+      ${retry ? '<button type="button" class="primary-button" data-short-retry="">再试此短局</button>' : ""}
+      ${result ? window.XianShortScore?.html(result) || "" : ""}
+      <details class="short-review-details"><summary>完整复盘 · 目标与当月来源</summary>
       <section><h3>目标差在哪</h3><ul class="short-review-goals">${review.goals.map(goal => `<li class="${goal.passed ? "passed" : "pending"}"><strong>${escapeHtml(goalText(goal))}</strong><span>${goal.start == null ? "开局值未记录" : `开局 ${goal.start} → 终值 ${goal.value}（${signed(goal.change)}）`}</span></li>`).join("")}</ul></section>
       <section><h3>影响目标的已记录处分</h3><p class="short-review-note">按目标即时变化幅度选出最多三项；月末用度、后续回响与其他处分也会影响终值。</p>${review.moments.length ? `<ol class="short-review-moments">${review.moments.map(item => `<li><strong>第 ${item.turn} 月 · ${escapeHtml(item.title)}</strong>${item.choice ? `<p>${escapeHtml(item.choice)}</p>` : ""}<p>${escapeHtml(item.changes.map(changeText).join(" · "))}</p></li>`).join("")}</ol>` : '<p class="short-review-note">没有足够的目标变化记录，不推断关键原因。</p>'}</section>
       <section><h3>目标转折与当月来源</h3>${review.turningPoints?.length ? `<ul class="short-review-turns">${review.turningPoints.map(item => `<li><strong>${escapeHtml(item.label)} · 第 ${item.turn} 月 · ${escapeHtml(item.kind)}</strong><p>${escapeHtml(item.source)}：${item.before} → ${item.after}。终局${item.finalPassed ? "已达标" : "未达标"}${item.partial ? "；本月记录有限" : ""}。</p><details><summary>展开当月变化来源</summary><p>${escapeHtml(breakdownText(item))}</p></details></li>`).join("")}</ul>` : '<p class="short-review-note">旧复盘未保存转折来源，不补造历史。</p>'}<p class="short-review-note">这里解释已记录的变化；调整其中一项不能保证改变最终成绩。</p></section>
       <section><h3>下一局先做什么</h3><ul class="short-review-advice">${review.advice.map(item => `<li><strong>${escapeHtml(item.heading)}</strong><p>${escapeHtml(item.text)}</p></li>`).join("")}</ul></section>
       <details class="short-review-months"><summary>逐月净变化 · ${review.months.length} 个月已记录</summary><p>${escapeHtml(coverage)}</p>${review.months.map(month => `<article><strong>第 ${month.turn} 月 · ${escapeHtml(month.date)}${month.partial ? "（从续接时开始）" : ""}</strong><p>${escapeHtml(month.changes.map(changeText).join(" · "))}</p></article>`).join("")}</details>
-      <p class="short-review-note">建议用于比较下一局的取舍，不能保证获章。</p>`;
+      <p class="short-review-note">建议用于比较下一局的取舍，不能保证获章。</p></details>`;
   }
 
   function text(review) {
@@ -206,5 +220,5 @@
       "建议不能保证获章。"].join("\n");
   }
 
-  window.XianShortReview = Object.freeze({ createLog, capture, settle, recordSettlement, build, html, text });
+  window.XianShortReview = Object.freeze({ createLog, capture, settle, recordSettlement, build, brief, html, text });
 })();

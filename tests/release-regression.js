@@ -83,11 +83,11 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.20.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.21.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
-for (const resource of ["data.js", "game.js", "action-plans.js", "monthly-report.js", "short-challenges.js", "command-center.js", "dynasty-saga.js", "monthly-safety.js", "monthly-safety.css", "save-backups.js", "short-review.js", "short-challenges.css", "same-challenge.js"]) {
+for (const resource of ["data.js", "game.js", "action-plans.js", "monthly-report.js", "short-challenges.js", "command-center.js", "dynasty-saga.js", "monthly-safety.js", "monthly-safety.css", "save-backups.js", "short-review.js", "short-challenges.css", "same-challenge.js", "short-score.js"]) {
   assert.ok(read("index.html").includes(`src/${resource}?v=${expectedVersion}`), `${resource} must be shipped with the release`);
 }
 for (const resource of ["decree-confirmation.js", "monthly-flow.js", "decree-helper.js", "decree-helper.css"]) {
@@ -150,18 +150,19 @@ for (const illustration of [
   assert.ok(fs.statSync(path.join(root, "assets", "images", "illustrations", illustration)).size > 40000, `${illustration} should contain a real WebP illustration`);
 }
 for (const resource of [
-  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.20.0",
+  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.21.0",
   "character-memory.css?v=1.7.0", "character-memory.js?v=1.7.0",
   "world-marks.css?v=1.8.0", "world-marks.js?v=2.14.0",
   "historian.css?v=1.9.0", "historian.js?v=1.9.0",
-  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.20.0",
+  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.21.0",
   "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.16.0",
   "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.2.0",
-  "short-challenges.css?v=2.20.0", "short-challenges.js?v=2.20.0", "short-review.js?v=2.20.0",
+  "short-challenges.css?v=2.21.0", "short-challenges.js?v=2.21.0", "short-review.js?v=2.21.0",
   "weekly-challenge.css?v=2.4.0", "weekly-challenge.js?v=2.15.0",
   "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.5.0",
 ]) assert.ok(read("index.html").includes(resource), `${resource} should be referenced`);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
+assert.ok(read("index.html").indexOf("src/short-score.js") < read("index.html").indexOf("src/short-review.js"), "score explanation must load before review rendering");
 assert.ok(read("index.html").indexOf("src/short-review.js") < read("index.html").indexOf("src/short-challenges.js"), "short review must load before challenge tracking");
 assert.match(read("index.html"), /id="short-ending-review"/);
 assert.ok(read("index.html").indexOf("src/same-challenge.js") < read("index.html").indexOf("src/short-challenges.js"), "same challenge comparison must load before result tracking");

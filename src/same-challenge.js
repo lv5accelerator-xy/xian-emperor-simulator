@@ -58,6 +58,7 @@
     });
     return { available: true, code: current.comparisonIdentity.code, previousAt: previous.completedAt, currentAt: current.completedAt,
       previousMedal: previous.medal, currentMedal: current.medal, previousScore: previous.score, currentScore: current.score,
+      scoreDifference: window.XianShortScore?.compare(current, previous) || null,
       previousEarly: Boolean(previous.endedEarly), currentEarly: Boolean(current.endedEarly), goals,
       effort: { actions: effort("actions"), treasury: effort("treasury") }, choiceDifferences,
       choicesComplete: Boolean(previous.review?.fromStart && current.review?.fromStart && previous.review?.choices && current.review?.choices) };
@@ -76,6 +77,7 @@
     const row = (label, values) => `<tr><th>${escape(label)}</th><td>${display(values.previous)}</td><td>${display(values.current)}</td><td>${values.previous == null || values.current == null ? "未记录" : signed(values.current - values.previous)}</td></tr>`;
     return `<details class="same-challenge"><summary>与上次同题比较</summary><p>${escape(comparison.code)} · 同题码、种子、规则和已记录开局条件一致。</p>
       <p>上次：${escape(medals(comparison.previousMedal))} · ${display(comparison.previousScore)} 分${comparison.previousEarly ? " · 提前终局" : ""}<br>本局：${escape(medals(comparison.currentMedal))} · ${display(comparison.currentScore)} 分${comparison.currentEarly ? " · 提前终局" : ""}</p>
+      ${window.XianShortScore?.comparisonHtml(comparison.scoreDifference) || ""}
       <table><thead><tr><th>目标</th><th>上次终值</th><th>本局终值</th><th>变化</th></tr></thead><tbody>${comparison.goals.map(goal => `<tr class="${goal.outcome}"><th>${escape(goal.label)}</th><td>${display(goal.previous)}<small>差额 ${display(goal.previousGap)}</small></td><td>${display(goal.current)}<small>差额 ${display(goal.currentGap)}</small></td><td>${signed(goal.delta)}</td></tr>`).join("")}</tbody></table>
       <table><thead><tr><th>实际投入</th><th>上次</th><th>本局</th><th>变化</th></tr></thead><tbody>${row("御前行动次数", comparison.effort.actions)}${row("处分国库净支出", comparison.effort.treasury)}</tbody></table>
       <p class="short-review-note">支出为已记录处分的实际国库净减少之和，不含月末用度；缺失的投入不记作零。</p>
@@ -86,6 +88,7 @@
   function text(comparison) {
     if (!comparison?.available) return `同题两局对比：${comparison?.reason || "尚无记录"}`;
     return [`同题两局对比：${comparison.code}`, `上次 ${medals(comparison.previousMedal)} ${comparison.previousScore} 分；本局 ${medals(comparison.currentMedal)} ${comparison.currentScore} 分`,
+      ...(window.XianShortScore ? [window.XianShortScore.comparisonText(comparison.scoreDifference)] : []),
       ...comparison.goals.map(goal => `${goal.label}：${display(goal.previous)} → ${display(goal.current)}（${signed(goal.delta)}）；目标差额 ${display(goal.previousGap)} → ${display(goal.currentGap)}`),
       `御前行动次数：${display(comparison.effort.actions.previous)} → ${display(comparison.effort.actions.current)}`,
       `处分国库净支出：${display(comparison.effort.treasury.previous)} → ${display(comparison.effort.treasury.current)}`,

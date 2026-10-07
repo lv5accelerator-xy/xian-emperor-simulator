@@ -34,6 +34,14 @@ for (const item of comparison.choices.filter(item => item.actionId !== "end")) {
 run.node("action-grid").querySelector("[data-action-compare]").click();
 assert.equal(run.node("modal-title").textContent, "行动方案比较");
 assert.match(run.node("modal-body").innerHTML, /比守成/);
+const front = run.node("modal-body").innerHTML.split("<details>")[0];
+const firstChoice = comparison.choices[0];
+for (const check of firstChoice.checks) {
+  const margin = Math.min(check.min == null ? Infinity : check.after - check.min, check.max == null ? Infinity : check.max - check.after);
+  assert.ok(front.includes(`${check.label}</strong><span>固定月末后预计 ${check.after} · ${margin >= 0 ? "余量" : "尚差"} ${Math.round(Math.abs(margin) * 100) / 100}`));
+}
+assert.ok(front.includes(`泄密检验约 ${Math.round(firstChoice.leak.chance * 1000) / 10}%`));
+assert.ok(front.includes(`安全额外 −${firstChoice.leak.securityLoss}、警戒额外 +${firstChoice.leak.alertGain}`));
 const index = comparison.choices.findIndex(item => item.actionId !== "end");
 const choice = comparison.choices[index];
 run.node("modal-body").querySelectorAll("[data-compare-choice]")[index].click();

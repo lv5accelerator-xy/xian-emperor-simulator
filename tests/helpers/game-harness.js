@@ -101,7 +101,7 @@ function harness(stores = {}, ambientRandom = .99) {
   vm.createContext(context);
   const load = (...files) => files.forEach(file => vm.runInContext(fs.readFileSync(path.join(root, "src", `${file}.js`), "utf8"), context, { filename: file }));
   const mount = (...files) => { const initial = (listeners.get("DOMContentLoaded") || []).length; load(...files); listeners.get("DOMContentLoaded").slice(initial).forEach(handler => handler()); };
-  load("data", "action-plans", "monthly-safety", "edict-rules", "action-feedback", "game", "short-review", "same-challenge", "short-challenges", "weekly-challenge", "monthly-report");
+  load("data", "action-plans", "monthly-safety", "edict-rules", "action-feedback", "game", "short-score", "short-review", "same-challenge", "short-challenges", "weekly-challenge", "monthly-report");
   // Initialize the core only; monthly report's pure builder remains available below.
   listeners.get("DOMContentLoaded")[0]();
   const api = context.window.XianEmperorGame;
