@@ -2,6 +2,7 @@
 
 | 文档 | 用途 |
 | --- | --- |
+| [READING_COMFORT.md](READING_COMFORT.md) | 三档字号、月报摘要、手机流程与设备验证 |
 | [TYPOGRAPHY.md](TYPOGRAPHY.md) | 古风与清晰主题、字体来源、授权与字符子集维护 |
 | [GAME_DESIGN.md](GAME_DESIGN.md) | 产品定位、历史剧本、数值与系统设计 |
 | [DEPLOY_GITHUB_PAGES.md](DEPLOY_GITHUB_PAGES.md) | GitHub Pages 上传、更新和排错步骤 |

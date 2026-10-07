@@ -1,0 +1,126 @@
+/* v2.23.0 · 御览从容 */
+html[data-reading-size="large"] { font-size: clamp(18px, calc(15px + .27vw), 20px); }
+html[data-reading-size="largest"] { font-size: clamp(20px, calc(17px + .27vw), 22px); }
+
+.reading-controls { margin-top: .25rem; }
+[data-reading-toggle] {
+  min-height: 44px;
+  padding: .45rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .025);
+  color: var(--gold2);
+  font-size: .9rem;
+  line-height: 1.5;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.typography-controls button[data-reading-size][aria-pressed="true"] {
+  border-color: var(--gold);
+  color: var(--gold2);
+  background: rgba(212, 173, 93, .12);
+}
+:where([data-reading-size], [data-reading-toggle]):focus-visible {
+  outline: 2px solid var(--gold2);
+  outline-offset: 3px;
+}
+:where(.event-text, .event-resolved, .ending-text, .decree-panel textarea) {
+  font-size: max(1rem, 1em);
+  line-height: 1.85;
+}
+.outcome-preview, .monthly-choice-impact { font-size: .85rem !important; line-height: 1.65; }
+
+/* The report scrolls inside the dialog; its controls stay outside the scroll area. */
+body.monthly-report-open { overflow: hidden; }
+.monthly-addon-overlay { padding: 1rem; }
+.monthly-addon-dialog { max-height: calc(100vh - 2rem); max-height: calc(100dvh - 2rem); }
+.monthly-addon-dialog > header { flex-shrink: 0; }
+.monthly-addon-dialog > header h2 { flex: 1; min-width: 0; font: 600 1.05rem/1.5 var(--font-serif); }
+.monthly-addon-close {
+  flex: 0 0 44px;
+  width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+.monthly-addon-body { flex: 1 1 auto; min-height: 0; overscroll-behavior: contain; }
+.monthly-addon-dialog > footer { flex-shrink: 0; }
+.monthly-addon-confirm { min-height: 44px; font: 700 .9rem/1.5 var(--font-ui); }
+.monthly-addon-dialog :where(button, summary):focus-visible { outline: 2px solid var(--gold2); outline-offset: 3px; }
+.monthly-addon-report { gap: .85rem; }
+.monthly-addon-report h3, .monthly-addon-report h4 { font-family: var(--font-serif); }
+.monthly-addon-report p, .monthly-addon-report li, .monthly-addon-report small, .monthly-addon-note, .monthly-addon-empty,
+.monthly-addon-summary span, .monthly-addon-summary small,
+.monthly-addon-delta span, .monthly-addon-delta strong, .monthly-addon-delta em,
+.monthly-addon-trend, .monthly-addon-verdict span, .monthly-addon-archive-list button small {
+  font-size: .85rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.monthly-addon-masthead h3 { font-size: 1.12rem; }
+.monthly-addon-masthead p { font-size: .85rem; }
+.monthly-addon-verdict p { font-family: var(--font-serif); }
+.monthly-addon-baseline-warning { font-size: .85rem; line-height: 1.7; }
+.monthly-report-brief { padding: .85rem; border: 1px solid rgba(145, 184, 157, .4); border-radius: 10px; background: rgba(38, 66, 53, .22); }
+.monthly-report-brief h3, .monthly-report-brief h4 { margin: 0 0 .45rem; color: var(--gold2); }
+.monthly-report-brief h4 { margin-top: .9rem; font-size: .95rem; }
+.monthly-report-brief p { margin: .25rem 0; }
+.monthly-report-goals { padding: 0; list-style: none; display: grid; gap: .5rem; }
+.monthly-report-goals li { display: grid; gap: .1rem; }
+.monthly-report-goals .safe { color: #b8dfc4; }
+.monthly-report-goals .risk, .monthly-report-alerts { color: #efb9a2; }
+.monthly-report-key-changes { display: grid; gap: .4rem; padding: 0; list-style: none; }
+.monthly-report-key-changes li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .25rem .75rem; }
+.monthly-report-key-changes .positive { color: #b8dfc4; }
+.monthly-report-key-changes .negative { color: #efb9a2; }
+.monthly-report-alerts { padding-left: 1.2rem; margin: .35rem 0; }
+.monthly-report-details { min-width: 0; padding: .75rem; border: 1px solid var(--border); border-radius: 10px; }
+.monthly-report-details > summary { min-height: 44px; cursor: pointer; color: var(--gold2); font-size: .95rem; }
+.monthly-report-details[open] > summary { margin-bottom: .65rem; }
+.monthly-addon-summary { margin-bottom: .85rem; }
+.monthly-addon-operation-head { grid-template-columns: auto minmax(0, 1fr) auto; }
+.monthly-addon-summary strong, .monthly-addon-delta strong, .monthly-addon-delta em,
+.monthly-report-key-changes strong { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; }
+.monthly-addon-verdict { margin-top: .85rem; }
+.monthly-step-short { display: none; }
+.monthly-flow-steps button { min-width: 0; min-height: 44px; }
+.monthly-flow-steps button:focus-visible { outline: 2px solid var(--gold2); outline-offset: 3px; }
+
+@media (max-width: 820px) {
+  .mobile-reading-toolbar { gap: .4rem; flex-wrap: wrap; }
+  .typography-controls { min-width: 0; }
+  .start-copy, .center-column, .right-column, .monthly-flow-copy, .monthly-flow-advice { min-width: 0; }
+  .monthly-addon-overlay {
+    padding: max(.5rem, env(safe-area-inset-top)) max(.5rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.5rem, env(safe-area-inset-left));
+  }
+  .monthly-addon-dialog {
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - max(.5rem, env(safe-area-inset-top)) - max(.5rem, env(safe-area-inset-bottom)));
+  }
+  .monthly-addon-dialog > header { gap: .5rem; padding: .6rem; }
+  .monthly-addon-modal-seal { display: none; }
+  .monthly-addon-body { padding: .65rem; }
+  .monthly-addon-dialog > footer { padding: .6rem; }
+  .monthly-addon-confirm { width: 100%; }
+  .monthly-addon-summary, .monthly-addon-deltas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .monthly-addon-delta { grid-template-columns: minmax(0, 1fr); }
+  .monthly-addon-delta em { grid-column: 1; }
+  .monthly-addon-operation-head { grid-template-columns: auto minmax(0, 1fr); }
+  .monthly-addon-operation-head > strong { grid-column: 2; font-size: .85rem; }
+  .monthly-addon-archive-list button { grid-template-columns: minmax(0, 1fr); }
+  .monthly-addon-archive-list button strong { font-size: .85rem; }
+  .monthly-addon-archive-list button small { grid-column: 1; }
+}
+@media (max-width: 720px) {
+  .monthly-flow-steps button { flex-direction: column; padding: 7px 4px; gap: 4px; }
+  body .monthly-flow-steps button .monthly-step-label { display: none; }
+  body .monthly-flow-steps button .monthly-step-short { display: inline; font-size: .85rem; line-height: 1.5; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .monthly-flow-pulse { animation: none; }
+}

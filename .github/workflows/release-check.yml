@@ -233,7 +233,7 @@ jobs:
 
       - name: Validate page references and version
         run: |
-          grep -q 'v2.22.0' index.html
+          grep -q 'v2.23.0' index.html
           grep -q 'src/action-feedback.js?v=2.15.0' index.html
           grep -q 'src/action-feedback.css?v=2.15.0' index.html
           grep -q 'src/audio.css' index.html
@@ -268,7 +268,7 @@ jobs:
           grep -q 'src/ui.js?v=2.6.1' index.html
           grep -q 'src/world-system.js?v=2.15.0' index.html
           grep -q 'src/command-center.css?v=2.5.0-r2' index.html
-          grep -q 'src/command-center.js?v=2.22.0' index.html
+          grep -q 'src/command-center.js?v=2.23.0' index.html
           grep -q 'src/character-memory.css?v=1.7.0' index.html
           grep -q 'src/character-memory.js?v=1.7.0' index.html
           grep -q 'src/world-marks.css?v=1.8.0' index.html
@@ -276,23 +276,23 @@ jobs:
           grep -q 'src/historian.css?v=1.9.0' index.html
           grep -q 'src/historian.js?v=1.9.0' index.html
           grep -q 'src/dynasty-saga.css?v=2.0.0' index.html
-          grep -q 'src/dynasty-saga.js?v=2.22.0' index.html
+          grep -q 'src/dynasty-saga.js?v=2.23.0' index.html
           grep -q 'src/monthly-flow.css?v=2.1.0' index.html
-          grep -q 'src/monthly-flow.js?v=2.16.0' index.html
+          grep -q 'src/monthly-flow.js?v=2.23.0' index.html
           grep -q 'src/consequence-echoes.css?v=2.2.0' index.html
           grep -q 'src/consequence-echoes.js?v=2.2.0' index.html
-          grep -q 'src/short-challenges.css?v=2.22.0' index.html
-          grep -q 'src/short-challenges.js?v=2.22.0' index.html
-          grep -q 'src/short-review.js?v=2.22.0' index.html
+          grep -q 'src/short-challenges.css?v=2.23.0' index.html
+          grep -q 'src/short-challenges.js?v=2.23.0' index.html
+          grep -q 'src/short-review.js?v=2.23.0' index.html
           grep -q 'id="short-ending-review"' index.html
-          grep -q 'src/action-plans.js?v=2.22.0' index.html
-          grep -q 'src/monthly-report.js?v=2.22.0' index.html
+          grep -q 'src/action-plans.js?v=2.23.0' index.html
+          grep -q 'src/monthly-report.js?v=2.23.0' index.html
           grep -q 'id="ending-audit-btn"' index.html
           test -f src/action-plans.js
           test -f docs/SETTLEMENT_AUDIT.md
           test -f docs/DECISION_COMPARISON.md
-          grep -q 'src/same-challenge.js?v=2.22.0' index.html
-          grep -q 'src/short-score.js?v=2.22.0' index.html
+          grep -q 'src/same-challenge.js?v=2.23.0' index.html
+          grep -q 'src/short-score.js?v=2.23.0' index.html
           test -f tests/score-explanation-regression.js
           test -f tests/action-comparison-regression.js
           test -f tests/review-turning-points-regression.js
@@ -301,10 +301,10 @@ jobs:
           test -f tests/settlement-audit-regression.js
           test -f tests/backup-compare-regression.js
           test -f tests/advice-playthrough-regression.js
-          test -f patch-notes/v2.22.0.txt
-          grep -q 'src/monthly-safety.js?v=2.22.0' index.html
-          grep -q 'src/monthly-safety.css?v=2.22.0' index.html
-          grep -q 'src/save-backups.js?v=2.22.0' index.html
+          test -f patch-notes/v2.23.0.txt
+          grep -q 'src/monthly-safety.js?v=2.23.0' index.html
+          grep -q 'src/monthly-safety.css?v=2.23.0' index.html
+          grep -q 'src/save-backups.js?v=2.23.0' index.html
           grep -q 'id="start-backups-btn"' index.html
           grep -q 'src/weekly-challenge.css?v=2.4.0' index.html
           grep -q 'src/weekly-challenge.js?v=2.15.0' index.html
@@ -413,6 +413,10 @@ jobs:
           test -f assets/fonts/licenses/LXGW-WenKai-OFL.txt
           grep -q 'src/typography.js?v=2.22.0' index.html
           grep -q 'src/typography.css?v=2.22.0' index.html
+          grep -q 'src/reading-settings.js?v=2.23.0' index.html
+          grep -q 'src/reading-settings.css?v=2.23.0' index.html
+          grep -q 'src/monthly-report.css?v=2.23.0' index.html
+          test -f docs/READING_COMFORT.md
           test -f tests/typography-regression.js
           test -f patch-notes/v0.8.0.txt
           test -f patch-notes/v0.8.1.txt
@@ -449,7 +453,7 @@ jobs:
           test -f patch-notes/v2.14.0.txt
           test -f patch-notes/v2.16.0.txt
           test -f patch-notes/v2.17.0.txt
-          test -f patch-notes/v2.22.0.txt
+          test -f patch-notes/v2.23.0.txt
 
       - name: Run progression regression
         run: node tests/progression-regression.js
@@ -515,7 +519,7 @@ jobs:
         run: node tests/balance-regression.js
 
       - name: Run release regression
-        run: EXPECTED_VERSION=2.22.0 node tests/release-regression.js
+        run: EXPECTED_VERSION=2.23.0 node tests/release-regression.js
 
       - name: Run typography preference regression
         run: node tests/typography-regression.js
@@ -531,3 +535,9 @@ jobs:
 
       - name: Validate recorded score components and deltas
         run: node tests/score-explanation-regression.js
+
+      - name: Validate independent reading preferences
+        run: node tests/reading-settings-regression.js
+
+      - name: Validate concise monthly report against actual records
+        run: node tests/monthly-summary-regression.js

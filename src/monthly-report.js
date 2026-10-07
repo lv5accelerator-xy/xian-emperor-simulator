@@ -1,5 +1,5 @@
 /*
- * 天子蒙尘：献帝模拟器 - 月度施政覆奏扩展 v0.1.1
+ * 天子蒙尘：献帝模拟器 - 月度施政覆奏扩展 v2.23.0
  *
  * 该扩展不修改核心规则引擎。它在“结束本月”前后读取本地存档，
  * 汇总当月奏报裁决、御前行动、月末结算和国势变化，
@@ -12,12 +12,12 @@
   const REPORT_STORE_KEY = "xian_emperor_monthly_reports_v011";
   const SNAPSHOT_STORE_KEY = "xian_emperor_month_snapshot_v011";
   const MAX_REPORTS = 36;
-
+  let closeActiveOverlay = null;
+  let returnFocus = null;
 
   document.addEventListener("DOMContentLoaded", initMonthlyReports);
 
   function initMonthlyReports() {
-    injectStyles();
     installArchiveButton();
     document.addEventListener("xian:settlement-completed", event => {
       const { before, after } = event.detail;
@@ -252,6 +252,7 @@
       settlement: after.lastSettlement?.gameCreatedAt === before.createdAt && after.lastSettlement.turn === before.turn ? after.lastSettlement : null,
       monthEndNotes: dynamics.notes.length ? dynamics.notes : ["朝廷庶务照常运转，未见另项异常。"],
       monthEndSummary: dynamics.summary || "尚书台未列额外公开数值变化。",
+      alerts: dynamics.alerts,
       baselinePartial: Boolean(monthStart.partial),
       campaignEnded: Boolean(after.ended),
       advice: buildStrategicAdvice(after),
@@ -312,8 +313,12 @@
 
     const notes = [];
     const summaries = [];
+    const alerts = [];
 
     items.forEach((report) => {
+      if (["danger", "warning"].includes(report.type) || report.title === "宫中警讯") {
+        alerts.push(`${report.title}：${report.text}`);
+      }
       if (report.title === "宫中警讯") {
         notes.push(report.text);
         return;
@@ -325,11 +330,16 @@
         .split("；")
         .map((item) => item.trim())
         .filter(Boolean)
-        .forEach((item) => notes.push(report.title === "月末结算" ? item : `${report.title}：${item}`));
+        .forEach((item) => {
+          notes.push(report.title === "月末结算" ? item : `${report.title}：${item}`);
+          if (report.title === "月末结算" && ["俸粮与行政经费不足", "民间不稳，流言与盗贼滋生"].includes(item)) {
+            alerts.push(`月末结算：${item}`);
+          }
+        });
       if (delta) summaries.push(`${report.title}：${delta.replace(/[。.]$/, "")}`);
     });
 
-    return { notes, summary: summaries.join("；") };
+    return { notes, summary: summaries.join("；"), alerts };
   }
 
   function splitReportText(text = "") {
@@ -505,7 +515,6 @@
     body.querySelectorAll("[data-report-id]").forEach((button) => {
       button.addEventListener("click", () => {
         const report = reports.find((item) => item.id === button.dataset.reportId);
-        overlay.remove();
         showMonthlyReport(report, { archive: true });
       });
     });
@@ -513,8 +522,6 @@
 
   function showMonthlyReport(report, { archive = false, campaignEnded = false } = {}) {
     if (!report) return;
-    document.querySelector(".monthly-addon-overlay")?.remove();
-
     const overlay = createOverlay(`${report.date}·尚书台施政覆奏`);
     const body = overlay.querySelector(".monthly-addon-body");
     const footerButton = overlay.querySelector(".monthly-addon-confirm");
@@ -528,15 +535,18 @@
   }
 
   function createOverlay(title) {
-    document.querySelector(".monthly-addon-overlay")?.remove();
+    const previousFocus = closeActiveOverlay ? returnFocus : document.activeElement;
+    closeActiveOverlay?.(false);
+    returnFocus = previousFocus;
 
     const overlay = document.createElement("div");
     overlay.className = "monthly-addon-overlay";
     overlay.innerHTML = `
-      <section class="monthly-addon-dialog" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+      <section class="monthly-addon-dialog" role="dialog" aria-modal="true" aria-labelledby="monthly-report-title">
         <header>
-          <span class="monthly-addon-modal-seal">奏</span>
-          <h2>${escapeHtml(title)}</h2>
+          <span class="monthly-addon-modal-seal" aria-hidden="true">奏</span>
+          <h2 id="monthly-report-title">${escapeHtml(title)}</h2>
+          <button class="monthly-addon-close" type="button" aria-label="收起月报">×</button>
         </header>
         <div class="monthly-addon-body"></div>
         <footer>
@@ -545,14 +555,63 @@
       </section>
     `;
     document.body.appendChild(overlay);
+    document.body.classList.add("monthly-report-open");
 
-    const close = () => overlay.remove();
-    overlay.querySelector(".monthly-addon-confirm").addEventListener("click", close);
+    const close = (restoreFocus = true) => {
+      overlay.remove();
+      document.body.classList.remove("monthly-report-open");
+      closeActiveOverlay = null;
+      if (restoreFocus) {
+        const target = previousFocus?.isConnected && !previousFocus.disabled && previousFocus.getClientRects().length
+          ? previousFocus : document.querySelector("#event-choices button:not(:disabled)");
+        target?.focus();
+      }
+    };
+    closeActiveOverlay = close;
+    overlay.querySelector(".monthly-addon-confirm").addEventListener("click", () => close());
+    overlay.querySelector(".monthly-addon-close").addEventListener("click", () => close());
     overlay.addEventListener("click", (event) => {
       if (event.target === overlay) close();
     });
+    overlay.addEventListener("keydown", event => {
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); return; }
+      if (event.key !== "Tab") return;
+      const controls = [...overlay.querySelectorAll('button:not(:disabled), summary, [tabindex="0"]')]
+        .filter(element => element.getClientRects().length);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    });
+    overlay.querySelector(".monthly-addon-confirm").focus({ preventScroll: true });
 
     return overlay;
+  }
+
+  function summarizeReport(report) {
+    const finite = value => typeof value === "number" && Number.isFinite(value);
+    const goals = (report.settlement?.goals || []).map(goal => {
+      const known = finite(goal.actual) && (finite(goal.min) || finite(goal.max));
+      const passed = known && (!finite(goal.min) || goal.actual >= goal.min) && (!finite(goal.max) || goal.actual <= goal.max);
+      const requirement = [finite(goal.min) ? `至少 ${goal.min}` : "", finite(goal.max) ? `不高于 ${goal.max}` : ""].filter(Boolean).join("，");
+      return { label: goal.label, actual: goal.actual, known, passed, requirement,
+        fellOut: known && goal.predictedPassed === true && !passed };
+    });
+    const changes = (report.statChanges || []).filter(item => finite(item.delta) && item.delta !== 0)
+      .slice().sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 3);
+    return { goals, changes, alerts: Array.isArray(report.alerts) ? report.alerts.filter(item => typeof item === "string") : null };
+  }
+
+  function buildBriefHtml(report) {
+    const brief = summarizeReport(report);
+    return `<section class="monthly-report-brief" aria-label="本月重点">
+      <h3>本月重点</h3>
+      <h4>短局目标 · 本月结算后</h4>
+      ${brief.goals.length ? `<ul class="monthly-report-goals">${brief.goals.map(goal => `<li class="${goal.known ? goal.passed ? "safe" : "risk" : ""}"><strong>${escapeHtml(goal.label)} · ${goal.known ? goal.passed ? "已达标" : "未达标" : "未记录"}</strong><span>${goal.known ? `实际 ${goal.actual}，${escapeHtml(goal.requirement)}${goal.fellOut ? "；结算后跌出目标" : ""}` : "旧记录缺少实际值或目标条件，不补造结果。"}</span></li>`).join("")}</ul><p>此处显示本月实际值；奖章以终局核验为准。</p>` : "<p>本月未记录短局目标。</p>"}
+      <h4>${report.baselinePartial ? "载入后关键净变" : "全月关键净变"}</h4>
+      ${brief.changes.length ? `<ul class="monthly-report-key-changes">${brief.changes.map(item => `<li class="${(item.key === "caoAlert" ? -item.delta : item.delta) > 0 ? "positive" : "negative"}"><span>${escapeHtml(item.name)}</span><strong>${item.before} → ${item.after}（${signed(item.delta)}）</strong></li>`).join("")}</ul><p>按变化幅度列出最多三项；完整国势见下方明细。</p>` : "<p>已记录的公开指标无净变化。</p>"}
+      <h4>重要异常</h4>
+      ${brief.alerts === null ? "<p>旧月报未单独记录警讯，请展开庶务核对。</p>" : brief.alerts.length ? `<ul class="monthly-report-alerts">${brief.alerts.slice(0, 2).map(alert => `<li>${escapeHtml(alert)}</li>`).join("")}</ul>${brief.alerts.length > 2 ? `<p>共 ${brief.alerts.length} 条警讯，庶务明细保留全部记录。</p>` : ""}` : "<p>本月未记录额外警讯。</p>"}
+    </section>`;
   }
 
   function buildReportHtml(report) {
@@ -608,8 +667,8 @@
       <div class="monthly-addon-report">
         <header class="monthly-addon-masthead">
           <span>尚书台谨覆</span>
-          <h3>月度施政执行核验</h3>
-          <p>圣旨采用已记录的执行评估；其他政务明确标为估计。实际投入、公开变化与月末净变化分别列出。</p>
+          <h3>月度施政覆奏</h3>
+          <p>先阅本月重点，完整处分与结算记录可展开复查。</p>
         </header>
 
         ${
@@ -618,6 +677,11 @@
             : ""
         }
 
+        ${report.settlement?.partial ? '<p class="monthly-addon-baseline-warning">月末对账从固定结算后的续接处开始，请结合完整记录判断。</p>' : ""}
+        ${buildBriefHtml(report)}
+
+        <details class="monthly-report-details"><summary>处分与执行评估 · ${report.operations.length} 项</summary>
+        <p class="monthly-addon-note">圣旨采用已记录的执行评估；其他政务明确标为估计，估计不代表已经全部落实。</p>
         <div class="monthly-addon-summary">
           <div class="${report.overall.className}">
             <span>综合奉行度</span>
@@ -633,104 +697,35 @@
           <h3>一、诏令与御前处分核验</h3>
           <div class="monthly-addon-operations">${operationsHtml}</div>
         </section>
+        </details>
 
+        <details class="monthly-report-details"><summary>完整国势 · ${report.statChanges.length} 项与隐情趋势</summary>
         <section class="monthly-addon-section">
           <h3>二、月终国势变动</h3>
           <div class="monthly-addon-deltas">${statHtml}</div>
           <div class="monthly-addon-trends">${hiddenHtml}</div>
         </section>
+        </details>
 
+        <details class="monthly-report-details"><summary>结算对账与庶务 · 展开全部来源</summary>
         <section class="monthly-addon-section">
           ${window.XianMonthlySafety?.renderSettlement?.(report.settlement) || ""}
           <h3>三、月末庶务与异常</h3>
           <ul>${report.monthEndNotes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
           <p class="monthly-addon-dynamics">${escapeHtml(report.monthEndSummary)}</p>
         </section>
+        </details>
 
+        <details class="monthly-report-details"><summary>尚书台总评与来月提示</summary>
         <section class="monthly-addon-verdict">
           <span>尚书台总评</span>
           <p>${escapeHtml(report.verdict)}</p>
           <span>来月御前提示</span>
           <p>${escapeHtml(report.advice)}</p>
         </section>
+        </details>
       </div>
     `;
-  }
-
-  function injectStyles() {
-    if (document.getElementById("monthly-report-addon-styles")) return;
-    const style = document.createElement("style");
-    style.id = "monthly-report-addon-styles";
-    style.textContent = `
-      .monthly-addon-overlay{position:fixed;inset:0;z-index:150;display:grid;place-items:center;padding:1rem;background:rgba(5,4,3,.86);backdrop-filter:blur(9px)}
-      .monthly-addon-dialog{width:min(940px,100%);max-height:92vh;display:flex;flex-direction:column;border:1px solid rgba(221,187,105,.45);border-radius:14px;background:linear-gradient(145deg,#34241c,#18110e);box-shadow:0 30px 110px rgba(0,0,0,.72);overflow:hidden;color:#eee2cb}
-      .monthly-addon-dialog>header{display:flex;align-items:center;gap:.75rem;padding:1rem 1.1rem;border-bottom:1px solid rgba(222,185,105,.25)}
-      .monthly-addon-dialog>header h2{margin:0;font:600 1.2rem/1.4 "Noto Serif SC","Songti SC","SimSun",serif}
-      .monthly-addon-modal-seal{width:40px;height:40px;display:grid;place-items:center;border:3px double #d4ad5d;border-radius:7px;background:#762b28;color:#f0d58f;font-family:"Noto Serif SC","SimSun",serif}
-      .monthly-addon-body{padding:1rem;overflow:auto}
-      .monthly-addon-dialog>footer{display:flex;justify-content:flex-end;padding:.85rem 1rem;border-top:1px solid rgba(222,185,105,.25)}
-      .monthly-addon-confirm{padding:.72rem 1.1rem;border:1px solid #efd99b;border-radius:8px;background:linear-gradient(#e5c87e,#b98d3e);color:#21140f;font:700 .85rem "Microsoft YaHei",sans-serif;cursor:pointer}
-      .monthly-addon-confirm:hover{filter:brightness(1.08)}
-      .monthly-addon-report{display:grid;gap:1rem}
-      .monthly-addon-masthead{padding:.85rem;border:1px solid rgba(221,187,105,.25);border-radius:9px;background:linear-gradient(90deg,rgba(132,44,37,.14),transparent)}
-      .monthly-addon-masthead span{color:#d4ad5d;font-size:.68rem;letter-spacing:.12em}
-      .monthly-addon-masthead h3{margin:.16rem 0;color:#eee2cb;font:600 1.22rem/1.4 "Noto Serif SC","SimSun",serif}
-      .monthly-addon-masthead p{margin:.1rem 0 0;color:#a99578;font-size:.68rem}
-      .monthly-addon-baseline-warning{margin:0;padding:.65rem .75rem;border:1px solid rgba(194,123,61,.45);border-radius:8px;background:rgba(194,123,61,.08);color:#d8b083;font-size:.7rem}
-      .monthly-addon-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem}
-      .monthly-addon-summary>div{display:grid;gap:.1rem;padding:.7rem;border:1px solid rgba(222,185,105,.25);border-radius:8px;background:rgba(255,255,255,.025)}
-      .monthly-addon-summary span,.monthly-addon-summary small{color:#a99578;font-size:.63rem}
-      .monthly-addon-summary strong{color:#f0d58f;font:700 1.3rem/1.2 "Noto Serif SC","SimSun",serif}
-      .monthly-addon-summary .excellent,.monthly-addon-summary .good{border-color:rgba(113,141,101,.5)}
-      .monthly-addon-summary .warning,.monthly-addon-summary .critical{border-color:rgba(185,71,63,.55)}
-      .monthly-addon-section{padding:.82rem;border:1px solid rgba(222,185,105,.18);border-radius:9px;background:rgba(0,0,0,.08)}
-      .monthly-addon-section>h3{margin:0 0 .65rem;color:#f0d58f;font:600 .94rem/1.4 "Noto Serif SC","SimSun",serif}
-      .monthly-addon-operations{display:grid;gap:.65rem}
-      .monthly-addon-operation{padding:.75rem;border:1px solid rgba(222,185,105,.25);border-left:4px solid #c6a153;border-radius:8px;background:rgba(255,255,255,.025)}
-      .monthly-addon-operation.excellent,.monthly-addon-operation.good{border-left-color:#78986c}
-      .monthly-addon-operation.warning{border-left-color:#c27b3d}
-      .monthly-addon-operation.critical{border-left-color:#b9473f}
-      .monthly-addon-operation-head{display:grid;grid-template-columns:auto 1fr auto;gap:.6rem;align-items:center}
-      .monthly-addon-operation-head>span{width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(222,185,105,.25);border-radius:50%;color:#d4ad5d;font-size:.62rem}
-      .monthly-addon-operation-head small,.monthly-addon-operation-head h4{display:block;margin:0}
-      .monthly-addon-operation-head small{color:#a99578;font-size:.6rem}
-      .monthly-addon-operation-head h4{margin-top:.06rem;color:#eee2cb;font:600 .86rem/1.35 "Noto Serif SC","SimSun",serif}
-      .monthly-addon-operation-head>strong{color:#f0d58f}
-      .monthly-addon-meter{height:7px;margin:.5rem 0 .32rem;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.08)}
-      .monthly-addon-meter i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8b3a32,#d7b35f)}
-      .monthly-addon-operation p{margin:.32rem 0 0;color:#b8a789;font-size:.7rem;line-height:1.65}
-      .monthly-addon-operation p b{color:#d7c19a}
-      .monthly-addon-status{color:#d4ad5d!important}
-      .monthly-addon-change{padding-top:.32rem;border-top:1px dashed rgba(221,187,105,.15)}
-      .monthly-addon-deltas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem}
-      .monthly-addon-delta{display:grid;grid-template-columns:1fr auto;gap:.12rem .45rem;padding:.52rem .6rem;border:1px solid rgba(221,187,105,.15);border-radius:7px}
-      .monthly-addon-delta span{color:#a99578;font-size:.63rem}
-      .monthly-addon-delta strong{font-size:.68rem}
-      .monthly-addon-delta em{grid-column:2;font-style:normal;font-size:.66rem}
-      .monthly-addon-delta.positive em{color:#9ab58d}.monthly-addon-delta.negative em{color:#d47a6f}.monthly-addon-delta.neutral em{color:#8f816c}
-      .monthly-addon-trends{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
-      .monthly-addon-trend{padding:.23rem .48rem;border:1px solid rgba(221,187,105,.15);border-radius:999px;color:#a99578;font-size:.61rem}
-      .monthly-addon-trend.good{color:#b8c9a8}.monthly-addon-trend.bad{color:#d1a397}
-      .monthly-addon-section ul{margin:0;padding-left:1.15rem;color:#b8a789;font-size:.7rem}
-      .monthly-addon-section li+li{margin-top:.28rem}
-      .monthly-addon-dynamics{margin:.6rem 0 0;padding-top:.5rem;border-top:1px dashed rgba(221,187,105,.15);color:#d4ad5d;font-size:.69rem}
-      .monthly-addon-verdict{padding:.85rem;border:1px solid rgba(221,187,105,.32);border-radius:9px;background:linear-gradient(90deg,rgba(132,44,37,.12),transparent)}
-      .monthly-addon-verdict span{display:block;color:#d4ad5d;font-size:.64rem;letter-spacing:.1em}
-      .monthly-addon-verdict p{margin:.25rem 0 .7rem;color:#d5c3a3;font:.76rem/1.72 "Noto Serif SC","SimSun",serif}
-      .monthly-addon-verdict p:last-child{margin-bottom:0}
-      .monthly-addon-note{margin:0 0 .75rem;color:#b8a789;font-size:.72rem}
-      .monthly-addon-archive-list{display:grid;gap:.5rem}
-      .monthly-addon-archive-list button{display:grid;grid-template-columns:1fr auto;gap:.18rem .7rem;padding:.7rem .8rem;border:1px solid rgba(222,185,105,.25);border-radius:8px;background:rgba(255,255,255,.025);color:#eee2cb;text-align:left;cursor:pointer}
-      .monthly-addon-archive-list button:hover{border-color:rgba(222,185,105,.55);background:rgba(212,173,93,.07)}
-      .monthly-addon-archive-list button span{font-family:"Noto Serif SC","SimSun",serif}
-      .monthly-addon-archive-list button strong{color:#f0d58f;font-size:.72rem}
-      .monthly-addon-archive-list button small{grid-column:1/-1;color:#a99578;font-size:.62rem}
-      .monthly-addon-empty{color:#a99578;font-size:.72rem}
-      .monthly-addon-toast{position:fixed;right:1rem;bottom:1rem;z-index:180;max-width:min(420px,calc(100vw - 2rem));padding:.72rem .9rem;border:1px solid rgba(222,185,105,.35);border-radius:8px;background:#2b1e18;color:#eee2cb;box-shadow:0 12px 40px rgba(0,0,0,.45);font-size:.75rem;transform:translateY(12px);opacity:0;transition:.2s}
-      .monthly-addon-toast.show{transform:none;opacity:1}.monthly-addon-toast.warning{border-color:#c27b3d}.monthly-addon-toast.error{border-color:#b9473f}
-      @media(max-width:720px){.monthly-addon-summary,.monthly-addon-deltas{grid-template-columns:1fr 1fr}.monthly-addon-operation-head{grid-template-columns:auto 1fr}.monthly-addon-operation-head>strong{grid-column:2}.monthly-addon-dialog{max-height:96vh}}
-    `;
-    document.head.appendChild(style);
   }
 
   function showAddonToast(message, type = "neutral") {
@@ -783,5 +778,5 @@
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
   }
-  window.XianMonthlyReport = Object.freeze({ buildMonthlyReport, formatReignDate, buildReportHtml });
+  window.XianMonthlyReport = Object.freeze({ buildMonthlyReport, formatReignDate, buildReportHtml, summarizeReport });
 })();

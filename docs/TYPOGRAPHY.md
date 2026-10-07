@@ -12,6 +12,8 @@ v2.22.0 提供两种字风，默认古风楷书。开局页与结局页选择“
 
 古风模式适当增大长文行距与手机字号。字风按钮使用原生 button 和 aria-pressed，支持键盘操作。切换不重建游戏或弹窗，保持玩家当前操作。
 
+v2.23.0 增加独立的标准／大字／特大字号设置，并让月报沿用所选字风。操作与回归见 [阅读字号与月报](READING_COMFORT.md)。
+
 ## 来源与历史风格
 
 - 本版使用 [霞鹜文楷](https://github.com/lxgw/LxgwWenKai)，它是基于 Klee One 的现代开源中文字体，并非钟繇小楷或其他历史书家原作。
@@ -24,7 +26,7 @@ v2.22.0 提供两种字风，默认古风楷书。开局页与结局页选择“
 
 ```sh
 node tests/typography-regression.js
-EXPECTED_VERSION=2.22.0 node tests/release-regression.js
+EXPECTED_VERSION=2.23.0 node tests/release-regression.js
 ```
 
 浏览器核对：切换两种字风并刷新；继续原有存档，确认日期与行动点未变；手机窄屏核对奏报、拟旨、弹窗和结局，不应出现横向溢出。`tests/narrow-screen.html` 只检查 390 像素网页排版，不代表真实 iPhone Safari 验证。

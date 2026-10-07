@@ -1,0 +1,68 @@
+/* 尚书台月报基础样式 · v2.23.0 */
+.monthly-addon-overlay{position:fixed;inset:0;z-index:150;display:grid;place-items:center;padding:1rem;background:rgba(5,4,3,.86);backdrop-filter:blur(9px)}
+.monthly-addon-dialog{width:min(940px,100%);max-height:92vh;display:flex;flex-direction:column;border:1px solid rgba(221,187,105,.45);border-radius:14px;background:linear-gradient(145deg,#34241c,#18110e);box-shadow:0 30px 110px rgba(0,0,0,.72);overflow:hidden;color:#eee2cb}
+.monthly-addon-dialog>header{display:flex;align-items:center;gap:.75rem;padding:1rem 1.1rem;border-bottom:1px solid rgba(222,185,105,.25)}
+.monthly-addon-dialog>header h2{margin:0;font:600 1.2rem/1.4 "Noto Serif SC","Songti SC","SimSun",serif}
+.monthly-addon-modal-seal{width:40px;height:40px;display:grid;place-items:center;border:3px double #d4ad5d;border-radius:7px;background:#762b28;color:#f0d58f;font-family:"Noto Serif SC","SimSun",serif}
+.monthly-addon-body{padding:1rem;overflow:auto}
+.monthly-addon-dialog>footer{display:flex;justify-content:flex-end;padding:.85rem 1rem;border-top:1px solid rgba(222,185,105,.25)}
+.monthly-addon-confirm{padding:.72rem 1.1rem;border:1px solid #efd99b;border-radius:8px;background:linear-gradient(#e5c87e,#b98d3e);color:#21140f;font:700 .85rem "Microsoft YaHei",sans-serif;cursor:pointer}
+.monthly-addon-confirm:hover{filter:brightness(1.08)}
+.monthly-addon-report{display:grid;gap:1rem}
+.monthly-addon-masthead{padding:.85rem;border:1px solid rgba(221,187,105,.25);border-radius:9px;background:linear-gradient(90deg,rgba(132,44,37,.14),transparent)}
+.monthly-addon-masthead span{color:#d4ad5d;font-size:.68rem;letter-spacing:.12em}
+.monthly-addon-masthead h3{margin:.16rem 0;color:#eee2cb;font:600 1.22rem/1.4 "Noto Serif SC","SimSun",serif}
+.monthly-addon-masthead p{margin:.1rem 0 0;color:#a99578;font-size:.68rem}
+.monthly-addon-baseline-warning{margin:0;padding:.65rem .75rem;border:1px solid rgba(194,123,61,.45);border-radius:8px;background:rgba(194,123,61,.08);color:#d8b083;font-size:.7rem}
+.monthly-addon-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem}
+.monthly-addon-summary>div{display:grid;gap:.1rem;padding:.7rem;border:1px solid rgba(222,185,105,.25);border-radius:8px;background:rgba(255,255,255,.025)}
+.monthly-addon-summary span,.monthly-addon-summary small{color:#a99578;font-size:.63rem}
+.monthly-addon-summary strong{color:#f0d58f;font:700 1.3rem/1.2 "Noto Serif SC","SimSun",serif}
+.monthly-addon-summary .excellent,.monthly-addon-summary .good{border-color:rgba(113,141,101,.5)}
+.monthly-addon-summary .warning,.monthly-addon-summary .critical{border-color:rgba(185,71,63,.55)}
+.monthly-addon-section{padding:.82rem;border:1px solid rgba(222,185,105,.18);border-radius:9px;background:rgba(0,0,0,.08)}
+.monthly-addon-section>h3{margin:0 0 .65rem;color:#f0d58f;font:600 .94rem/1.4 "Noto Serif SC","SimSun",serif}
+.monthly-addon-operations{display:grid;gap:.65rem}
+.monthly-addon-operation{padding:.75rem;border:1px solid rgba(222,185,105,.25);border-left:4px solid #c6a153;border-radius:8px;background:rgba(255,255,255,.025)}
+.monthly-addon-operation.excellent,.monthly-addon-operation.good{border-left-color:#78986c}
+.monthly-addon-operation.warning{border-left-color:#c27b3d}
+.monthly-addon-operation.critical{border-left-color:#b9473f}
+.monthly-addon-operation-head{display:grid;grid-template-columns:auto 1fr auto;gap:.6rem;align-items:center}
+.monthly-addon-operation-head>span{width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(222,185,105,.25);border-radius:50%;color:#d4ad5d;font-size:.62rem}
+.monthly-addon-operation-head small,.monthly-addon-operation-head h4{display:block;margin:0}
+.monthly-addon-operation-head small{color:#a99578;font-size:.6rem}
+.monthly-addon-operation-head h4{margin-top:.06rem;color:#eee2cb;font:600 .86rem/1.35 "Noto Serif SC","SimSun",serif}
+.monthly-addon-operation-head>strong{color:#f0d58f}
+.monthly-addon-meter{height:7px;margin:.5rem 0 .32rem;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.08)}
+.monthly-addon-meter i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8b3a32,#d7b35f)}
+.monthly-addon-operation p{margin:.32rem 0 0;color:#b8a789;font-size:.7rem;line-height:1.65}
+.monthly-addon-operation p b{color:#d7c19a}
+.monthly-addon-status{color:#d4ad5d!important}
+.monthly-addon-change{padding-top:.32rem;border-top:1px dashed rgba(221,187,105,.15)}
+.monthly-addon-deltas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem}
+.monthly-addon-delta{display:grid;grid-template-columns:1fr auto;gap:.12rem .45rem;padding:.52rem .6rem;border:1px solid rgba(221,187,105,.15);border-radius:7px}
+.monthly-addon-delta span{color:#a99578;font-size:.63rem}
+.monthly-addon-delta strong{font-size:.68rem}
+.monthly-addon-delta em{grid-column:2;font-style:normal;font-size:.66rem}
+.monthly-addon-delta.positive em{color:#9ab58d}.monthly-addon-delta.negative em{color:#d47a6f}.monthly-addon-delta.neutral em{color:#8f816c}
+.monthly-addon-trends{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem}
+.monthly-addon-trend{padding:.23rem .48rem;border:1px solid rgba(221,187,105,.15);border-radius:999px;color:#a99578;font-size:.61rem}
+.monthly-addon-trend.good{color:#b8c9a8}.monthly-addon-trend.bad{color:#d1a397}
+.monthly-addon-section ul{margin:0;padding-left:1.15rem;color:#b8a789;font-size:.7rem}
+.monthly-addon-section li+li{margin-top:.28rem}
+.monthly-addon-dynamics{margin:.6rem 0 0;padding-top:.5rem;border-top:1px dashed rgba(221,187,105,.15);color:#d4ad5d;font-size:.69rem}
+.monthly-addon-verdict{padding:.85rem;border:1px solid rgba(221,187,105,.32);border-radius:9px;background:linear-gradient(90deg,rgba(132,44,37,.12),transparent)}
+.monthly-addon-verdict span{display:block;color:#d4ad5d;font-size:.64rem;letter-spacing:.1em}
+.monthly-addon-verdict p{margin:.25rem 0 .7rem;color:#d5c3a3;font:.76rem/1.72 "Noto Serif SC","SimSun",serif}
+.monthly-addon-verdict p:last-child{margin-bottom:0}
+.monthly-addon-note{margin:0 0 .75rem;color:#b8a789;font-size:.72rem}
+.monthly-addon-archive-list{display:grid;gap:.5rem}
+.monthly-addon-archive-list button{display:grid;grid-template-columns:1fr auto;gap:.18rem .7rem;padding:.7rem .8rem;border:1px solid rgba(222,185,105,.25);border-radius:8px;background:rgba(255,255,255,.025);color:#eee2cb;text-align:left;cursor:pointer}
+.monthly-addon-archive-list button:hover{border-color:rgba(222,185,105,.55);background:rgba(212,173,93,.07)}
+.monthly-addon-archive-list button span{font-family:"Noto Serif SC","SimSun",serif}
+.monthly-addon-archive-list button strong{color:#f0d58f;font-size:.72rem}
+.monthly-addon-archive-list button small{grid-column:1/-1;color:#a99578;font-size:.62rem}
+.monthly-addon-empty{color:#a99578;font-size:.72rem}
+.monthly-addon-toast{position:fixed;right:1rem;bottom:1rem;z-index:180;max-width:min(420px,calc(100vw - 2rem));padding:.72rem .9rem;border:1px solid rgba(222,185,105,.35);border-radius:8px;background:#2b1e18;color:#eee2cb;box-shadow:0 12px 40px rgba(0,0,0,.45);font-size:.75rem;transform:translateY(12px);opacity:0;transition:.2s}
+.monthly-addon-toast.show{transform:none;opacity:1}.monthly-addon-toast.warning{border-color:#c27b3d}.monthly-addon-toast.error{border-color:#b9473f}
+@media(max-width:720px){.monthly-addon-summary,.monthly-addon-deltas{grid-template-columns:1fr 1fr}.monthly-addon-operation-head{grid-template-columns:auto 1fr}.monthly-addon-operation-head>strong{grid-column:2}.monthly-addon-dialog{max-height:96vh}}

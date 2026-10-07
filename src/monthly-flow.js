@@ -100,7 +100,8 @@
 
   function stepButton(index, label, complete, current, target) {
     const stateClass = complete ? "complete" : current === index ? "current" : "";
-    return `<button type="button" class="${stateClass}" data-flow-jump="${target}"><i>${complete ? "✓" : index}</i><span>${label}</span></button>`;
+    const shortLabel = { event: "裁决", actions: "行动", end: "月末" }[target];
+    return `<button type="button" class="${stateClass}" data-flow-jump="${target}" aria-label="${label}${complete ? "，已完成" : current === index ? "，当前步骤" : ""}"${!complete && current === index ? ' aria-current="step"' : ""}><i aria-hidden="true">${complete ? "✓" : index}</i><span class="monthly-step-label">${label}</span><span class="monthly-step-short" aria-hidden="true">${shortLabel}</span></button>`;
   }
 
   function flowPrompt(core, event) {
