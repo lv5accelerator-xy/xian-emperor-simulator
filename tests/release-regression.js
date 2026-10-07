@@ -83,7 +83,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.21.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.22.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -114,7 +114,7 @@ assert.match(read("index.html"), /campaign-evolution-data\.js\?v=1\.5\.1/);
 assert.match(read("index.html"), /campaign-evolution\.js\?v=2\.15\.0/);
 assert.match(read("index.html"), /src\/ui\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /src\/ui\.js\?v=2\.6\.1/);
-assert.match(read("index.html"), /src\/visual-refresh\.css\?v=2\.7\.1/);
+assert.match(read("index.html"), /src\/visual-refresh\.css\?v=2\.22\.0/);
 assert.match(read("index.html"), /src\/ui-refresh-v280\.css\?v=2\.8\.0/);
 assert.match(read("index.html"), /src\/ui-refresh-v280\.js\?v=2\.8\.0/);
 assert.match(read("index.html"), /src\/causal-court\.css\?v=2\.9\.0/);
@@ -133,12 +133,12 @@ assert.match(read("src/ui-refresh-v280.css"), /@media \(max-width: 820px\)[\s\S]
 assert.match(read("src/ui-refresh-v280.css"), /\.topbar-v110 \.utility-nav-upgraded\s*{\s*display:\s*none/);
 assert.match(read("src/ui-refresh-v280.js"), /data-mobile-destination="month"[\s\S]+data-mobile-destination="actions"[\s\S]+data-mobile-destination="map"[\s\S]+data-mobile-destination="archive"/);
 assert.match(read("index.html"), /preload[^>]+zcool-xiaowei-game\.woff2/);
-for (const font of ["zcool-xiaowei-game.woff2", "noto-serif-sc-game.woff2", "noto-sans-sc-game.woff2"]) {
+for (const font of ["zcool-xiaowei-game.woff2", "noto-serif-sc-game.woff2", "noto-sans-sc-game.woff2", "wenkai-game-regular.woff2", "wenkai-game-medium.woff2"]) {
   const file = path.join(root, "assets", "fonts", font);
   assert.ok(fs.existsSync(file), `${font} should be included`);
   assert.ok(fs.statSync(file).size > 100000, `${font} should contain a real WOFF2 subset`);
 }
-for (const license of ["ZCOOL-XiaoWei-OFL.txt", "Noto-Serif-SC-OFL.txt", "Noto-Sans-SC-OFL.txt"]) {
+for (const license of ["ZCOOL-XiaoWei-OFL.txt", "Noto-Serif-SC-OFL.txt", "Noto-Sans-SC-OFL.txt", "LXGW-WenKai-OFL.txt"]) {
   assert.ok(fs.existsSync(path.join(root, "assets", "fonts", "licenses", license)), `${license} should be included`);
 }
 for (const illustration of [
@@ -150,14 +150,14 @@ for (const illustration of [
   assert.ok(fs.statSync(path.join(root, "assets", "images", "illustrations", illustration)).size > 40000, `${illustration} should contain a real WebP illustration`);
 }
 for (const resource of [
-  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.21.0",
+  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.22.0",
   "character-memory.css?v=1.7.0", "character-memory.js?v=1.7.0",
   "world-marks.css?v=1.8.0", "world-marks.js?v=2.14.0",
   "historian.css?v=1.9.0", "historian.js?v=1.9.0",
-  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.21.0",
+  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.22.0",
   "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.16.0",
   "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.2.0",
-  "short-challenges.css?v=2.21.0", "short-challenges.js?v=2.21.0", "short-review.js?v=2.21.0",
+  "short-challenges.css?v=2.22.0", "short-challenges.js?v=2.22.0", "short-review.js?v=2.22.0",
   "weekly-challenge.css?v=2.4.0", "weekly-challenge.js?v=2.15.0",
   "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.5.0",
 ]) assert.ok(read("index.html").includes(resource), `${resource} should be referenced`);

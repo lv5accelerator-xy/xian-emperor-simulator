@@ -1,7 +1,7 @@
 /* 天子蒙尘：献帝模拟器 v2.7.1 · 汉字风骨 */
 @font-face {
   font-family: "Xian Display";
-  src: url("../assets/fonts/zcool-xiaowei-game.woff2") format("woff2");
+  src: url("../assets/fonts/zcool-xiaowei-game.woff2?v=2.22.0") format("woff2");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -9,7 +9,7 @@
 
 @font-face {
   font-family: "Xian Serif SC";
-  src: url("../assets/fonts/noto-serif-sc-game.woff2") format("woff2");
+  src: url("../assets/fonts/noto-serif-sc-game.woff2?v=2.22.0") format("woff2");
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
@@ -17,7 +17,7 @@
 
 @font-face {
   font-family: "Xian Sans SC";
-  src: url("../assets/fonts/noto-sans-sc-game.woff2") format("woff2");
+  src: url("../assets/fonts/noto-sans-sc-game.woff2?v=2.22.0") format("woff2");
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
@@ -357,3 +357,4 @@ input {
   .event-illustration { height: 128px; }
   .ending-illustration { height: 160px; }
 }
+

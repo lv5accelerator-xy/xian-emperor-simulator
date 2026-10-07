@@ -1,0 +1,117 @@
+/* 天子蒙尘 v2.22.0 · 汉墨入廷。现代开源楷体，不冒称历史书家字库。 */
+@font-face {
+  font-family: "Xian WenKai";
+  src: url("../assets/fonts/wenkai-game-regular.woff2?v=2.22.0") format("woff2");
+  font-style: normal;
+  font-weight: 100 500;
+  font-display: swap;
+  /* Latin digits and percentages always use the next, clearer family. */
+  unicode-range: U+2E80-2FFF, U+3000-303F, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF01-FF60, U+20000-2FA1F;
+}
+
+@font-face {
+  font-family: "Xian WenKai";
+  src: url("../assets/fonts/wenkai-game-medium.woff2?v=2.22.0") format("woff2");
+  font-style: normal;
+  font-weight: 600 900;
+  font-display: swap;
+  unicode-range: U+2E80-2FFF, U+3000-303F, U+3400-4DBF, U+4E00-9FFF, U+F900-FAFF, U+FF01-FF60, U+20000-2FA1F;
+}
+
+html[data-font-mode="classic"] {
+  --font-display: "Xian Display", "Xian WenKai", "Xian Sans SC", "STKaiti", "KaiTi", serif;
+  --font-serif: "Xian WenKai", "Xian Sans SC", "STKaiti", "KaiTi", serif;
+  --font-ui: "Xian WenKai", "Xian Sans SC", "STKaiti", "KaiTi", sans-serif;
+}
+
+html[data-font-mode="clear"] {
+  --font-serif: var(--font-ui);
+  --font-display: var(--font-ui);
+}
+
+.typography-settings {
+  display: grid;
+  gap: .35rem;
+  margin: 0 0 .9rem;
+  min-width: 0;
+}
+
+.typography-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.typography-label {
+  color: var(--muted);
+  font-size: .8rem;
+  margin-right: .2rem;
+}
+
+.typography-controls button,
+.mobile-font-toggle {
+  min-height: 44px;
+  padding: .45rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .025);
+  color: var(--text);
+  font-size: .9rem;
+  line-height: 1.5;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.typography-controls button[aria-pressed="true"] {
+  color: var(--gold2);
+  border-color: var(--gold);
+  background: rgba(212, 173, 93, .12);
+}
+
+.typography-controls button:focus-visible,
+[data-font-toggle]:focus-visible {
+  outline: 2px solid var(--gold2);
+  outline-offset: 3px;
+}
+
+.typography-hint {
+  margin: 0;
+  color: #c1b299;
+  font-size: .85rem;
+  line-height: 1.6;
+}
+
+.mobile-reading-toolbar { display: none; }
+.ending-typography { margin-top: 1rem; }
+
+html[data-font-mode="classic"] :where(.event-text, .full-chronicle p, .chronicle-entry p, .decree-panel textarea) {
+  font-size: max(1rem, 1em);
+  line-height: 1.95;
+}
+
+/* Numeric faces remain independent of the selected reading theme. */
+:where(.choice-number, .short-review-heading > strong, .score-components td, .same-challenge td, .comparison-risk) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+@media (max-width: 820px) {
+  .mobile-reading-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: .55rem;
+  }
+
+  .mobile-font-toggle {
+    padding: .4rem .75rem;
+    color: var(--gold2);
+  }
+
+  html[data-font-mode="classic"] :where(.choice-button, .event-resolved, .short-review-brief p, .ending-text) {
+    font-size: max(.95rem, 1em);
+    line-height: 1.8;
+  }
+
+  .typography-controls { gap: .35rem; }
+  .typography-label { font-size: .8rem; }
+}

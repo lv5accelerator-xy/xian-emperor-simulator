@@ -60,9 +60,11 @@ def build_subset(source: Path, destination: Path, codepoints: set[int]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--display", required=True, type=Path, help="ZCOOL XiaoWei TTF")
-    parser.add_argument("--serif", required=True, type=Path, help="Noto Serif SC variable TTF")
-    parser.add_argument("--sans", required=True, type=Path, help="Noto Sans SC variable TTF")
+    parser.add_argument("--display", type=Path, help="ZCOOL XiaoWei TTF")
+    parser.add_argument("--serif", type=Path, help="Noto Serif SC variable TTF")
+    parser.add_argument("--sans", type=Path, help="Noto Sans SC variable TTF")
+    parser.add_argument("--kai", type=Path, help="LXGW WenKai Regular TTF")
+    parser.add_argument("--kai-medium", type=Path, help="LXGW WenKai Medium TTF")
     args = parser.parse_args()
 
     codepoints = collect_runtime_characters()
@@ -70,7 +72,12 @@ def main() -> None:
         (args.display, OUTPUT_DIR / "zcool-xiaowei-game.woff2"),
         (args.serif, OUTPUT_DIR / "noto-serif-sc-game.woff2"),
         (args.sans, OUTPUT_DIR / "noto-sans-sc-game.woff2"),
+        (args.kai, OUTPUT_DIR / "wenkai-game-regular.woff2"),
+        (args.kai_medium, OUTPUT_DIR / "wenkai-game-medium.woff2"),
     ]
+    jobs = [(source, destination) for source, destination in jobs if source]
+    if not jobs:
+        parser.error("Pass at least one source font.")
     for source, destination in jobs:
         build_subset(source, destination, codepoints)
         print(f"{destination.relative_to(ROOT)}: {destination.stat().st_size:,} bytes")
@@ -79,3 +86,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
