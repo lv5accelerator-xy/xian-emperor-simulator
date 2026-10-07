@@ -1751,6 +1751,7 @@
       .map((entry) => `<p><strong>${escapeHtml(entry.date)}</strong>　${escapeHtml(entry.text)}</p>`)
       .join("");
     el["end-screen"].classList.remove("hidden");
+    el["end-screen"].scrollTop = 0;
   }
 
   function showCharacter(characterId) {
