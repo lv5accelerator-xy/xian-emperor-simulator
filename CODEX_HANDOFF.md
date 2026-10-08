@@ -32,6 +32,8 @@ Browser 插件不可用，使用已有 Playwright + /usr/bin/chromium，隔离�
 
 ## PR 与合并顺序
 
+Draft 功能 PR：https://github.com/lv5accelerator-xy/xian-emperor-simulator/pull/7 。功能／测试／版本说明交付 SHA：`59651ed5bf085d619a2b14ebab6fd5f5acc90443`；随后仅补写本交接中的 PR 链接，最终 head 以 PR 为准。所有变更已提交并推送，工作区干净。
+
 本轮建立独立 Draft stacked PR，base 为 `codex/workflow-normalization-20261007`。先由用户审查并合并 PR #6；再将功能 PR 的 base 调整为 main，必要时更新功能分支并复核 CI。release-check.yml 同时允许 main 和本次堆叠 base 的 PR 触发验证。
 
 不得自动合并 PR #6 或功能 PR，不强推 main，不改 Pages 设置或触发正式部署。main 合并会按原仓库规则发布，时机由用户决定。保留 AGENTS.md 的原生架构、个人账号、完整存档及分支 PR 交付约定。
