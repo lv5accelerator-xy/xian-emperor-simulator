@@ -9,7 +9,7 @@ function files(dir) {
 }
 function run(args) {
   const result = spawnSync(process.execPath, args, { cwd: root, stdio: 'inherit', env: {
-    ...process.env, EXPECTED_VERSION: process.env.EXPECTED_VERSION || '2.23.0'
+    ...process.env, EXPECTED_VERSION: process.env.EXPECTED_VERSION || '2.24.0'
   }, windowsHide: true, timeout: 600000 });
   if (result.error || result.status !== 0) {
     console.error(`Check failed: node ${args.join(' ')}`, result.error?.message || `exit ${result.status}`);

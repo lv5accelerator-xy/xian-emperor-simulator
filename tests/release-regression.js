@@ -83,7 +83,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.23.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.24.0";
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
 assert.match(read("index.html"), new RegExp(`v${escapedVersion}`));
 assert.match(read("CHANGELOG.md"), new RegExp(`## v${escapedVersion}`));
@@ -98,6 +98,10 @@ for (const resource of ["action-feedback.js", "action-feedback.css", "weekly-cha
 }
 for (const resource of ["edict-rules.js", "gameplay-polish.js", "gameplay-polish.css"]) {
   assert.ok(read("index.html").includes(`src/${resource}?v=2.14.0`), `${resource} must remain available`);
+}
+assert.ok(read("index.html").indexOf("src/scenario-220-story.js") < read("index.html").indexOf("src/game.js"), "220 story rules must load before the core");
+for (const resource of ["scenario-220-story.js", "scenario-220-story.css", "consequence-echoes.js", "final-verdict.js", "causal-court.js"]) {
+  assert.ok(read("index.html").includes(`src/${resource}?v=${expectedVersion}`), `${resource} must ship with current story integration`);
 }
 assert.ok(read("index.html").indexOf("src/action-plans.js") < read("index.html").indexOf("src/game.js"), "shared action plans must load before the core");
 assert.ok(read("index.html").indexOf("src/monthly-safety.js") < read("index.html").indexOf("src/game.js"), "shared monthly rules must load before the core");
@@ -118,7 +122,7 @@ assert.match(read("index.html"), /src\/visual-refresh\.css\?v=2\.22\.0/);
 assert.match(read("index.html"), /src\/ui-refresh-v280\.css\?v=2\.8\.0/);
 assert.match(read("index.html"), /src\/ui-refresh-v280\.js\?v=2\.8\.0/);
 assert.match(read("index.html"), /src\/causal-court\.css\?v=2\.9\.0/);
-assert.match(read("index.html"), /src\/causal-court\.js\?v=2\.9\.0/);
+assert.match(read("index.html"), /src\/causal-court\.js\?v=2\.24\.0/);
 assert.match(read("index.html"), /id="causal-court-panel"/);
 assert.match(read("index.html"), /src\/quarterly-agenda\.css\?v=2\.10\.0/);
 assert.match(read("index.html"), /src\/quarterly-agenda\.js\?v=2\.14\.0/);
@@ -150,16 +154,16 @@ for (const illustration of [
   assert.ok(fs.statSync(path.join(root, "assets", "images", "illustrations", illustration)).size > 40000, `${illustration} should contain a real WebP illustration`);
 }
 for (const resource of [
-  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.23.0",
+  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.24.0",
   "character-memory.css?v=1.7.0", "character-memory.js?v=1.7.0",
   "world-marks.css?v=1.8.0", "world-marks.js?v=2.14.0",
   "historian.css?v=1.9.0", "historian.js?v=1.9.0",
-  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.23.0",
-  "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.23.0",
-  "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.2.0",
-  "short-challenges.css?v=2.23.0", "short-challenges.js?v=2.23.0", "short-review.js?v=2.23.0",
+  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.24.0",
+  "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.24.0",
+  "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.24.0",
+  "short-challenges.css?v=2.24.0", "short-challenges.js?v=2.24.0", "short-review.js?v=2.24.0",
   "weekly-challenge.css?v=2.4.0", "weekly-challenge.js?v=2.15.0",
-  "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.5.0",
+  "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.24.0",
 ]) assert.ok(read("index.html").includes(resource), `${resource} should be referenced`);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
 assert.ok(read("index.html").indexOf("src/short-score.js") < read("index.html").indexOf("src/short-review.js"), "score explanation must load before review rendering");
