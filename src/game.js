@@ -410,6 +410,7 @@
     if (window.XianSaveBackups?.beforeNewGame?.() === false) return false;
     const scenario = getScenarioById(scenarioId);
     state = createInitialState(difficulty, scenario.id, options);
+    if (window.XianScenario220Story?.enabled(state)) state.story220 = window.XianScenario220Story.initial();
     addChronicle(
       formatReignDate(scenario.startYear, scenario.startMonth),
       scenario.opening
@@ -434,6 +435,8 @@
     if (!state || state.ended) return;
     state.actionPoints = 2;
     state.eventResolved = false;
+    settleScenario220Story();
+    if (checkImmediateEnding()) return;
     state.currentEventId = selectEventForTurn().id;
     addReport(
       "本月奏报",
@@ -456,6 +459,11 @@
     if (scenarioOpening) return scenarioOpening;
     const fixed = scenarioId === "jianan_196" ? DATA.fixedEvents.find((event) => event.fixedTurn === state.turn) : null;
     if (fixed) return fixed;
+
+    // Directed short/weekly sequences, openings and 196 fixed events retain priority.
+    // Only the ordinary 220 campaign can inject story nodes before path/causal/random events.
+    const storyEvent = window.XianScenario220Story?.selectEvent(state);
+    if (storyEvent) return storyEvent;
 
     const pathEventId = window.XianImperialPaths?.selectEventId?.(JSON.parse(JSON.stringify(state)));
     const pathEvent = (DATA.pathEvents || []).find(event => event.id === pathEventId);
@@ -492,6 +500,8 @@
   }
 
   function getCurrentEvent() {
+    const storyEvent = window.XianScenario220Story?.buildEvent(state.currentEventId, state);
+    if (storyEvent) return storyEvent;
     return allEvents().find((event) => event.id === state.currentEventId);
   }
 
@@ -511,6 +521,12 @@
     window.XianDecreeHelper?.refresh?.();
     window.XianMonthlyFlow?.refresh?.();
     window.XianShortChallenges?.refreshStatus?.(state);
+    const storyPanel = document.getElementById("story220-status");
+    if (storyPanel) {
+      const html = window.XianScenario220Story?.statusHtml(state) || "";
+      storyPanel.hidden = !html;
+      storyPanel.innerHTML = html;
+    }
   }
 
   function renderHeader() {
@@ -682,11 +698,12 @@
     el["event-choices"].innerHTML = event.choices
       .map(
         (choice, index) => `
-          <button class="choice-button" type="button" data-choice-index="${index}">
+          <button class="choice-button" type="button" data-choice-index="${index}" ${choice.disabledReason ? 'disabled aria-disabled="true"' : ""}>
             <span class="choice-number">${index + 1}</span>
             <span>
-              <strong>${choice.label}</strong>
-              <small>${choice.hint}</small>
+              <strong>${escapeHtml(choice.label)}</strong>
+              <small>${escapeHtml(choice.hint)}</small>
+              ${choice.disabledReason ? `<small class="story220-requirement">当前不可行：${escapeHtml(choice.disabledReason)}</small>` : ""}
               ${renderOutcomePreview(choice)}
             </span>
           </button>
@@ -703,10 +720,16 @@
     if (!state || state.eventResolved || state.ended) return;
     const event = getCurrentEvent();
     const choice = event?.choices[choiceIndex];
-    if (!choice) return;
+    if (!choice || choice.disabledReason) return;
+    if (event.story220 && state.story220?.decisions?.[event.id]) return;
 
     const before = captureOutcomeState();
     const deltaText = applyPackage(choice);
+    if (event.story220) {
+      // Persist the receipt and resolved flag with its effects, before listeners can save the core.
+      window.XianScenario220Story.record(state, event, choice, before);
+      state.eventResolved = true;
+    }
     document.dispatchEvent(new CustomEvent("xian:decision-resolved", { detail: {
       eventId: event.id,
       eventTitle: event.title,
@@ -719,6 +742,7 @@
       turn: state.turn,
       date: formatReignDate(state.year, state.month),
       createdAt: state.createdAt,
+      storyManaged: event.story220 === true,
     } }));
     state.eventResolved = true;
     state.recentEventIds.push(event.id);
@@ -1522,6 +1546,14 @@
     try { return callback(); } finally { settlementStage = previous; }
   }
 
+  function settleScenario220Story(finalMonth = false) {
+    return window.XianScenario220Story?.settle(state, (pkg, title, text) => {
+      const changes = applyPackage({ ...pkg, settlementSource: `延康主线 · ${title}` });
+      addReport(title, `${text}${changes ? `｜${changes}` : ""}`, "decision");
+      addChronicle(formatReignDate(state.year, state.month), `延康后续·${title}：${text}`);
+    }, finalMonth);
+  }
+
   function finalizeSettlement() {
     if (!settlementLedger) return;
     const ledger = settlementLedger;
@@ -1558,6 +1590,11 @@
       if (checkImmediateEnding()) return;
       settlementPhase("季度御题与后续回响", () => document.dispatchEvent(new CustomEvent("xian:month-ended", { detail: { turn: state.turn, createdAt: state.createdAt } })));
       if (state.ended) return;
+      if (state.turn === 12 && settleScenario220Story(true)) {
+        // Effects and their deduplication markers survive an interrupted final settlement together.
+        saveGame(true);
+        if (checkImmediateEnding()) return;
+      }
       settlementPhase("终值核验", () => document.dispatchEvent(new CustomEvent("xian:month-settled", { detail: { turn: state.turn, createdAt: state.createdAt } })));
       if (state.ended) return;
       finalizeSettlement();
@@ -1688,6 +1725,7 @@
       };
     }
 
+    if (window.XianScenario220Story?.enabled(state)) state.story220.completedNormally = true;
     concludeGame(ending);
   }
 
@@ -1723,7 +1761,8 @@
 
   function chooseEventIllustration(event = {}) {
     const searchText = `${event.category || ""} ${event.title || ""} ${event.text || ""}`;
-    const id = /赈|灾民|流民|饥|减赋|开仓|救济|民变/.test(searchText) ? "relief"
+    const id = event.story220 ? "court"
+      : /赈|灾民|流民|饥|减赋|开仓|救济|民变/.test(searchText) ? "relief"
       : /国库|钱粮|贡赋|赋税|粮价|仓廪|俸粮|度支|腐败/.test(searchText) ? "treasury"
       : /密诏|密令|伪诏|泄密|耳目|密谋|内应|暗中|私信/.test(searchText) ? "secret"
       : /使者|外镇|江东|河北|荆州|袁绍|刘表|孙策|贡物|外交/.test(searchText) ? "envoy"
@@ -1745,6 +1784,12 @@
       .map(([key, meta]) => `<div><span>${meta.name}</span><strong>${Math.round(state.stats[key])}</strong></div>`)
       .join("") + `<div class="scenario-result ${challenge.completed ? "complete" : "incomplete"}"><span>${escapeHtml(challenge.title)}</span><strong>${short ? `${short.completed}/${short.total} 项目标${short.endedEarly ? " · 提前终局" : ""}` : challenge.completed ? "挑战完成" : "尚未完成"}</strong></div>`;
     el["ending-stats"].innerHTML = short ? `<details><summary>终局国势 · 六项指标</summary><div class="ending-final-grid">${finalStats}</div></details>` : finalStats;
+    const afterword = document.getElementById("story220-afterword");
+    if (afterword) {
+      const html = window.XianScenario220Story?.afterwordHtml(state) || "";
+      afterword.hidden = !html;
+      afterword.innerHTML = html;
+    }
     window.XianShortChallenges?.renderEndingReview?.(state);
     el["ending-chronicle"].innerHTML = state.chronicle
       .slice(-8)
@@ -1972,7 +2017,7 @@
     return Boolean(save && typeof save === "object" && save.stats && save.hidden && Array.isArray(save.chronicle));
   }
 
-  function migrateSave(save) {
+  function migrateSave(save, importedShort = false) {
     const migrated = {
       ...createInitialState(save.difficulty || "standard", save.scenarioId || "jianan_196"),
       ...save,
@@ -1991,6 +2036,13 @@
       random: normalizeRandomState(save.random),
       monthlySettledTurn: clamp(Number(save.monthlySettledTurn ?? (Number(save.turn || 1) - 1)), 0, Number(save.turn || 1)),
     };
+    if (!importedShort && window.XianScenario220Story?.enabled(migrated)) {
+      migrated.story220 = window.XianScenario220Story.normalize(save.story220, migrated);
+      if (migrated.story220.decisions[migrated.currentEventId]) migrated.eventResolved = true;
+      if (String(migrated.currentEventId).startsWith("story220_") && !window.XianScenario220Story.buildEvent(migrated.currentEventId, migrated)) {
+        migrated.currentEventId = "old_official_petition";
+      }
+    }
     if (!migrated.currentEventId && !migrated.ended) {
       const fixed = DATA.fixedEvents.find((event) => event.fixedTurn === migrated.turn);
       migrated.currentEventId = (fixed || DATA.randomEvents[0]).id;
@@ -2017,7 +2069,11 @@
     const previous = new Map();
     let importing = false;
     try {
-      const restored = migrateSave(bundle.stores[SAVE_KEY]);
+      const shortStore = bundle.stores["xian_emperor_short_challenges_v230"];
+      const gameId = bundle.stores[SAVE_KEY].createdAt;
+      const importedShort = shortStore?.active?.gameCreatedAt === gameId
+        || (Array.isArray(shortStore?.results) && shortStore.results.some(item => item.gameCreatedAt === gameId));
+      const restored = migrateSave(bundle.stores[SAVE_KEY], importedShort);
       const values = new Map(PORTABLE_STORAGE_KEYS.map(key => [key, key === SAVE_KEY ? JSON.stringify(restored) :
         Object.prototype.hasOwnProperty.call(bundle.stores, key) ? JSON.stringify(bundle.stores[key]) : null]));
       PORTABLE_STORAGE_KEYS.forEach(key => previous.set(key, localStorage.getItem(key)));
@@ -2117,6 +2173,8 @@
     ];
     const shortReview = window.XianShortChallenges?.formatReviewText?.(state);
     if (shortReview) lines.push("", shortReview);
+    const afterword = window.XianScenario220Story?.afterwordText(state);
+    if (afterword) lines.push("", afterword);
     const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
     downloadBlob(blob, `${scenario.id}-chronicle.txt`);
   }

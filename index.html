@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#17110e">
   <meta name="description" content="一款以建安元年许都朝廷为舞台的汉末政治策略模拟游戏。">
   <script src="src/typography.js?v=2.22.0"></script>
-  <script src="src/reading-settings.js?v=2.23.0"></script>
-  <title>天子蒙尘：献帝模拟器 v2.23.0</title>
+  <script src="src/reading-settings.js?v=2.24.0"></script>
+  <title>天子蒙尘：献帝模拟器 v2.24.0</title>
   <link rel="preload" href="assets/fonts/zcool-xiaowei-game.woff2?v=2.22.0" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="styles.css?v=1.5.1">
   <link rel="stylesheet" href="src/world.css?v=1.5.1">
@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="src/dynasty-saga.css?v=2.0.0">
   <link rel="stylesheet" href="src/monthly-flow.css?v=2.1.0">
   <link rel="stylesheet" href="src/consequence-echoes.css?v=2.2.0">
-  <link rel="stylesheet" href="src/short-challenges.css?v=2.23.0">
+  <link rel="stylesheet" href="src/short-challenges.css?v=2.24.0">
   <link rel="stylesheet" href="src/weekly-challenge.css?v=2.4.0">
   <link rel="stylesheet" href="src/final-verdict.css?v=2.5.0">
   <link rel="stylesheet" href="src/ui.css?v=1.5.1">
@@ -43,10 +43,11 @@
   <link rel="stylesheet" href="src/gameplay-polish.css?v=2.14.0">
   <link rel="stylesheet" href="src/action-feedback.css?v=2.15.0">
   <link rel="stylesheet" href="src/decree-helper.css?v=2.16.0">
-  <link rel="stylesheet" href="src/monthly-safety.css?v=2.23.0">
+  <link rel="stylesheet" href="src/monthly-safety.css?v=2.24.0">
   <link rel="stylesheet" href="src/typography.css?v=2.22.0">
-  <link rel="stylesheet" href="src/monthly-report.css?v=2.23.0">
-  <link rel="stylesheet" href="src/reading-settings.css?v=2.23.0-r1">
+  <link rel="stylesheet" href="src/monthly-report.css?v=2.24.0">
+  <link rel="stylesheet" href="src/reading-settings.css?v=2.24.0-r1">
+  <link rel="stylesheet" href="src/scenario-220-story.css?v=2.24.0">
 </head>
 <body>
   <noscript><div class="noscript">本游戏需要启用 JavaScript。</div></noscript>
@@ -57,7 +58,7 @@
       <span class="start-emblem" aria-hidden="true"><span>汉</span></span>
     </figure>
     <div class="start-copy">
-      <p class="eyebrow">汉末政治策略模拟 · 正式版 v2.23.0</p>
+      <p class="eyebrow">汉末政治策略模拟 · 正式版 v2.24.0</p>
       <h1>天子蒙尘</h1>
       <h2>献帝模拟器</h2>
       <p class="start-intro">从中平六年的洛阳孤灯，到延康元年的禅代前夜。选择一段汉末危局，以诏书、官爵、军团与政治交易，为天子争取一条不由他人书写的道路。</p>
@@ -128,6 +129,7 @@
               <figcaption id="event-illustration-caption">御前月报 · 朝议</figcaption>
             </figure>
             <div class="event-head"><span id="event-category" class="category-chip">朝政</span><span class="memorial-label">本月奏报</span></div>
+            <section id="story220-status" class="story220-status" aria-label="延康主线进度" hidden></section>
             <h2 id="event-title">许都新廷</h2><p id="event-text" class="event-text"></p><div id="event-choices" class="event-choices"></div><div id="event-resolved" class="event-resolved hidden">此奏报已经裁决，可继续施行政令。</div>
           </article>
           <section class="panel reports-panel"><div class="panel-heading"><div><span class="section-kicker">执行反馈</span><h2>御前记录</h2></div><span class="live-mark">即时</span></div><div id="report-list" class="report-list"></div></section>
@@ -156,12 +158,12 @@
       </div>
     </main>
 
-    <footer class="game-footer"><span>v2.23.0 · 御览从容</span><span>Ctrl + S 手动保存</span></footer>
+    <footer class="game-footer"><span>v2.24.0 · 汉祚将尽</span><span>Ctrl + S 手动保存</span></footer>
   </div>
 
   <div id="modal-backdrop" class="modal-backdrop hidden" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><header><span class="modal-seal" aria-hidden="true">诏</span><h2 id="modal-title">御前处分</h2></header><div id="modal-body" class="modal-body"></div><footer><button id="modal-cancel" class="secondary-button" type="button">取消</button><button id="modal-confirm" class="primary-button" type="button">确定</button></footer></section></div>
 
-  <section id="end-screen" class="end-screen hidden" aria-label="终局"><div class="ending-scroll"><figure class="ending-illustration"><img src="assets/images/illustrations/ending-river-mountains.webp" alt="汉宫空台远眺山河，案上留有冠服与印玺" width="1672" height="941" loading="lazy"></figure><div class="ending-copy"><p class="eyebrow">建安实录 · 本局终卷</p><h1 id="ending-title">风雨续祚</h1><p id="ending-text" class="ending-text"></p><div id="ending-stats" class="ending-stats"></div><section id="short-ending-review" class="short-ending-review" aria-label="短局复盘" hidden></section><div id="ending-chronicle" class="ending-chronicle"></div><div class="ending-actions"><button id="ending-export" class="secondary-button" type="button">导出本局实录</button><button id="ending-audit-btn" class="secondary-button" type="button">结算对账</button><button id="ending-backups-btn" class="secondary-button" type="button">存档备份</button><button id="ending-restart" class="primary-button" type="button">返回开局</button></div><div class="typography-controls ending-typography" role="group" aria-label="文字风格"><span class="typography-label">字风</span><button type="button" data-font-mode="classic" aria-pressed="true">古风楷书</button><button type="button" data-font-mode="clear" aria-pressed="false">清晰阅读</button></div>
+  <section id="end-screen" class="end-screen hidden" aria-label="终局"><div class="ending-scroll"><figure class="ending-illustration"><img src="assets/images/illustrations/ending-river-mountains.webp" alt="汉宫空台远眺山河，案上留有冠服与印玺" width="1672" height="941" loading="lazy"></figure><div class="ending-copy"><p class="eyebrow">建安实录 · 本局终卷</p><h1 id="ending-title">风雨续祚</h1><p id="ending-text" class="ending-text"></p><div id="ending-stats" class="ending-stats"></div><section id="story220-afterword" class="story220-afterword" aria-label="延康史臣后记" hidden></section><section id="short-ending-review" class="short-ending-review" aria-label="短局复盘" hidden></section><div id="ending-chronicle" class="ending-chronicle"></div><div class="ending-actions"><button id="ending-export" class="secondary-button" type="button">导出本局实录</button><button id="ending-audit-btn" class="secondary-button" type="button">结算对账</button><button id="ending-backups-btn" class="secondary-button" type="button">存档备份</button><button id="ending-restart" class="primary-button" type="button">返回开局</button></div><div class="typography-controls ending-typography" role="group" aria-label="文字风格"><span class="typography-label">字风</span><button type="button" data-font-mode="classic" aria-pressed="true">古风楷书</button><button type="button" data-font-mode="clear" aria-pressed="false">清晰阅读</button></div>
         <div class="typography-controls reading-controls" role="group" aria-label="阅读字号">
           <span class="typography-label">字号</span>
           <button type="button" data-reading-size="standard" aria-pressed="true">标准</button>
@@ -173,7 +175,7 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <script src="src/edict-rules.js?v=2.14.0"></script>
-  <script src="src/data.js?v=2.23.0"></script>
+  <script src="src/data.js?v=2.24.0"></script>
   <script src="src/world-data.js?v=1.5.1"></script>
   <script src="src/strategy-network-data.js?v=1.5.1"></script>
   <script src="src/army-data.js?v=1.5.1"></script>
@@ -190,11 +192,12 @@
   <script src="src/portraits/yuan_shu.js?v=1.5.1"></script>
   <script src="src/portraits/liu_biao.js?v=1.5.1"></script>
   <script src="src/portraits/sun_ce.js?v=1.5.1"></script>
-  <script src="src/action-plans.js?v=2.23.0"></script>
-  <script src="src/monthly-safety.js?v=2.23.0"></script>
+  <script src="src/action-plans.js?v=2.24.0"></script>
+  <script src="src/monthly-safety.js?v=2.24.0"></script>
   <script src="src/action-feedback.js?v=2.15.0"></script>
-  <script src="src/game.js?v=2.23.0"></script>
-  <script src="src/monthly-report.js?v=2.23.0"></script>
+  <script src="src/scenario-220-story.js?v=2.24.0"></script>
+  <script src="src/game.js?v=2.24.0"></script>
+  <script src="src/monthly-report.js?v=2.24.0"></script>
   <script src="src/world-system.js?v=2.15.0"></script>
   <script src="src/decree-world.js?v=2.14.0"></script>
   <script src="src/strategy-network.js?v=2.15.0"></script>
@@ -206,20 +209,20 @@
   <script src="src/imperial-progress-data.js?v=1.5.1"></script>
   <script src="src/imperial-progress.js?v=1.5.1"></script>
   <script src="src/campaign-evolution.js?v=2.15.0"></script>
-  <script src="src/command-center.js?v=2.23.0"></script>
+  <script src="src/command-center.js?v=2.24.0"></script>
   <script src="src/character-memory.js?v=1.7.0"></script>
   <script src="src/world-marks.js?v=2.14.0"></script>
   <script src="src/historian.js?v=1.9.0"></script>
-  <script src="src/dynasty-saga.js?v=2.23.0"></script>
-  <script src="src/monthly-flow.js?v=2.23.0"></script>
-  <script src="src/consequence-echoes.js?v=2.2.0"></script>
-  <script src="src/short-score.js?v=2.23.0"></script>
-  <script src="src/short-review.js?v=2.23.0"></script>
-  <script src="src/same-challenge.js?v=2.23.0"></script>
-  <script src="src/short-challenges.js?v=2.23.0"></script>
+  <script src="src/dynasty-saga.js?v=2.24.0"></script>
+  <script src="src/monthly-flow.js?v=2.24.0"></script>
+  <script src="src/consequence-echoes.js?v=2.24.0"></script>
+  <script src="src/short-score.js?v=2.24.0"></script>
+  <script src="src/short-review.js?v=2.24.0"></script>
+  <script src="src/same-challenge.js?v=2.24.0"></script>
+  <script src="src/short-challenges.js?v=2.24.0"></script>
   <script src="src/weekly-challenge.js?v=2.15.0"></script>
-  <script src="src/final-verdict.js?v=2.5.0"></script>
-  <script src="src/causal-court.js?v=2.9.0"></script>
+  <script src="src/final-verdict.js?v=2.24.0"></script>
+  <script src="src/causal-court.js?v=2.24.0"></script>
   <script src="src/quarterly-agenda.js?v=2.14.0"></script>
   <script src="src/council-advice.js?v=2.11.0"></script>
   <script src="src/regional-echoes.js?v=2.12.0"></script>
@@ -230,6 +233,6 @@
   <script src="src/ui.js?v=2.6.1"></script>
   <script src="src/ui-refresh-v280.js?v=2.8.0"></script>
   <script src="src/gameplay-polish.js?v=2.14.0"></script>
-  <script src="src/save-backups.js?v=2.23.0"></script>
+  <script src="src/save-backups.js?v=2.24.0"></script>
 </body>
 </html>

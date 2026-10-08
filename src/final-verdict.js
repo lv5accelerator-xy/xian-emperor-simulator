@@ -83,6 +83,7 @@
       turningPoints,
       worldSummary: buildWorldSummary(normalized),
       finalComment: buildFinalComment(posthumous, route, dimensions, failed, promiseSummary),
+      storyAfterword: window.XianScenario220Story?.buildAfterword(game) || null,
       completedAt: new Date().toISOString(),
     };
   }
@@ -152,7 +153,12 @@
   function renderTab() {
     const current = store.verdicts[0];
     if (!current) return '<div class="command-empty">完成任意普通剧本、短局或汉祚长卷章节后，史家才会形成完整定论。</div>';
-    return `<div class="verdict-current"><span>${escapeHtml(current.scenarioName)} · ${escapeHtml(current.ending)}</span><strong>${escapeHtml(current.fullTitle)}</strong><p>${escapeHtml(current.finalComment)}</p></div><section class="verdict-virtues">${current.virtues.map(item => `<article><span>${escapeHtml(item.name)}</span><b>${item.score}</b><p>${escapeHtml(item.text)}</p></article>`).join("")}</section><section class="verdict-section"><h3>史家争议</h3>${current.controversies.map(item => `<p>“${escapeHtml(item)}”</p>`).join("")}</section><section class="verdict-section"><h3>人物后记</h3><div class="verdict-people">${current.characters.map(item => `<article><strong>${escapeHtml(item.name)}</strong><span>关系 ${item.relation} · 旧事 ${item.remembered}</span><p>${escapeHtml(item.fate)}</p></article>`).join("")}</div></section><section class="verdict-section"><h3>山河终卷</h3><p>${escapeHtml(current.worldSummary)}</p></section><div class="verdict-actions"><button type="button" data-verdict-export="${current.id}">导出《帝纪终评》</button></div>${store.verdicts.length > 1 ? `<section class="verdict-history"><h3>历次拟谥</h3>${store.verdicts.slice(1, 8).map(item => `<button type="button" data-verdict-select="${item.id}"><span>${escapeHtml(item.scenarioName)}</span><strong>汉${escapeHtml(item.posthumous)}帝</strong><small>${escapeHtml(item.ending)}</small></button>`).join("")}</section>` : ""}`;
+    return `<div class="verdict-current"><span>${escapeHtml(current.scenarioName)} · ${escapeHtml(current.ending)}</span><strong>${escapeHtml(current.fullTitle)}</strong><p>${escapeHtml(current.finalComment)}</p></div>${renderStoryAfterword(current.storyAfterword)}<section class="verdict-virtues">${current.virtues.map(item => `<article><span>${escapeHtml(item.name)}</span><b>${item.score}</b><p>${escapeHtml(item.text)}</p></article>`).join("")}</section><section class="verdict-section"><h3>史家争议</h3>${current.controversies.map(item => `<p>“${escapeHtml(item)}”</p>`).join("")}</section><section class="verdict-section"><h3>人物后记</h3><div class="verdict-people">${current.characters.map(item => `<article><strong>${escapeHtml(item.name)}</strong><span>关系 ${item.relation} · 旧事 ${item.remembered}</span><p>${escapeHtml(item.fate)}</p></article>`).join("")}</div></section><section class="verdict-section"><h3>山河终卷</h3><p>${escapeHtml(current.worldSummary)}</p></section><div class="verdict-actions"><button type="button" data-verdict-export="${current.id}">导出《帝纪终评》</button></div>${store.verdicts.length > 1 ? `<section class="verdict-history"><h3>历次拟谥</h3>${store.verdicts.slice(1, 8).map(item => `<button type="button" data-verdict-select="${item.id}"><span>${escapeHtml(item.scenarioName)}</span><strong>汉${escapeHtml(item.posthumous)}帝</strong><small>${escapeHtml(item.ending)}</small></button>`).join("")}</section>` : ""}`;
+  }
+
+  function renderStoryAfterword(word) {
+    if (!word || !Array.isArray(word.paragraphs)) return "";
+    return `<section class="story220-afterword"><h3>${escapeHtml(word.title)}</h3>${word.paragraphs.filter(text => typeof text === "string").map(text => `<p>${escapeHtml(text)}</p>`).join("")}</section>`;
   }
 
   function mountTab(root) {
@@ -183,6 +189,9 @@
       "史臣总评：", value.finalComment, "", "三项长处：", ...value.virtues.map(item => `${item.name}（${item.score}）：${item.text}`), "",
       "史家争议：", ...value.controversies.map((item, index) => `${index + 1}. ${item}`), "", "人物后记：", ...value.characters.map(item => `${item.name}：${item.fate}`), "", "山河终卷：", value.worldSummary,
     ];
+    if (value.storyAfterword && Array.isArray(value.storyAfterword.paragraphs)) {
+      lines.push("", value.storyAfterword.title, ...value.storyAfterword.paragraphs.filter(text => typeof text === "string"));
+    }
     const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
