@@ -43,7 +43,9 @@
 
 ## 当前版本
 
-当前版本为 **v2.23.0「御览从容」**。
+当前版本为 **v2.24.0「汉祚将尽」**。
+
+- **v2.24.0**：220 年普通剧本增加百官联署、宗庙与旧臣、玺绶之争、最后朝议四幕。前序裁决、杨彪信任、百官与宫禁决定支持、旧约和可行路线；延迟后果与终月承诺核验保存在核心存档，正常终局生成引用实际决策的专属史臣后记。其他剧本、短局与每周同题沿用原规则，详见 [延康主线与验证](docs/SCENARIO_220_STORY.md)。
 
 - **v2.23.0**：标准、大字、特大字号独立保存；月报先呈现实际目标、关键净变与警讯，原详情可展开；手机流程标签、月报滚动与继续按钮完善，详见 [阅读字号与月报](docs/READING_COMFORT.md)。
 
@@ -156,7 +158,7 @@ node tests/settlement-replay-regression.js
 发布检查还需要设置当前预期版本：
 
 ```bash
-EXPECTED_VERSION=2.23.0 node tests/release-regression.js
+EXPECTED_VERSION=2.24.0 node tests/release-regression.js
 ```
 
 统一检查入口为 `node scripts/check.cjs`（Node.js 24，跨 Windows/Linux）；开发约定见 [AGENTS.md](AGENTS.md)，任务交接见 [CODEX_HANDOFF.md](CODEX_HANDOFF.md)。
