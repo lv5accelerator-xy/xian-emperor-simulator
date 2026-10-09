@@ -2,6 +2,7 @@
 
 | 文档 | 用途 |
 | --- | --- |
+| [SCENARIO_220_STORY.md](SCENARIO_220_STORY.md) | 延康四幕、条件路线、核心存档、延迟后果与验证 |
 | [READING_COMFORT.md](READING_COMFORT.md) | 三档字号、月报摘要、手机流程与设备验证 |
 | [TYPOGRAPHY.md](TYPOGRAPHY.md) | 古风与清晰主题、字体来源、授权与字符子集维护 |
 | [GAME_DESIGN.md](GAME_DESIGN.md) | 产品定位、历史剧本、数值与系统设计 |

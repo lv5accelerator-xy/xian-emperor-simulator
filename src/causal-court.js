@@ -107,7 +107,7 @@
         text: `裁为“${detail.choiceLabel || "既定方案"}”，${describePackage(detail)}。`,
         tags,
       });
-      scheduleDelayed(next, core, detail, id);
+      if (!detail.storyManaged) scheduleDelayed(next, core, detail, id);
       return true;
     });
     if (!saved) return;
