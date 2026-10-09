@@ -37,3 +37,17 @@ Draft 功能 PR：https://github.com/lv5accelerator-xy/xian-emperor-simulator/pu
 本轮建立独立 Draft stacked PR，base 为 `codex/workflow-normalization-20261007`。先由用户审查并合并 PR #6；再将功能 PR 的 base 调整为 main，必要时更新功能分支并复核 CI。release-check.yml 同时允许 main 和本次堆叠 base 的 PR 触发验证。
 
 不得自动合并 PR #6 或功能 PR，不强推 main，不改 Pages 设置或触发正式部署。main 合并会按原仓库规则发布，时机由用户决定。保留 AGENTS.md 的原生架构、个人账号、完整存档及分支 PR 交付约定。
+
+## 2026-10-09 个人云环境复核
+
+沿用现有 `xian-emperor-simulator` 环境。实际云主机 `dbb34129ad41`，Debian 13.6，Node 24.19.0、Python 3.12.14；工作目录 `/workspace/xian-emperor-simulator`。本批验证的功能代码为 `9b74b27bac0365c5021495caaa499e77b449a9cf`，并保留原 `codex/v224-han-dynasty-finale` 分支和 v2.24.0 内容。它已继承规范化提交 `9ccf7a8`，不代表 PR #6 已合并。
+
+原快照与恢复后的完整 `node scripts/check.cjs` 各为 62 项语法、30 个回归脚本，退出 0、失败/跳过脚本 0；临时验证规范提交 9ccf7a8 为 61/29、退出 0。默认模拟样本保留，包括 120 局推荐及 120 局配对守成。两个版本各执行 6 项独立 CI 内联检查，全部退出 0；`EXPECTED_VERSION` 来自各自当前工作流，分别为 2.23.0（第527行）与 2.24.0（第531行）。模拟 quota rejection 保留为备份回滚测试的预期诊断。
+
+静态 HTTP：2.23.0 的根页面/index.html/99个脚本样式共101请求、2.24.0 的根页面/index.html/101个脚本样式共103请求，均200。Browser 插件缺失，沿用 Playwright 1.62.1 与系统 Chromium；两个版本各在1280×900及390×844的 fresh context 实际开局、裁决并验证状态变化、刷新续档，均无水平溢出、pageerror 0。桌面实际点击保存，窄屏验证裁决自动存档；正式玩家数据未访问。
+
+浏览器初次验证曾受到延迟出现的新手引导、保存同步时点及窄屏隐藏的顶部保存按钮影响；通过真实关闭引导、等待同步和使用该尺寸的自动存档路径复核后通过，失败尝试未删除。恢复服务首次重启遇到本轮旧进程占用端口，停止本轮进程后恢复成功；另有临时 Python 探针的 invalid escape sequence 诊断。没有把这些历史尝试称为全部一次通过。
+
+环境面板原启动技能仍固定 EXPECTED_VERSION=2.22.0，原网络预设为 unrestricted。已准备动态读取当前 CI 版本、文档/Node24/失败即停止的启动技能，以及收紧至 Package managers 的修改；**保存草稿被产品页面以“无操作权限”拒绝**。只读配置工具 revision 1 确认旧技能与 unrestricted 均未改变；新配置没有保存、没有发布。页面显示仅限我自己，变量/代理密钥0；只读工具不暴露所有者或 can_save，因此不能推断具体权限原因。需本人处理环境保存权限；不得绕过、改 Business 或建立替代环境。
+
+本批源/测试文件改动0、云工作区干净；本文件为本机隔离克隆的文档追加，提交后以 PR #7 head 为准。未验证新任务快照恢复，也未合并/部署或修改生产密钥。
