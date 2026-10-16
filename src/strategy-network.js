@@ -37,6 +37,7 @@
     const previousSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function strategyAwareSetItem(key, value) {
       previousSetItem.apply(this, arguments);
+      if (window.XianEmperorGame?.commit) return;
       if (!window.__xianFullSaveImporting && this === localStorage && key === GAME_SAVE_KEY) {
         window.clearTimeout(processTimer);
         processTimer = window.setTimeout(() => processCoreSave(value), 90);
@@ -819,6 +820,7 @@
   }
 
   window.XianStrategyNetwork = Object.freeze({
+    syncFromCore: raw => processCoreSave(raw),
     settleMonth: () => {
       processCoreSave(localStorage.getItem(GAME_SAVE_KEY));
       if (state && coreState && state.lastProcessedTurn <= Number(coreState.monthlySettledTurn || 0)) processCoreSave(localStorage.getItem(GAME_SAVE_KEY));

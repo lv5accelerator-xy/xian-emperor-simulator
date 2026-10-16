@@ -166,7 +166,7 @@ assert.ok(read("index.html").indexOf("src/short-score.js") < read("index.html").
 assert.ok(read("index.html").indexOf("src/short-review.js") < read("index.html").indexOf("src/short-challenges.js"), "short review must load before challenge tracking");
 assert.match(read("index.html"), /id="short-ending-review"/);
 assert.ok(read("index.html").indexOf("src/same-challenge.js") < read("index.html").indexOf("src/short-challenges.js"), "same challenge comparison must load before result tracking");
-assert.match(read("src/game.js"), /schemaVersion:\s*101/);
+assert.match(read("src/game.js"), /schemaVersion:\s*102/);
 assert.match(read("src/game.js"), /__xianFullSaveImporting\s*=\s*true/);
 for (const file of [
   "world-system.js",

@@ -53,7 +53,7 @@
     const previousSetItem = Storage.prototype.setItem;
     Storage.prototype.setItem = function courtAwareSetItem(key, value) {
       previousSetItem.apply(this, arguments);
-      if (this !== localStorage || key !== CORE_KEY || window.__xianFullSaveImporting || window.__xianCourtWriting) return;
+      if (this !== localStorage || key !== CORE_KEY || window.__xianFullSaveImporting || window.__xianCourtWriting || window.XianEmperorGame?.commit) return;
       window.clearTimeout(processTimer);
       processTimer = window.setTimeout(() => processCoreSave(value), 280);
     };
@@ -69,12 +69,12 @@
   }
 
   function processCoreSave(raw, firstLoad = false) {
-    const core = safeParse(raw);
+    const core = typeof raw === "string" ? safeParse(raw) : raw;
     if (!isValidCore(core)) { coreState = null; state = loadState(); renderAll(); return; }
     coreState = core;
     const loaded = loadState();
     state = !loaded || loaded.gameCreatedAt !== core.createdAt ? createState(core) : migrateState(loaded, core);
-    if (core.turn > state.lastProcessedTurn || firstLoad) generatePetition(core);
+    if (!core.ended) generatePetition(core);
     state.lastProcessedTurn = Math.max(state.lastProcessedTurn, core.turn);
     state.updatedAt = new Date().toISOString();
     saveState();
@@ -82,24 +82,31 @@
   }
 
   function createState(core) {
-    return { version: VERSION, gameCreatedAt: core.createdAt, lastProcessedTurn: 0, factions: Object.fromEntries(FACTIONS.map(item => [item.id, { influence: item.influence, support: item.support, tension: item.tension }])), petitions: [], history: [], resolvedCount: 0, updatedAt: new Date().toISOString() };
+    return { version: VERSION, schemaVersion: 2, gameCreatedAt: core.createdAt, lastProcessedTurn: 0, generatedTurns: [], resolutionReceipts: {}, factions: Object.fromEntries(FACTIONS.map(item => [item.id, { influence: item.influence, support: item.support, tension: item.tension }])), petitions: [], history: [], resolvedCount: 0, updatedAt: new Date().toISOString() };
   }
 
   function migrateState(current, core) {
     const factions = { ...(current.factions || {}) };
     FACTIONS.forEach(item => { factions[item.id] = { influence: item.influence, support: item.support, tension: item.tension, ...(factions[item.id] || {}) }; });
-    return { ...current, version: VERSION, gameCreatedAt: core.createdAt, lastProcessedTurn: Number(current.lastProcessedTurn || 0), factions, petitions: Array.isArray(current.petitions) ? current.petitions : [], history: Array.isArray(current.history) ? current.history : [], resolvedCount: Number(current.resolvedCount || 0) };
+    const petitions = Array.isArray(current.petitions) ? current.petitions : [];
+    const history = Array.isArray(current.history) ? current.history : [];
+    // Legacy saves already processed that month even when the resolved card was removed.
+    const generatedTurns = [...new Set([...(current.generatedTurns || []), ...petitions.map(item => item.turn), ...history.filter(item => item.templateId).map(item => item.turn), ...(Number(current.schemaVersion || 0) < 2 ? [current.lastProcessedTurn] : [])].map(Number).filter(turn => turn > 0))];
+    const resolutionReceipts = { ...(current.resolutionReceipts || {}) };
+    history.filter(item => item.templateId && item.id).forEach(item => { resolutionReceipts[item.id] ||= { turn: item.turn, responseId: item.responseId, migrated: true }; });
+    return { ...current, version: VERSION, schemaVersion: 2, gameCreatedAt: core.createdAt, lastProcessedTurn: Number(current.lastProcessedTurn || 0), generatedTurns, resolutionReceipts, factions, petitions, history, resolvedCount: Number(current.resolvedCount || 0) };
   }
 
   function generatePetition(core) {
     const pending = state.petitions.filter(item => item.status === "pending");
-    if (pending.length >= 2 || pending.some(item => item.turn === core.turn)) return;
+    if (pending.length >= 2 || state.generatedTurns.includes(Number(core.turn))) return;
     const eligible = PETITIONS.filter(template => core.turn >= template.minTurn && !state.history.some(item => item.templateId === template.id));
     const pool = eligible.length ? eligible : PETITIONS.filter(template => core.turn >= template.minTurn);
     if (!pool.length) return;
     const key = window.XianEmperorGame?.getRandomKey?.("court", core.createdAt, core) ?? core.createdAt;
     const pick = pool[Math.floor(seededRandom(`${key}-${core.turn}-court`)() * pool.length) % pool.length];
     state.petitions.unshift({ id: `petition-${core.turn}-${pick.id}`, templateId: pick.id, turn: core.turn, status: "pending", createdAt: new Date().toISOString() });
+    state.generatedTurns.push(Number(core.turn));
     state.petitions = state.petitions.slice(0, 8);
   }
 
@@ -108,14 +115,17 @@
     const response = template?.choices?.[responseId];
     if (!template || !response) return null;
     const faction = currentState?.factions?.[template.faction] || FACTIONS.find(item => item.id === template.faction);
-    return { ...response, factionId: template.faction, supportAfter: clamp(Number(faction?.support || 50) + response.support, 0, 100), tensionAfter: clamp(Number(faction?.tension || 30) + response.tension, 0, 100) };
+    return { ...response, budget: window.XianEmperorGame?.canAffordEffects?.(response.effects), factionId: template.faction, supportAfter: clamp(Number(faction?.support || 50) + response.support, 0, 100), tensionAfter: clamp(Number(faction?.tension || 30) + response.tension, 0, 100) };
   }
 
   function resolvePetition(id, responseId) {
     const petition = state?.petitions?.find(item => item.id === id && item.status === "pending");
     const template = PETITIONS.find(item => item.id === petition?.templateId);
     const response = previewResponse(template?.id, responseId, state);
-    if (!petition || !template || !response) return false;
+    if (!petition || !template || !response || state.resolutionReceipts[id]) return false;
+    const budget = window.XianEmperorGame?.canAffordEffects?.(response.effects);
+    if (!budget?.ok) { showBudgetFailure(budget); return false; }
+    state.resolutionReceipts[id] = { turn: window.XianEmperorGame.getState().turn, responseId, cost: budget.cost };
     const faction = state.factions[template.faction];
     faction.support = response.supportAfter;
     faction.tension = response.tensionAfter;
@@ -130,6 +140,7 @@
     state.resolvedCount += 1;
     saveState();
     window.XianEmperorGame?.applyExternalPackage({
+      causalId: `court-resolution-${id}`,
       effects: response.effects,
       hidden: response.hidden,
       relations: template.relation ? { [template.relation]: response.relation } : undefined,
@@ -138,6 +149,14 @@
     });
     renderAll();
     return true;
+  }
+
+  function showBudgetFailure(budget) {
+    const content = document.getElementById("court-politics-content");
+    if (!content) return;
+    let notice = document.getElementById("court-budget-notice");
+    if (!notice) { notice = document.createElement("p"); notice.id = "court-budget-notice"; notice.setAttribute("role", "status"); content.prepend(notice); }
+    notice.textContent = budget?.reason || "本局已结束，不能新增处分。";
   }
 
   function installNavButton() {
@@ -183,7 +202,7 @@
   function renderOverlay() {
     const content = document.getElementById("court-politics-content"); const date = document.getElementById("court-politics-date"); if (!content || !date) return;
     document.querySelectorAll("[data-court-tab]").forEach(button => button.classList.toggle("active", button.dataset.courtTab === activeTab));
-    date.textContent = coreState ? `第 ${coreState.turn}/${coreState.maxTurns || 24} 月 · 每项选择都会改变人物关系与派系态度` : "尚未载入本局";
+    date.textContent = coreState ? `第 ${coreState.turn}/${window.XianEmperorGame?.getDeadline?.(coreState) || window.XianEmperorGame?.getDeadline?.(coreState) || coreState.maxTurns || 24} 月 · 每项选择都会改变人物关系与派系态度` : "尚未载入本局";
     if (!state) { content.innerHTML = '<p class="empty-state">请先开启或读取一局游戏。</p>'; return; }
     const values = Object.values(state.factions); const avgSupport = Math.round(values.reduce((sum,item) => sum + item.support,0) / values.length); const avgTension = Math.round(values.reduce((sum,item) => sum + item.tension,0) / values.length);
     content.innerHTML = `<section class="court-summary"><article><span>待议</span><strong>${state.petitions.length}</strong><small>最多同时保留两件</small></article><article><span>平均支持</span><strong>${avgSupport}</strong><small>各派对汉廷态度</small></article><article><span>平均张力</span><strong>${avgTension}</strong><small>高张力会放大冲突</small></article><article><span>累计议决</span><strong>${state.resolvedCount}</strong><small>奏请与谈判共计</small></article></section>${activeTab === "factions" ? renderFactions() : activeTab === "history" ? renderHistory() : renderPetitions()}`;
@@ -241,5 +260,5 @@
   function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "'":"&#39;", '"':"&quot;" }[char])); }
   function seededRandom(seed) { let hash=2166136261; for(let index=0;index<seed.length;index+=1){hash^=seed.charCodeAt(index);hash=Math.imul(hash,16777619);} return()=>{hash+=0x6d2b79f5;let value=hash;value=Math.imul(value^(value>>>15),value|1);value^=value+Math.imul(value^(value>>>7),value|61);return((value^(value>>>14))>>>0)/4294967296;}; }
 
-  window.XianCourtPolitics = Object.freeze({ version: VERSION, factions: FACTIONS.map(item => ({ ...item })), petitions: PETITIONS.map(item => ({ id:item.id,type:item.type,speaker:item.speaker,title:item.title })), previewResponse, resolvePetition, applyCausalEffects, diagnostics: () => state ? JSON.parse(JSON.stringify(state)) : null });
+  window.XianCourtPolitics = Object.freeze({ version: VERSION, factions: FACTIONS.map(item => ({ ...item })), petitions: PETITIONS.map(item => ({ id:item.id,type:item.type,speaker:item.speaker,title:item.title })), previewResponse, resolvePetition, applyCausalEffects, syncFromCore: (raw = localStorage.getItem(CORE_KEY)) => processCoreSave(raw), diagnostics: () => state ? JSON.parse(JSON.stringify(state)) : null });
 })();

@@ -39,6 +39,51 @@
   ];
   let settlementLedger = null;
   let settlementStage = "";
+  let commitRunning = false;
+  let operationDepth = 0;
+  const RULES_VERSION = 224;
+
+  // One synchronous boundary owns gameplay. Timers may repaint, never settle a save.
+  function commit(kind = "save") {
+    if (!state || commitRunning || operationDepth || window.__xianFullSaveImporting) return false;
+    commitRunning = true;
+    window.__xianCommitRunning = true;
+    try {
+      const sync = (system, method = "syncFromCore") => system?.[method]?.(JSON.stringify(state), { kind });
+      sync(window.XianWorldSystem);
+      sync(window.XianDecreeWorld);
+      sync(window.XianWorldSystem);
+      sync(window.XianStrategyNetwork);
+      sync(window.XianArmySystem);
+      window.XianStrategyNetwork?.reconcilePromises?.();
+      sync(window.XianCourtPolitics);
+      sync(window.XianCausalCourt);
+      sync(window.XianRegionalEchoes);
+      sync(window.XianCampaignEvolution);
+      sync(window.XianImperialProgress);
+      sync(window.XianImperialPaths);
+      state.updatedAt = new Date().toISOString();
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      document.dispatchEvent(new CustomEvent("xian:core-saved", { detail: { turn: state.turn, createdAt: state.createdAt, kind } }));
+      // Synchronous listeners may add receipts, but cannot publish a partial core.
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      document.dispatchEvent(new CustomEvent("xian:commit-completed", { detail: { turn: state.turn, createdAt: state.createdAt, kind } }));
+      return true;
+    } finally { commitRunning = false; window.__xianCommitRunning = false; }
+  }
+
+  function getDeadline(gameState = state) {
+    if (!gameState) return 0;
+    const short = window.XianShortChallenges?.getActiveStatus?.(gameState);
+    return Math.min(Number(gameState.maxTurns || 24), Number(short?.duration || short?.definition?.duration || gameState.deadline || gameState.maxTurns || 24));
+  }
+
+  function canAffordEffects(effects = {}) {
+    const cost = Math.max(0, -Number((effects.effects || effects).treasury || 0));
+    const shortfall = Math.max(0, cost - Number(state?.stats?.treasury || 0));
+    const ok = Boolean(state && !state.ended && !window.__xianFullSaveImporting && !shortfall);
+    return { ok, cost, shortfall, reason: !state || state.ended ? "本局已结束，不能新增处分。" : shortfall ? `国库不足，尚缺 ${shortfall}。` : "" };
+  }
 
   const MAX_REPORTS = 10;
   const ACTION_CATEGORIES = [
@@ -89,6 +134,7 @@
       processedEventIds: [],
       metrics: {
         battles: 0,
+        courtBattles: 0,
         courtVictories: 0,
         courtDefeats: 0,
         citiesTaken: 0,
@@ -110,7 +156,7 @@
       version: 290,
       pending: Array.isArray(current.pending) ? current.pending.slice(0, 16) : [],
       history: Array.isArray(current.history) ? current.history.slice(0, 36) : [],
-      processedEventIds: Array.isArray(current.processedEventIds) ? current.processedEventIds.slice(-80) : [],
+      processedEventIds: Array.isArray(current.processedEventIds) ? current.processedEventIds : [],
       metrics: { ...base.metrics, ...(current.metrics || {}) },
     };
   }
@@ -345,13 +391,18 @@
 
     return {
       version: DATA.version,
-      schemaVersion: 101,
+      schemaVersion: 102,
+      rulesVersion: RULES_VERSION,
+      operationSequence: 0,
+      appliedReceipts: [],
+      actionRepetitions: { turn: 1, counts: {} },
       scenarioId: scenario.id,
       difficulty,
       turn: 1,
       year: scenario.startYear,
       month: scenario.startMonth,
       maxTurns: scenario.maxTurns,
+      deadline: Number(options.deadline || scenario.maxTurns),
       actionPoints: 2,
       stats,
       hidden,
@@ -410,6 +461,7 @@
     if (window.XianSaveBackups?.beforeNewGame?.() === false) return false;
     const scenario = getScenarioById(scenarioId);
     state = createInitialState(difficulty, scenario.id, options);
+    if (options.setup) applyPackage(options.setup);
     addChronicle(
       formatReignDate(scenario.startYear, scenario.startMonth),
       scenario.opening
@@ -418,6 +470,7 @@
     prepareTurn();
     enterGame();
     saveGame(true);
+    document.dispatchEvent(new CustomEvent("xian:new-game-committed", { detail: { turn: state.turn, createdAt: state.createdAt } }));
     return true;
   }
 
@@ -432,6 +485,7 @@
 
   function prepareTurn() {
     if (!state || state.ended) return;
+    if (state.actionRepetitions?.turn !== state.turn) state.actionRepetitions = { turn: state.turn, counts: {} };
     state.actionPoints = 2;
     state.eventResolved = false;
     state.currentEventId = selectEventForTurn().id;
@@ -706,9 +760,13 @@
     if (!choice) return;
 
     const before = captureOutcomeState();
+    operationDepth += 1;
+    state.operationSequence += 1;
+    state.eventResolved = true;
     const deltaText = applyPackage(choice);
     document.dispatchEvent(new CustomEvent("xian:decision-resolved", { detail: {
       eventId: event.id,
+      id: `decision:${state.createdAt}:${state.turn}:${event.id}`,
       eventTitle: event.title,
       choiceIndex,
       choiceLabel: choice.label,
@@ -730,6 +788,7 @@
     });
     showToast("本月奏报已裁决。", "success");
     checkImmediateEnding();
+    operationDepth -= 1;
     saveGame(true);
     renderAll();
   }
@@ -880,6 +939,21 @@
       if (name.startsWith("modal-")) { const input = document.getElementById(name); if (input) input.value = value; }
       else el["modal-body"].querySelectorAll(`input[name="${name}"]`).forEach(input => { input.checked = input.value === value; });
     }
+    refreshActionPreviews(actionId);
+    el["modal-body"].onchange = () => refreshActionPreviews(actionId);
+  }
+
+  function refreshActionPreviews(actionId) {
+    const fields = {};
+    el["modal-body"].querySelectorAll("select").forEach(input => { fields[input.id] = input.value; });
+    el["modal-body"].querySelectorAll('input[type="radio"]').forEach(input => {
+      const plan = window.XianActionPlans.build(actionId, { ...fields, [input.name]: input.value }, state);
+      const container = input.closest("label")?.querySelector("span");
+      if (!plan || !container) return;
+      container.querySelectorAll(".outcome-preview, .action-rule-note").forEach(item => item.remove());
+      container.insertAdjacentHTML("beforeend", renderOutcomePreview(plan, Object.entries(plan.relations).map(([id,value]) => `${getCharacter(id)?.name || id}关系 ${formatSigned(value)}`))
+        + `<small class="action-rule-note">${escapeHtml(plan.repetition?.reason || "本次完整收益")}${plan.advice ? ` 主议：${escapeHtml(plan.advice.description)}；剩余 ${plan.advice.remaining} 次。` : ""}${plan.affordable ? "" : ` 国库尚缺 ${Math.max(0, plan.cost - state.stats.treasury)}。`}</small>`);
+    });
   }
 
   function openRecommendedAction(recommendation = getRecommendedCommonAction()) {
@@ -1415,22 +1489,33 @@
 
   function completeAction(pkg) {
     if (!canAct()) return;
+    const budget = canAffordEffects(pkg.effects || {});
+    if (!budget.ok) { showToast(budget.reason, "warning"); return false; }
+    operationDepth += 1;
+    state.operationSequence += 1;
+    const operationId = `action-${state.createdAt}-${state.turn}-${state.totalActions + 1}`;
+    if (pkg.repetition?.key) {
+      if (state.actionRepetitions?.turn !== state.turn) state.actionRepetitions = { turn: state.turn, counts: {} };
+      state.actionRepetitions.counts[pkg.repetition.key] = Number(state.actionRepetitions.counts[pkg.repetition.key] || 0) + 1;
+    }
+    window.XianCouncilAdvice?.consumeActionModifier?.(pkg, operationId, state);
     const before = captureOutcomeState();
     const deltaText = applyPackage(pkg);
     state.actionPoints -= 1;
     state.totalActions += 1;
     const report = addReport(pkg.title, `${pkg.text}${deltaText ? `｜${deltaText}` : ""}`, "action", {
       ...(pkg.edict ? { edict: pkg.edict } : {}),
+      id: operationId,
+      repetition: pkg.repetition || null, advice: pkg.advice || null,
       outcome: buildActionOutcome(before, pkg, "action"),
     });
     addChronicle(formatReignDate(state.year, state.month), pkg.chronicle);
     showToast(`行动完成，尚可行动 ${state.actionPoints} 次。`, "success");
     checkImmediateEnding();
-    saveGame(true);
-    renderAll();
     if (pkg.causal !== false) {
       document.dispatchEvent(new CustomEvent("xian:external-action-completed", { detail: {
-        id: `action-${state.createdAt}-${state.turn}-${state.totalActions}`,
+        id: operationId,
+        actionId: pkg.actionId, targetId: pkg.targetId, type: pkg.type, tags: pkg.tags,
         title: pkg.title,
         text: pkg.text,
         effects: { ...(pkg.effects || {}) },
@@ -1441,9 +1526,13 @@
       } }));
       // Include synchronous replies and newly scheduled consequences, then persist the receipt.
       report.outcome = buildActionOutcome(before, pkg, "action");
-      saveGame(true);
-      renderAll();
     }
+    operationDepth -= 1;
+    saveGame(true);
+    report.outcome = buildActionOutcome(before, pkg, "action");
+    saveGame(true);
+    renderAll();
+    return true;
   }
 
   function collectFollowUps() {
@@ -1561,7 +1650,7 @@
       settlementPhase("终值核验", () => document.dispatchEvent(new CustomEvent("xian:month-settled", { detail: { turn: state.turn, createdAt: state.createdAt } })));
       if (state.ended) return;
       finalizeSettlement();
-      if (state.turn >= state.maxTurns) { finishCampaign(); return; }
+      if (state.turn >= getDeadline()) { finishCampaign(); return; }
       advanceCalendar(); state.turn += 1; prepareTurn();
       saveGame(true); renderAll(); window.scrollTo({ top: 0, behavior: "smooth" });
     } finally { settlementLedger = null; settlementStage = ""; }
@@ -1938,10 +2027,9 @@
 
   function saveGame(silent = false) {
     if (!state) return;
-    state.updatedAt = new Date().toISOString();
+    if (commitRunning || operationDepth || window.__xianFullSaveImporting) return;
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-      document.dispatchEvent(new CustomEvent("xian:core-saved", { detail: { turn: state.turn, createdAt: state.createdAt } }));
+      commit("save");
       updateContinueButton();
       if (!silent) showToast("御前存档已保存到本浏览器。", "success");
     } catch (error) {
@@ -1957,6 +2045,8 @@
       const loaded = JSON.parse(raw);
       if (!validateSave(loaded)) throw new Error("Invalid save");
       state = migrateSave(loaded);
+      commit("load");
+      document.dispatchEvent(new CustomEvent("xian:state-restored", { detail: { kind: "load", turn: state.turn, createdAt: state.createdAt } }));
       enterGame(true);
       if (state.ended && state.ending) displayEnding(state.ending);
       if (!silent) showToast("存档读取成功。", "success");
@@ -1977,7 +2067,12 @@
       ...createInitialState(save.difficulty || "standard", save.scenarioId || "jianan_196"),
       ...save,
       version: DATA.version,
-      schemaVersion: 101,
+      schemaVersion: 102,
+      rulesVersion: RULES_VERSION,
+      ruleMigration: save.rulesVersion === RULES_VERSION ? save.ruleMigration : { from: save.rulesVersion || 216, to: RULES_VERSION, turn: save.turn, comparisonEligible: false },
+      operationSequence: Number(save.operationSequence || 0),
+      appliedReceipts: Array.isArray(save.appliedReceipts) ? save.appliedReceipts : [],
+      actionRepetitions: save.actionRepetitions?.turn === save.turn ? save.actionRepetitions : { turn: save.turn, counts: {} },
       decreeDraft: typeof save.decreeDraft === "string" ? save.decreeDraft.slice(0, 600) : "",
       decreeWorkspaceOpen: save.decreeWorkspaceOpen === true,
       scenarioId: save.scenarioId || "jianan_196",
@@ -2087,12 +2182,7 @@
           restoreFullSave(imported);
           return;
         }
-        if (window.XianSaveBackups?.captureBeforeReplacement?.("导入旧版存档前") === false) return;
-        state = migrateSave(importedCore);
-        saveGame(true);
-        enterGame();
-        if (state.ended && state.ending) displayEnding(state.ending);
-        showToast("旧版核心存档已迁移并导入。", "success");
+        restoreFullSave(planLegacyImport(importedCore));
       } catch (error) {
         window.__xianFullSaveImporting = false;
         console.error(error);
@@ -2100,6 +2190,23 @@
       }
     };
     reader.readAsText(file, "utf-8");
+  }
+
+  function planLegacyImport(core) {
+    if (!validateSave(core)) throw new Error("Invalid legacy core");
+    const current = captureFullSave()?.stores || {};
+    const stores = { [SAVE_KEY]: { ...core, importMigration: { source: "core-only", turn: core.turn, rebuiltSystems: true, missingHistory: true } } };
+    // These stores are explicitly collections/preferences, never current-world progress.
+    for (const key of [SCENARIO_RECORDS_KEY, "xian_emperor_audio_v023", "xian_emperor_weekly_challenge_v240", "xian_emperor_historian_v190", "xian_emperor_final_verdict_v250", "xian_emperor_command_center_v160"]) {
+      if (current[key]) stores[key] = current[key];
+    }
+    const progress = current.xian_emperor_progression_v100;
+    if (progress) stores.xian_emperor_progression_v100 = { version: progress.version, profile: progress.profile, session: {} };
+    const short = current.xian_emperor_short_challenges_v230;
+    if (short) stores.xian_emperor_short_challenges_v230 = { ...short, active: null };
+    // An old core has no evidence for world, army, challenge or month-start history.
+    // All omitted session keys are removed atomically by the same restore installer.
+    return { format: "xian-emperor-full-save", version: DATA.version, migration: "core-only", stores };
   }
 
   function exportChronicleText() {
@@ -2314,6 +2421,10 @@
   function applyExternalPackage(pkg = {}) {
     if (window.__xianFullSaveImporting) return false;
     if (!state || state.ended) return { applied: false, changes: "" };
+    const receipt = pkg.receiptId || pkg.causalId;
+    if (receipt && state.appliedReceipts.includes(receipt)) return { applied: false, duplicate: true, changes: "" };
+    if (receipt) state.appliedReceipts.push(receipt);
+    operationDepth += 1;
     state.externalSequence += 1;
     const changes = applyPackage({ ...pkg, settlementSource: pkg.settlementSource || (settlementStage ? `${settlementStage} · ${pkg.report?.title || pkg.title || "朝局变化"}` : "其他变化（未归类）") });
     if (pkg.report?.title && pkg.report?.text) {
@@ -2321,8 +2432,6 @@
     }
     if (pkg.chronicle) addChronicle(formatReignDate(state.year, state.month), pkg.chronicle);
     checkImmediateEnding();
-    saveGame(true);
-    renderAll();
     if (pkg.causal !== false) {
       document.dispatchEvent(new CustomEvent("xian:external-package-applied", { detail: {
         id: pkg.causalId || `external-${state.createdAt}-${state.turn}-${state.externalSequence}`,
@@ -2335,6 +2444,9 @@
         createdAt: state.createdAt,
       } }));
     }
+    operationDepth -= 1;
+    saveGame(true);
+    renderAll();
     return { applied: true, changes };
   }
 
@@ -2350,8 +2462,7 @@
 
   function performExternalAction(pkg = {}) {
     if (!canAct()) return false;
-    completeAction(pkg);
-    return true;
+    return completeAction(pkg) === true;
   }
 
   function concludeExternalEnding(ending = {}) {
@@ -2373,6 +2484,9 @@
   }
 
   window.XianEmperorGame = Object.freeze({
+    commit,
+    getDeadline,
+    canAffordEffects,
     applyExternalPackage,
     performExternalAction,
     concludeExternalEnding,
@@ -2384,6 +2498,7 @@
     captureFullSave,
     downloadFullSave,
     restoreFullSave,
+    planLegacyImport,
     getPortableStorageKeys: () => [...PORTABLE_STORAGE_KEYS],
     openUtilityModal: openModal,
     closeUtilityModal: closeModal,

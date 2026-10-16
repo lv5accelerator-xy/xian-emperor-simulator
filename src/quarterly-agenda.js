@@ -60,6 +60,8 @@
   document.addEventListener("xian:battle-report", event => recordContribution(event.detail || {}, "battle"));
   document.addEventListener("xian:city-captured", event => recordContribution(event.detail || {}, "capture"));
   document.addEventListener("xian:month-ended", settleIfDue);
+  document.addEventListener("xian:campaign-concluded", archiveAtEnding);
+  document.addEventListener("xian:state-restored", () => { state = loadState(); sync(); });
 
   function init() {
     document.getElementById("quarterly-agenda-panel")?.addEventListener("click", handleClick);
@@ -106,13 +108,22 @@
   }
 
   function coreState() { return window.XianEmperorGame?.getState?.() || null; }
+  function deadline(core) {
+    return Number(window.XianEmperorGame?.getDeadline?.(core) || window.XianShortChallenges?.getActiveStatus?.(core)?.duration || core?.maxTurns || 0);
+  }
+  function hasFullQuarter(core) { return deadline(core) - Number(core?.turn || 1) + 1 >= 3; }
 
   function sync() {
     const core = coreState();
-    if (!core || core.ended) return render();
+    if (!core) return render();
     if (state.gameCreatedAt !== core.createdAt) {
       state = blankState();
       state.gameCreatedAt = core.createdAt;
+    }
+    if (core.ended) { archiveAtEnding({ detail: { state: core } }); return render(); }
+    if (!hasFullQuarter(core)) {
+      if (state.offers.length) { state.offers = []; saveState(); }
+      return render();
     }
     const signature = `${core.createdAt}-${core.turn}-${core.eventResolved}-${state.active?.id || "none"}-${state.cycle}`;
     if (!state.active && !state.offers.length && Number(core.turn || 1) >= Number(state.cooldownUntilTurn || 0)) {
@@ -125,6 +136,7 @@
   }
 
   function buildOffers(core) {
+    if (!core || core.ended || !hasFullQuarter(core)) return [];
     const causes = core.causality?.metrics || {};
     const values = {
       restore_treasury: 100 - Number(core.stats?.treasury || 0),
@@ -140,12 +152,12 @@
   function selectAgenda(id) {
     const core = coreState();
     const agenda = AGENDAS.find(item => item.id === id);
-    if (!core || core.ended || state.active || !state.offers.includes(id) || !agenda) return false;
+    if (!core || core.ended || !hasFullQuarter(core) || state.active || !state.offers.includes(id) || !agenda) return false;
     state.cycle += 1;
     state.active = {
       id,
       startTurn: core.turn,
-      endTurn: Math.min(core.maxTurns, core.turn + 2),
+      endTurn: Number(core.turn) + 2,
       baseline: readMetric(core, agenda.metric),
       secondaryBaseline: agenda.secondary ? readMetric(core, agenda.secondary) : null,
       peopleBaseline: readMetric(core, "peopleStability"),
@@ -205,7 +217,7 @@
     const core = coreState();
     const agenda = getActiveAgenda();
     if (!core || !agenda || !state.active || event.detail?.createdAt && event.detail.createdAt !== core.createdAt) return;
-    if (Number(core.turn || 0) < Number(state.active.endTurn || Infinity)) return;
+    if (core.ended || Number(core.turn || 0) < Number(state.active.endTurn || Infinity)) return;
     const progress = calculateProgress(core, agenda);
     const success = progress >= 100;
     const record = {
@@ -216,6 +228,8 @@
       progress: Math.round(progress),
       startTurn: state.active.startTurn,
       endTurn: core.turn,
+      scheduledEndTurn: state.active.endTurn,
+      endReason: "quarter-completed",
       result: success ? "三月施政有成，朝廷上下看见了连续政令的作用。" : "三月之期已尽，此事未能办成，并留下了需要继续承担的缺口。",
     };
     state.history.unshift(record);
@@ -235,6 +249,24 @@
       },
       chronicle: `三月御题“${agenda.title}”${success ? "告成" : "未竟"}。`,
     });
+  }
+
+  function archiveAtEnding(event) {
+    const core = event?.detail?.state || coreState();
+    const agenda = getActiveAgenda();
+    if (!core || state.gameCreatedAt !== core.createdAt) return;
+    if (agenda && state.active) {
+      const progress = Math.round(calculateProgress(core, agenda));
+      state.history.unshift({ cycle: state.cycle, agendaId: agenda.id, title: agenda.title,
+        success: progress >= 100, progress, startTurn: state.active.startTurn,
+        endTurn: core.turn, scheduledEndTurn: state.active.endTurn, endReason: "campaign-ended",
+        result: `本局于第 ${core.turn} 月结束（${core.ending?.title || "期限结束"}），归档实际成果 ${progress}%；未进行月份不追加奖惩。` });
+      state.history = state.history.slice(0, MAX_HISTORY);
+      state.active = null;
+      state.contribution = 0;
+      state.contributionLog = [];
+    }
+    if (agenda || state.offers.length) { state.offers = []; saveState(); }
   }
 
   function getActiveAgenda() { return AGENDAS.find(item => item.id === state.active?.id) || null; }
@@ -278,6 +310,12 @@
   }
 
   function renderOffers(root) {
+    const core = coreState();
+    if (core && !hasFullQuarter(core)) {
+      const short = window.XianShortChallenges?.getActiveStatus?.(core);
+      root.innerHTML = `<header class="quarterly-head"><div><span class="section-kicker">本局最终目标</span><h2>收束朝局，准备终局核验</h2><p>本局于第 ${deadline(core)} 月结束，尚余 ${Math.max(0, deadline(core) - Number(core.turn) + 1)} 月，不再另立三月御题。</p><p>${esc(short ? short.checks.map(check => check.label).join("；") : "保持朝廷存续，并按剧本终局条件核验实际国势。")}</p></div><div class="quarterly-seal" aria-hidden="true">终</div></header>${state.history.length ? `<button class="quarterly-history-button" type="button" data-quarterly-history>查看历季得失</button>` : ""}`;
+      return;
+    }
     const offers = state.offers.map(id => AGENDAS.find(item => item.id === id)).filter(Boolean);
     root.innerHTML = `
       <header class="quarterly-head"><div><span class="section-kicker">三月朝局 · 只择一事</span><h2>此季，陛下欲先办成何事？</h2><p>选择不会消耗行动。未来三个月的奏报、行动、人物与战事都会围绕此目标汇总。</p></div><div class="quarterly-seal" aria-hidden="true">策</div></header>

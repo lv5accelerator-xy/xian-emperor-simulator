@@ -36,6 +36,7 @@
       processedEventIds: [],
       metrics: {
         battles: 0,
+        courtBattles: 0,
         courtVictories: 0,
         courtDefeats: 0,
         citiesTaken: 0,
@@ -57,7 +58,7 @@
       version: 290,
       pending: Array.isArray(current.pending) ? current.pending.slice(0, MAX_PENDING) : [],
       history: Array.isArray(current.history) ? current.history.slice(0, MAX_HISTORY) : [],
-      processedEventIds: Array.isArray(current.processedEventIds) ? current.processedEventIds.slice(-MAX_PROCESSED) : [],
+      processedEventIds: Array.isArray(current.processedEventIds) ? current.processedEventIds : [],
       metrics: { ...base.metrics, ...(current.metrics || {}) },
     };
   }
@@ -75,13 +76,15 @@
   }
 
   function addHistory(next, item) {
+    next.historySequence = Number(next.historySequence || 0) + 1;
     next.history.unshift({
-      id: item.id || `cause-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: item.id || `cause-${item.turn || 1}-${next.historySequence}`,
       turn: Number(item.turn || 1),
       type: item.type || "decision",
       title: item.title || "朝局变化",
       text: item.text || "一项御前处置改变了后续局势。",
       tags: Array.isArray(item.tags) ? item.tags : [],
+      participants: item.participants || null,
       createdAt: new Date().toISOString(),
     });
     next.history = next.history.slice(0, MAX_HISTORY);
@@ -144,6 +147,7 @@
     const saved = commit(next => {
       if (!markProcessed(next, id)) return false;
       next.metrics.battles += 1;
+      if (courtInvolved) next.metrics.courtBattles += 1;
       next.metrics.lastBattleTurn = Number(report.turn || 0);
       if (courtWon) next.metrics.courtVictories += 1;
       if (courtLost) next.metrics.courtDefeats += 1;
@@ -152,10 +156,11 @@
         turn: report.turn,
         type: "battle",
         title: report.title || "前线交兵",
-        text: `${report.result || "战事未决"}，两军合计折损约${Math.round(losses).toLocaleString("zh-CN")}人；伤亡、军粮与抚恤将回到朝堂。`,
+        text: `${report.result || "战事未决"}，两军合计折损约${Math.round(losses).toLocaleString("zh-CN")}人；${courtInvolved ? "汉军费用与抚恤记入朝廷" : "诸侯战事由当地战场与地方回响记录"}。`,
         tags: ["war", "finance", "people"],
+        participants: [report.attackerOwner, report.defenderOwner],
       });
-      next.pending.unshift({
+      if (courtInvolved) next.pending.unshift({
         id: `war-debt-${id}`,
         kind: "war_debt",
         dueTurn: Number(report.turn || 0) + 1,
@@ -180,6 +185,7 @@
         type: courtLost ? "danger" : "military",
       },
       causal: false,
+      receiptId: `court-battle:${id}`,
     });
   }
 

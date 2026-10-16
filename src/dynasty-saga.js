@@ -38,7 +38,7 @@
       render: renderTab,
       onMount: mountTab,
     });
-    if (profile.active && profile.pendingScenarioId) setTimeout(applyPendingLegacy, 120);
+    if (profile.active && profile.pendingScenarioId) applyPendingLegacy();
   }
 
   function installLauncher() {
@@ -117,7 +117,7 @@
     }
     document.getElementById("difficulty-select").value = "standard";
     document.getElementById("new-game-btn")?.click();
-    setTimeout(applyPendingLegacy, 90);
+    applyPendingLegacy();
   }
 
   function applyPendingLegacy() {

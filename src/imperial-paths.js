@@ -121,7 +121,7 @@
       return dualProgress("御题与专属奏报", successes, 3, state.active.momentum, 2);
     }
     if (stage === 0) return alternativeProgress("胜利或新附", metrics.courtVictories, 1, metrics.citiesTaken, 1);
-    if (stage === 1) return alternativeProgress("新附或战历", metrics.citiesTaken, 1, metrics.battles, 3);
+    if (stage === 1) return alternativeProgress("新附或汉军战历", metrics.citiesTaken, 1, metrics.courtBattles || 0, 3);
     return dualProgress("胜绩与专属奏报", metrics.courtVictories, 2, state.active.momentum, 2);
   }
 

@@ -13,14 +13,26 @@
   document.addEventListener("xian:city-captured", event => recordEcho(buildEchoFromCapture(event.detail || {})));
   document.addEventListener("xian:before-month-end", advanceEchoes);
 
-  function blankState() { return { version: 1, gameCreatedAt: null, echoes: [], history: [], processed: [] }; }
-  function loadState() { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); return { ...blankState(), ...(value || {}), echoes: Array.isArray(value?.echoes) ? value.echoes : [], history: Array.isArray(value?.history) ? value.history : [], processed: Array.isArray(value?.processed) ? value.processed : [] }; } catch (_) { return blankState(); } }
+  function blankState() { return { version: 2, gameCreatedAt: null, echoes: [], history: [], processed: [], resolutionReceipts: {}, conclusionReceipts: {} }; }
+  function loadState() {
+    try {
+      const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      const next = { ...blankState(), ...(value || {}), version: 2, echoes: Array.isArray(value?.echoes) ? value.echoes : [], history: Array.isArray(value?.history) ? value.history : [], processed: Array.isArray(value?.processed) ? value.processed : [] };
+      next.resolutionReceipts = { ...(value?.resolutionReceipts || {}) }; next.conclusionReceipts = { ...(value?.conclusionReceipts || {}) };
+      [...next.echoes, ...next.history].forEach(item => {
+        if (item.choice || item.choiceLabel) next.resolutionReceipts[item.id] ||= { optionId: item.choice, migrated: true };
+        if (item.phase === "resolved" || item.resolvedTurn) next.conclusionReceipts[item.id] ||= { turn: item.resolvedTurn, migrated: true };
+      });
+      return next;
+    } catch (_) { return blankState(); }
+  }
   function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {} render(); }
   function coreState() { return window.XianEmperorGame?.getState?.() || null; }
   function strategyState() { return window.XianStrategyNetwork?.getState?.() || null; }
 
   function sync() {
     const core = coreState();
+    state = loadState();
     if (!core || core.ended) return render();
     if (state.gameCreatedAt !== core.createdAt) { state = blankState(); state.gameCreatedAt = core.createdAt; saveState(); return; }
     render();
@@ -46,7 +58,7 @@
   }
 
   function buildEchoFromCapture(capture) {
-    if (!capture?.cityId) return null;
+    if (!capture?.cityId || ![capture.previousOwner, capture.newOwner].includes("court")) return null;
     const taken = capture.newOwner === "court";
     return {
       id: `capture-${capture.id || `${capture.turn}-${capture.cityId}`}`,
@@ -66,9 +78,8 @@
 
   function recordEcho(echo) {
     const core = coreState();
-    if (!core || !echo || state.processed.includes(echo.sourceId || echo.id)) return false;
+    if (!core || core.ended || !echo || state.processed.includes(echo.sourceId || echo.id)) return false;
     state.processed.push(echo.sourceId || echo.id);
-    state.processed = state.processed.slice(-60);
     const existing = state.echoes.find(item => item.cityId === echo.cityId && item.phase !== "resolved");
     if (existing) {
       existing.severity = clamp(Math.max(existing.severity, echo.severity) + 8, 0, 100);
@@ -84,7 +95,7 @@
 
   function advanceEchoes(event) {
     const core = coreState();
-    if (!core || event.detail?.createdAt && event.detail.createdAt !== core.createdAt) return;
+    if (!core || core.ended || event.detail?.createdAt && event.detail.createdAt !== core.createdAt) return;
     let changed = false;
     state.echoes.forEach(echo => {
       if (echo.phase === "forming" && core.turn >= echo.dueTurn) {
@@ -120,11 +131,16 @@
   }
 
   function resolveEcho(echoOrId, optionId, automatic = false) {
+    const core = coreState();
+    if (!core || core.ended) return false;
     const echo = typeof echoOrId === "string" ? state.echoes.find(item => item.id === echoOrId) : echoOrId;
-    if (!echo || echo.phase !== "decision") return false;
+    if (!echo || echo.phase !== "decision" || state.resolutionReceipts[echo.id]) return false;
     let option = getResolutionOptions(echo).find(item => item.id === optionId);
     if (automatic) option = { id: "neglect", label: "因循未决", note: "地方自行承担代价。", core: { effects: { prestige: -1 }, hidden: { peopleStability: -2 } }, city: { courtLoyalty: -3, pressure: 5 } };
     if (!option) return false;
+    const budget = window.XianEmperorGame?.canAffordEffects?.(option.core?.effects);
+    if (!automatic && !budget?.ok) { showBudgetFailure(budget); return false; }
+    state.resolutionReceipts[echo.id] = { optionId: option.id, turn: core.turn, cost: budget?.cost || 0, automatic };
     echo.choice = option.id;
     echo.choiceLabel = option.label;
     echo.phase = "watch";
@@ -135,6 +151,7 @@
     window.XianQuarterlyAgenda?.addContribution?.(automatic ? 0 : 7, `处置${echo.cityName}地方余波`);
     window.XianEmperorGame?.applyExternalPackage?.({
       ...option.core, causal: false,
+      causalId: `regional-resolution-${echo.id}`,
       report: { title: `山河回响·${echo.cityName}`, text: automatic ? `${echo.cityName}的余波久未裁处，地方只能自行承担。` : `朝廷以“${option.label}”处置${echo.cityName}余波。两个月后将见分晓。`, type: automatic ? "danger" : "decision" },
       chronicle: `${echo.cityName}有余波，朝廷${automatic ? "久未裁处" : `命以“${option.label}”善后`}。`,
     });
@@ -142,18 +159,34 @@
   }
 
   function concludeEcho(echo) {
+    if (state.conclusionReceipts[echo.id]) return;
     const city = strategyState()?.cities?.[echo.cityId];
     const good = Number(city?.courtLoyalty || 50) >= 52 && Number(city?.pressure || 0) <= 58 && echo.choice !== "neglect";
     echo.phase = "resolved";
     echo.resolvedTurn = coreState()?.turn || echo.dueTurn;
+    state.conclusionReceipts[echo.id] = { turn: echo.resolvedTurn, good };
     echo.outcome = good ? "处置逐渐见效，地方开始把朝廷视作可依赖的秩序。" : "余波仍未完全平息，地方对朝廷的信任恢复缓慢。";
     state.history.unshift({ id: echo.id, cityName: echo.cityName, kind: echo.kind, choiceLabel: echo.choiceLabel || "因循未决", outcome: echo.outcome, resolvedTurn: echo.resolvedTurn });
     state.history = state.history.slice(0, 18);
+    saveState();
     window.XianEmperorGame?.applyExternalPackage?.({
       effects: good ? { prestige: 1 } : {}, hidden: good ? { peopleStability: 1 } : { peopleStability: -1 }, causal: false,
       report: { title: `地方后报·${echo.cityName}`, text: echo.outcome, type: good ? "decision" : "neutral" },
       chronicle: `${echo.cityName}善后有报：${echo.outcome}`,
     });
+  }
+
+  function previewResolution(echo, optionId) {
+    const option = getResolutionOptions(echo).find(item => item.id === optionId);
+    return option ? { ...option, budget: window.XianEmperorGame?.canAffordEffects?.(option.core?.effects) } : null;
+  }
+
+  function showBudgetFailure(budget) {
+    const slot = document.getElementById("regional-echo-slot");
+    if (!slot) return;
+    let notice = document.getElementById("regional-budget-notice");
+    if (!notice) { notice = document.createElement("p"); notice.id = "regional-budget-notice"; notice.setAttribute("role", "status"); slot.prepend(notice); }
+    notice.textContent = budget?.reason || "本局已结束，不能新增处分。";
   }
 
   function applyCity(cityId, patch, reason) {
@@ -177,5 +210,5 @@
   function getState() { return JSON.parse(JSON.stringify(state)); }
   function clamp(value, min, max) { return Math.min(max, Math.max(min, Number(value) || 0)); }
   function esc(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
-  window.XianRegionalEchoes = Object.freeze({ version: VERSION, buildEchoFromBattle, buildEchoFromCapture, getResolutionOptions, recordEcho, resolveEcho, getState });
+  window.XianRegionalEchoes = Object.freeze({ version: VERSION, buildEchoFromBattle, buildEchoFromCapture, getResolutionOptions, previewResolution, recordEcho, resolveEcho, syncFromCore: sync, getState });
 })();

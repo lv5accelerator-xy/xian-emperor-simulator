@@ -109,6 +109,7 @@
   }
 
   function queueSync() {
+    if (window.XianEmperorGame?.commit) return;
     if (syncQueued) return;
     syncQueued = true;
     const run = () => { syncQueued = false; syncFromCore(); };
@@ -211,8 +212,8 @@
     } catch (_) { return null; }
   }
 
-  function syncFromCore() {
-    const nextCore = readCore();
+  function syncFromCore(raw) {
+    const nextCore = typeof raw === "string" ? JSON.parse(raw) : readCore();
     if (!nextCore) {
       core = null;
       focus?.classList.add("hidden");
@@ -613,6 +614,7 @@
   }
 
   window.XianImperialProgress = Object.freeze({
+    syncFromCore,
     getPathEnding,
     getState: () => JSON.parse(JSON.stringify(progress)),
     sync: syncFromCore,

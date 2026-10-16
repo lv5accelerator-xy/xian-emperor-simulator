@@ -39,6 +39,7 @@
   }
 
   function queueSync(raw) {
+    if (window.XianEmperorGame?.commit) return;
     window.clearTimeout(syncTimer);
     syncTimer = window.setTimeout(() => syncFromCore(typeof raw === "string" ? raw : localStorage.getItem(CORE_KEY)), 360);
   }
@@ -136,7 +137,12 @@
     const loaded = safeParse(localStorage.getItem(STORE_KEY));
     state = !loaded || loaded.gameCreatedAt !== core.createdAt ? defaultState(core) : migrateState(loaded, core);
     processElapsedTurns();
-    evaluateStage();
+    // Complete a chain of already-met goals at this exact committed state.
+    for (let index = 0; index < stages().length; index += 1) {
+      const count = state.completedStages.length;
+      evaluateStage();
+      if (state.completedStages.length === count) break;
+    }
     state.updatedAt = new Date().toISOString();
     saveState();
     renderAll();
@@ -182,6 +188,7 @@
     window.__xianEvolutionRefreshOnly = true;
     try {
       window.XianEmperorGame?.applyExternalPackage?.({
+        receiptId: `stage:${core.createdAt}:${stage.id}`,
         ...(stage.reward || {}),
         report: { title: "战役阶段达成", text: `“${stage.title}”已经完成，朝廷获得小幅整备奖励。`, type: "important" },
         chronicle: `朝廷完成战役阶段“${stage.title}”。`,
@@ -423,6 +430,7 @@
   }
 
   window.XianCampaignEvolution = Object.freeze({
+    syncFromCore,
     version: VERSION,
     objectiveValue,
     objectiveComplete,

@@ -25,7 +25,7 @@
       saveMonthlyReport(report, before.createdAt || null);
       if (!after.ended) showMonthlyReport(report, { campaignEnded: false });
     });
-    document.addEventListener("xian:core-saved", () => setTimeout(() => ensureCurrentMonthSnapshot(), 0));
+    document.addEventListener("xian:commit-completed", () => ensureCurrentMonthSnapshot());
     document.getElementById("ending-audit-btn")?.addEventListener("click", () => {
       const settlement = window.XianEmperorGame.getState()?.lastSettlement;
       if (!settlement) return showAddonToast("本存档尚无结算对账记录。", "warning");
@@ -87,7 +87,7 @@
     }
   }
 
-  function writeMonthSnapshot(state) {
+  function writeMonthSnapshot(state, phase = "restored") {
     if (!state) return;
     const snapshot = {
       gameCreatedAt: state.createdAt || null,
@@ -97,6 +97,8 @@
       date: formatReignDate(state.year, state.month),
       stats: { ...state.stats },
       hidden: { ...state.hidden },
+      partial: phase !== "month-start" && (Boolean(state.eventResolved) || Number(state.actionPoints) < 2 || Number(state.monthlySettledTurn) >= Number(state.turn)),
+      capturedPhase: phase,
       capturedAt: new Date().toISOString(),
     };
     try {
@@ -106,7 +108,7 @@
     }
   }
 
-  function ensureCurrentMonthSnapshot(force = false) {
+  function ensureCurrentMonthSnapshot(phase = "restored") {
     const state = readGameState();
     if (!state || state.ended) return;
     const snapshot = readMonthSnapshot();
@@ -117,7 +119,7 @@
       snapshot.year === state.year &&
       snapshot.month === state.month;
 
-    if (force || !matches) writeMonthSnapshot(state);
+    if (!matches) writeMonthSnapshot(state, typeof phase === "string" ? phase : "restored");
   }
 
   function installArchiveButton() {
@@ -139,19 +141,11 @@
     const resetForNewGame = () => {
       localStorage.removeItem(REPORT_STORE_KEY);
       localStorage.removeItem(SNAPSHOT_STORE_KEY);
-      setTimeout(() => ensureCurrentMonthSnapshot(true), 0);
+      ensureCurrentMonthSnapshot("month-start");
     };
 
-    document.getElementById("new-game-btn")?.addEventListener("click", resetForNewGame);
-    document.getElementById("continue-game-btn")?.addEventListener("click", () => {
-      setTimeout(() => ensureCurrentMonthSnapshot(false), 0);
-    });
-    document.getElementById("load-btn")?.addEventListener("click", () => {
-      setTimeout(() => ensureCurrentMonthSnapshot(true), 0);
-    });
-    document.getElementById("import-file")?.addEventListener("change", () => {
-      setTimeout(() => ensureCurrentMonthSnapshot(true), 80);
-    });
+    document.addEventListener("xian:new-game-committed", resetForNewGame);
+    document.addEventListener("xian:state-restored", () => ensureCurrentMonthSnapshot("restored"));
   }
 
   function getMonthStartSnapshot(before) {
@@ -163,7 +157,7 @@
       snapshot.year === before.year &&
       snapshot.month === before.month;
 
-    if (matches) return { ...snapshot, partial: false };
+    if (matches) return { ...snapshot, partial: Boolean(snapshot.partial) };
 
     return {
       gameCreatedAt: before.createdAt || null,

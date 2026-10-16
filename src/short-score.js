@@ -8,7 +8,7 @@
   const unknown = "旧成绩未记录评分构成，或记录与总分不一致；保留原总分，不推算缺失数值。";
 
   function build(result, core) {
-    if (result?.rulesVersion !== 216 || !Number.isFinite(result.score) || !Number.isInteger(result.completed)
+    if (![216, 224].includes(result?.rulesVersion) || !Number.isFinite(result.score) || !Number.isInteger(result.completed)
       || !Number.isInteger(result.total) || result.total < 0 || result.completed < 0 || result.completed > result.total
       || !Number.isFinite(core?.stats?.prestige) || !Number.isFinite(core?.stats?.authority)) return null;
     const inputs = { completed: result.completed, total: result.total, prestige: core.stats.prestige, authority: core.stats.authority };
@@ -17,7 +17,7 @@
     const components = result.endedEarly ? { goals: 0, prestige: 0, authority: 0, rounding: 0 }
       : { goals: round(rawGoals), prestige: round(inputs.prestige * 2), authority: round(inputs.authority) };
     components.rounding = round(result.score - components.goals - components.prestige - components.authority);
-    return { version: 1, rulesVersion: 216, endedEarly: Boolean(result.endedEarly), inputs, components, total: result.score };
+    return { version: 1, rulesVersion: result.rulesVersion, endedEarly: Boolean(result.endedEarly), inputs, components, total: result.score };
   }
 
   function read(result) {

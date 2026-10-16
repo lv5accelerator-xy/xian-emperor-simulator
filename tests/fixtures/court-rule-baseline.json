@@ -1,0 +1,11 @@
+{
+  "baseCommit": "bd8ff28c24a44d9a1f9bc9bdf098f52011621ce2",
+  "command": "node tests/court-rule-consistency-regression.js",
+  "exitCode": 1,
+  "results": [
+    { "id": "A3", "handler": "XianCourtPolitics.resolvePetition then persisted reload", "expected": "0 pending after same-month reload", "actual": "1 pending" },
+    { "id": "A5", "handler": "XianCourtPolitics.resolvePetition(fu_guard, accept)", "expected": "false at treasury 0", "actual": "true" },
+    { "id": "A6-world", "handler": "xian:battle-report, three pure warlord battles", "expected": "0 war_debt", "actual": "3 war_debt" },
+    { "id": "A6-court", "handler": "xian:battle-report, court battle", "expected": "courtBattles 1", "actual": "undefined" }
+  ]
+}

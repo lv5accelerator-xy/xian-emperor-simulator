@@ -48,6 +48,7 @@
         window.__xianArmyRefreshOnly ||
         window.__xianStrategyRefreshOnly
       ) return;
+      if (window.XianEmperorGame?.commit) return;
       window.clearTimeout(processTimer);
       processTimer = window.setTimeout(() => processCoreSave(value), 240);
     };
@@ -619,17 +620,36 @@
 
     byCity.forEach((armies, cityId) => {
       const pair = findHostilePair(armies, cityId);
-      if (!pair) return;
-      const [attacker, defender] = pair;
-      resolveBattle(attacker, defender, cityId, turn, core, rng);
+      if (pair) {
+        const [attacker, defender] = pair;
+        resolveBattle(attacker, defender, cityId, turn, core, rng);
+      }
+      // A city can have walls and a local garrison without a field army.
+      // Re-read control after the field battle: the previous defender may have
+      // retreated, dissolved, or lost the city to a third party while we marched.
+      armies.filter(army => army.task === "attack" && army.targetCityId === cityId && army.status !== "destroyed" && army.status !== "routing")
+        .sort((a, b) => armyReadiness(b) - armyReadiness(a)).forEach(attacker => {
+          const enemy = armies.some(other => other.id !== attacker.id && other.troops >= 500 && !["destroyed", "routing", "marching"].includes(other.status) && areHostile(attacker.owner, other.owner));
+          if (enemy) return;
+          const city = readStrategyState()?.cities?.[cityId];
+          if (!city) return;
+          if (!areHostile(attacker.owner, city.controller)) {
+            attacker.task = "defend";
+            attacker.status = "defending";
+            attacker.lastChange = `抵达友方${cityName(cityId)}，转入驻防`;
+            return;
+          }
+          const siege = beginSiege(attacker, null, cityId, turn, null);
+          if (siege && Number(city.defense || 0) <= 0) captureCity(siege, attacker, turn, "城防失效，守军接受接管");
+        });
     });
   }
 
   function findHostilePair(armies, cityId) {
-    const attackers = armies.filter(army => army.task === "attack" && army.targetCityId === cityId);
+    const attackers = armies.filter(army => army.task === "attack" && army.targetCityId === cityId && !["marching", "routing"].includes(army.status));
     for (const attacker of attackers.sort((a, b) => armyReadiness(b) - armyReadiness(a))) {
       const defender = armies
-        .filter(army => army.owner !== attacker.owner && areHostile(attacker.owner, army.owner))
+        .filter(army => !["marching", "routing"].includes(army.status) && army.owner !== attacker.owner && areHostile(attacker.owner, army.owner))
         .sort((a, b) => armyReadiness(b) - armyReadiness(a))[0];
       if (defender) return [attacker, defender];
     }
@@ -691,7 +711,7 @@
     checkDestroyed(attacker, turn);
     checkDestroyed(defender, turn);
     const report = {
-      id: `battle-${turn}-${cityId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: `battle-${turn}-${cityId}-${attacker.id}-${defender.id}`,
       turn,
       date: formatTurnDate(core, turn),
       cityId,
@@ -725,7 +745,7 @@
   function beginSiege(attacker, defender, cityId, turn, report) {
     const strategy = readStrategyState();
     const city = strategy?.cities?.[cityId];
-    if (!city || city.controller === attacker.owner) {
+    if (!city || !areHostile(city.controller, attacker.owner)) {
       attacker.status = "defending";
       attacker.task = "defend";
       return null;
@@ -735,10 +755,12 @@
       existing.attackerArmyId = attacker.id;
       existing.attackerOwner = attacker.owner;
       existing.lastChange = `${armyName(attacker)}接替围城阵地`;
+      attacker.status = "besieging";
+      attacker.task = "siege";
       return existing;
     }
     const siege = {
-      id: `siege-${cityId}-${turn}-${Date.now()}`,
+      id: `siege-${cityId}-${turn}-${attacker.id}`,
       cityId,
       attackerArmyId: attacker.id,
       attackerOwner: attacker.owner,
@@ -752,13 +774,13 @@
       startedTurn: turn,
       lastResolvedTurn: turn,
       status: "active",
-      lastChange: "野战得胜，进攻军开始围城",
+      lastChange: report ? "野战得胜，进攻军开始围城" : "城外没有敌对野战军，开始围攻城防与当地守军",
     };
     state.sieges[cityId] = siege;
     attacker.status = "besieging";
     attacker.task = "siege";
     attacker.targetCityId = cityId;
-    report.siegeId = siege.id;
+    if (report) report.siegeId = siege.id;
     addLog(turn, "siege", `${armyName(attacker)}包围${cityName(cityId)}，城内尚有守军与粮秣。`);
     return siege;
   }
@@ -774,6 +796,19 @@
         siege.lastChange = "围城军已经撤离，城围解除";
         addLog(turn, "retreat", `${cityName(siege.cityId)}之围已经解除。`);
         return;
+      }
+      if (!areHostile(army.owner, city.controller)) {
+        siege.status = "lifted";
+        siege.lastChange = "目标已归友方，围城军转入驻防";
+        army.task = "defend";
+        army.status = "defending";
+        return;
+      }
+      if (siege.defenderOwner !== city.controller) {
+        siege.defenderOwner = city.controller;
+        siege.walls = Number(city.defense || 0);
+        siege.citySupply = Number(city.supply || 0);
+        siege.lastChange = "目标控制者改变，按现有城防继续围城";
       }
       const outcome = calculateSiegeTurn(siege, army, city, core, rng());
       siege.progress = clamp(siege.progress + outcome.progress, 0, 100);
@@ -849,6 +884,7 @@
   }
 
   function captureCity(siege, army, turn, reason) {
+    if (siege.status === "captured" || state.conquests.some(item => item.id === `conquest-${siege.id}`)) return;
     const strategy = readStrategyState();
     const city = strategy?.cities?.[siege.cityId];
     if (!city) return;
@@ -888,6 +924,7 @@
   }
 
   function setSiegeStance(cityId, stance) {
+    if ((window.XianEmperorGame?.getState?.() || coreState)?.ended) return false;
     const siege = state?.sieges?.[cityId];
     if (!siege || siege.status !== "active" || !["assault", "blockade", "persuade"].includes(stance)) return false;
     siege.stance = stance;
@@ -974,14 +1011,25 @@
         text: captive ? `尝试以汉室名分招纳${captive.name}，预计成功率 ${recruitChance}%。` : "收编降官与守军骨干，为朝廷补充可用之人。",
       },
     };
-    return choices[decision] || null;
+    const result = choices[decision] || null;
+    if (result) result.treasuryCost = Math.max(0, -Number(result.effects?.treasury || 0));
+    return result;
   }
 
   function resolvePostwarJudgment(judgmentId, decision) {
     const judgment = state?.pendingJudgments?.find(item => item.id === judgmentId && item.status === "pending");
     if (!judgment) return false;
-    const result = getJudgmentDecision(decision, judgment, coreState);
+    const currentCore = window.XianEmperorGame?.getState?.() || coreState;
+    if (currentCore?.ended || !window.XianEmperorGame?.applyExternalPackage) return false;
+    const result = getJudgmentDecision(decision, judgment, currentCore);
     if (!result) return false;
+    const budget = window.XianEmperorGame?.canAffordEffects?.(result.effects) || { ok: Number(currentCore?.stats?.treasury || 0) >= Math.max(0, -Number(result.effects?.treasury || 0)), shortfall: Math.max(0, -Number(result.effects?.treasury || 0) - Number(currentCore?.stats?.treasury || 0)) };
+    if (!budget.ok) {
+      window.XianEmperorGame?.toast?.(budget.reason || `国库不足，尚缺${budget.shortfall}。`);
+      const content = document.getElementById("army-system-content");
+      if (content) { let warning = content.querySelector("[data-army-budget-warning]"); if (!warning) { warning = document.createElement("p"); warning.dataset.armyBudgetWarning = "true"; content.prepend(warning); } warning.textContent = budget.reason || `国库不足，尚缺${budget.shortfall}。待决事项已保留。`; }
+      return false;
+    }
     const strategy = readStrategyState();
     const city = strategy?.cities?.[judgment.cityId];
     if (!city) return false;
@@ -1364,7 +1412,7 @@
   function renderJudgmentCard(judgment) {
     const captive = state.captives.find(item => item.id === judgment.captiveId);
     const recruit = getJudgmentDecision("recruit", judgment, coreState);
-    return `<article class="judgment-card"><div class="judgment-card-head"><div><span>第 ${judgment.turn} 月克城</span><strong>${escapeHtml(cityName(judgment.cityId))}</strong><small>${escapeHtml(ownerName(judgment.previousOwner))} → ${escapeHtml(ownerName(judgment.newOwner))}</small></div><b>${captive ? `俘将 ${escapeHtml(captive.name)}` : "守军请降"}</b></div><p>城池已经易手，但由谁治理、如何安民以及怎样处置降将，将决定皇权与诸侯关系。</p><div class="judgment-actions"><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="pacify"><strong>赦降安民</strong><span>威望与民稳上升</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="appoint"><strong>汉官接掌</strong><span>皇权上升 · 曹氏警戒</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="reward"><strong>论功行赏</strong><span>功臣保有城池</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="recruit"><strong>纳降任用</strong><span>${captive ? `归降机会 ${recruit.recruitChance}%` : "收编降官"}</span></button></div></article>`;
+    return `<article class="judgment-card"><div class="judgment-card-head"><div><span>第 ${judgment.turn} 月克城</span><strong>${escapeHtml(cityName(judgment.cityId))}</strong><small>${escapeHtml(ownerName(judgment.previousOwner))} → ${escapeHtml(ownerName(judgment.newOwner))}</small></div><b>${captive ? `俘将 ${escapeHtml(captive.name)}` : "守军请降"}</b></div><p>城池已经易手，但由谁治理、如何安民以及怎样处置降将，将决定皇权与诸侯关系。</p><div class="judgment-actions"><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="pacify"><strong>赦降安民</strong><span>威望与民稳上升</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="appoint"><strong>汉官接掌</strong><span>国库−6 · 皇权上升 · 曹氏警戒</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="reward"><strong>论功行赏</strong><span>国库−5 · 功臣保有城池</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="recruit"><strong>纳降任用</strong><span>${captive ? `归降机会 ${recruit.recruitChance}%` : "收编降官"}</span></button></div></article>`;
   }
 
   function renderSiegeCard(siege) {
@@ -1402,6 +1450,7 @@
   }
 
   window.XianArmySystem = Object.freeze({
+    syncFromCore: raw => processCoreSave(raw ?? localStorage.getItem(CORE_KEY)),
     settleMonth: () => {
       processCoreSave(localStorage.getItem(CORE_KEY));
       if (state && coreState && state.lastProcessedTurn <= Number(coreState.monthlySettledTurn || 0)) processCoreSave(localStorage.getItem(CORE_KEY));

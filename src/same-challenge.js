@@ -16,11 +16,11 @@
     const code = String(definition?.code || "").trim().toUpperCase();
     if (!/^XIAN-\d{4}W\d{2}-[0-9A-Z]{5}$/.test(code) || !Number.isInteger(core?.random?.seed)) return null;
     if (window.XianWeeklyChallenge?.parseCode && !window.XianWeeklyChallenge.parseCode(code)) return null;
-    const start = { code, seed: core.random.seed, rulesVersion: 216, algorithm: core.random.algorithm,
+    const start = { code, seed: core.random.seed, rulesVersion: core.rulesVersion || 216, algorithm: core.random.algorithm,
       definition: { scenarioId: definition.scenarioId, duration: definition.duration, difficulty: definition.difficulty || "standard",
         sequence: definition.sequence, setup: definition.setup || {}, goals: (definition.goals || []).map(({ path, min, max }) => ({ path, min, max })) },
       opening: { stats: core.stats, hidden: core.hidden, relations: core.relations, randomDraws: core.random.draws } };
-    return { code, seed: start.seed, rulesVersion: 216, key: JSON.stringify(canonical(start)) };
+    return { code, seed: start.seed, rulesVersion: start.rulesVersion, key: JSON.stringify(canonical(start)) };
   }
 
   function eligible(result) {

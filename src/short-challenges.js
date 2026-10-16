@@ -57,6 +57,9 @@
 
   document.addEventListener("DOMContentLoaded", init, { once: true });
   document.addEventListener("xian:core-saved", () => trackProgress());
+  document.addEventListener("xian:new-game-committed", event => {
+    if (store.active?.gameCreatedAt && store.active.gameCreatedAt !== event.detail.createdAt) { store.active = null; saveStore(); }
+  });
   document.addEventListener("xian:game-entered", () => {
     const core = window.XianEmperorGame?.getState?.();
     if (core?.ended) recordResult({ state: core });
@@ -89,16 +92,16 @@
     const current = window.XianEmperorGame?.getState?.();
     if (current && !current.ended && typeof window.confirm === "function" && !window.confirm("开始短局会覆盖当前单局存档，完整导出后仍可恢复。确定继续吗？")) return false;
     if (window.XianSaveBackups?.prepareReplacement?.("开始新短局前") === false) return false;
+    const previousStore = JSON.parse(JSON.stringify(store));
     store.active = { kind: "curated", challengeId: definition.id, gameCreatedAt: null, startedAt: new Date().toISOString(), pendingGrade: null };
     saveStore();
     syncStartSelectors(definition);
-    window.XianEmperorGame?.startNewGame?.("standard", definition.scenarioId);
+    if (window.XianEmperorGame?.startNewGame?.("standard", definition.scenarioId, { deadline: definition.duration, setup: definition.setup }) === false) { store = previousStore; saveStore(); return false; }
     const core = window.XianEmperorGame?.getState?.();
     if (!core) { store.active = null; saveStore(); return false; }
     store.active.gameCreatedAt = core.createdAt;
     saveStore();
     window.XianEmperorGame?.applyExternalPackage?.({
-      ...definition.setup,
       report: { title: `短局·${definition.name}`, text: `${definition.intro}本局持续 ${definition.duration} 个月。`, type: "important" },
       chronicle: `天子进入短局挑战“${definition.name}”。`,
     });
@@ -113,17 +116,17 @@
     const current = window.XianEmperorGame?.getState?.();
     if (current && !current.ended && typeof window.confirm === "function" && !window.confirm("开始同题挑战会覆盖当前单局存档，确定继续吗？")) return false;
     if (window.XianSaveBackups?.prepareReplacement?.("开始同题挑战前") === false) return false;
+    const previousStore = JSON.parse(JSON.stringify(store));
     store.customDefinitions[custom.id] = custom;
     store.active = { kind: custom.kind, challengeId: custom.id, gameCreatedAt: null, startedAt: new Date().toISOString(), pendingGrade: null };
     saveStore();
     syncStartSelectors(custom);
-    window.XianEmperorGame?.startNewGame?.(custom.difficulty || "standard", custom.scenarioId, { randomSeed: custom.randomSeed });
+    if (window.XianEmperorGame?.startNewGame?.(custom.difficulty || "standard", custom.scenarioId, { randomSeed: custom.randomSeed, deadline: custom.duration, setup: custom.setup }) === false) { store = previousStore; saveStore(); return false; }
     const core = window.XianEmperorGame?.getState?.();
     if (!core) return false;
     store.active.gameCreatedAt = core.createdAt;
     saveStore();
     window.XianEmperorGame?.applyExternalPackage?.({
-      ...(custom.setup || {}),
       report: { title: custom.name, text: custom.intro || "所有玩家面对相同事件顺序。", type: "important" },
       chronicle: `天子进入挑战“${custom.name}”。`,
     });
@@ -138,6 +141,7 @@
     store.active.reviewLog = window.XianShortReview.createLog(core, true);
     store.active.comparisonIdentity = window.XianSameChallenge?.identity(activeDefinition(), core) || null;
     saveStore();
+    window.XianEmperorGame?.commit?.("challenge-ready");
   }
 
   function trackProgress(settled = false) {
@@ -166,7 +170,7 @@
     if (!core || core.ended || !definition || core.createdAt !== store.active.gameCreatedAt || Number(core.turn) < Number(definition.duration)) return;
     finishing = true;
     const grade = evaluateChallenge(definition, core);
-    grade.scoreBreakdown = window.XianShortScore?.build({ ...grade, rulesVersion: 216, endedEarly: false }, core) || null;
+    grade.scoreBreakdown = window.XianShortScore?.build({ ...grade, rulesVersion: core.rulesVersion || 216, endedEarly: false }, core) || null;
     store.active.pendingGrade = grade;
     saveStore();
     window.XianEmperorGame?.concludeExternalEnding?.({
@@ -196,7 +200,8 @@
       endedEarly,
       finalTurn: detail.state.turn,
       endingTitle: detail.state.ending?.title || "",
-      rulesVersion: 216,
+      rulesVersion: detail.state.rulesVersion || 216,
+      ruleMigration: detail.state.ruleMigration || null,
       randomSeed: detail.state.random?.seed ?? null,
       comparisonIdentity: store.active.comparisonIdentity || null,
       reward: definition.reward || "无名史签",
