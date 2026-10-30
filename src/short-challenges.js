@@ -280,7 +280,7 @@
     root.querySelectorAll("[data-short-start]").forEach(button => button.addEventListener("click", () => start(button.dataset.shortStart)));
   }
 
-  function getResultForGame(createdAt) { return store.results.find(result => result.gameCreatedAt === createdAt) || null; }
+  function getResultForGame(createdAt) { return store.results.find(result => result.gameCreatedAt === createdAt && !result.archivedByCoreImport) || null; }
 
   function getReview(result, core = {}) {
     return result?.review || window.XianShortReview?.build(result, challengeById(result.challengeId) || store.customDefinitions[result.challengeId], core);

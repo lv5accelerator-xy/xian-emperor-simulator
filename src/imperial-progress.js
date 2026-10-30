@@ -227,7 +227,7 @@
       progress.session = defaultSession(core.createdAt);
       progress.session.lastSeenTurn = Number(core.turn || 1);
       progress.session.turnActionBaseline = Number(core.totalActions || 0);
-      progress.profile.totalRuns = Number(progress.profile.totalRuns || 0) + 1;
+      if (core.importMigration?.source !== "core-only") progress.profile.totalRuns = Number(progress.profile.totalRuns || 0) + 1;
       changed = true;
       if (!progress.profile.tutorialSeen) setTimeout(() => openTutorial(0), 420);
     }
@@ -320,6 +320,7 @@
     if (!applied) return;
     progress.session.lastUsedTurns[action.id] = Number(core.turn || 0);
     saveProgress();
+    window.XianEmperorGame?.commit?.("path-action");
     showToast(`已施行：${action.name}`, "success");
     queueSync();
   }
@@ -327,7 +328,7 @@
   function ensurePendingArc() {
     if (!core || core.ended || progress.session.pendingArc || !progress.session.pathId) return false;
     if (Number(progress.session.lastArcTurn || 0) === Number(core.turn || 0)) return false;
-    const fraction = Number(core.turn || 1) / Math.max(1, Number(core.maxTurns || 24));
+    const fraction = Number(core.turn || 1) / Math.max(1, Number(window.XianEmperorGame?.getDeadline?.(core) || core.maxTurns || 24));
     const candidates = orderedArcsForPath(progress.session.pathId).filter(arc => {
       const arcState = arcStateFor(arc.id);
       return arcState.stage < arc.chapters.length && fraction >= ARC_THRESHOLDS[arcState.stage];
@@ -360,7 +361,7 @@
     overlay.innerHTML = `
       <section class="imperial-dialog arc-dialog" role="dialog" aria-modal="true" aria-labelledby="arc-dialog-title">
         <header><div><span class="imperial-kicker">人物事件 · ${escapeHtml(arc.title)}</span><h2 id="arc-dialog-title">${escapeHtml(chapter.title)}</h2></div><button type="button" data-imperial-close aria-label="关闭">×</button></header>
-        <div class="imperial-dialog-body"><div class="arc-intro"><span>${escapeHtml(arc.portrait)}</span><div><strong>${escapeHtml(arc.name)}</strong><p>${escapeHtml(chapter.text)}</p></div></div><div class="arc-choices">${chapter.choices.map((choice, index) => `<button type="button" data-arc-choice="${index}"><strong>${escapeHtml(choice.label)}</strong><span>${escapeHtml(choice.hint)}</span></button>`).join("")}</div></div>
+        <div class="imperial-dialog-body"><div class="arc-intro"><span>${escapeHtml(arc.portrait)}</span><div><strong>${escapeHtml(arc.name)}</strong><p>${escapeHtml(chapter.text)}</p></div></div><div class="arc-choices">${chapter.choices.map((choice, index) => { const budget = actionBudget(choice.effects); return `<button type="button" data-arc-choice="${index}" ${budget.ok ? "" : "disabled"}><strong>${escapeHtml(choice.label)}</strong><span>${escapeHtml(choice.hint)}${budget.cost ? ` 国库用度 ${budget.cost}。` : ""}${budget.ok ? "" : escapeHtml(budget.reason)}</span></button>`; }).join("")}</div></div>
       </section>`;
     overlay.classList.remove("hidden");
     document.body.classList.add("imperial-overlay-open");
@@ -372,6 +373,8 @@
     const chapter = arc?.chapters?.[pending?.chapterIndex];
     const choice = chapter?.choices?.[choiceIndex];
     if (!arc || !chapter || !choice || !core || core.ended) return;
+    const budget = actionBudget(choice.effects);
+    if (!budget.ok) { showToast(budget.reason, "warning"); return; }
     const arcState = arcStateFor(arc.id);
     arcState.stage += 1;
     arcState.affinity = Number(arcState.affinity || 0) + Number(choice.affinity || 0);
@@ -471,8 +474,17 @@
   function renderPathAction(action) {
     const lastTurn = Number(progress.session.lastUsedTurns?.[action.id] || -99);
     const remaining = Math.max(0, action.cooldown - (Number(core.turn || 0) - lastTurn));
-    const disabled = remaining > 0 || !core.eventResolved || core.actionPoints <= 0;
-    return `<button type="button" data-path-action="${action.id}" ${disabled ? "disabled" : ""}><strong>${escapeHtml(action.name)}</strong><small>${remaining ? `整备还需 ${remaining} 月` : escapeHtml(action.description)}</small></button>`;
+    const budget = actionBudget(action.effects);
+    const disabled = remaining > 0 || !core.eventResolved || core.actionPoints <= 0 || !budget.ok;
+    return `<button type="button" data-path-action="${action.id}" ${disabled ? "disabled" : ""}><strong>${escapeHtml(action.name)}</strong><small>${remaining ? `整备还需 ${remaining} 月` : escapeHtml(action.description)}${budget.cost ? ` 国库用度 ${budget.cost}。` : ""}${budget.ok ? "" : escapeHtml(budget.reason)}</small></button>`;
+  }
+
+  function actionBudget(effects = {}) {
+    const current = window.XianEmperorGame?.getState?.() || core;
+    const cost = Math.max(0, -Number(effects?.treasury || 0));
+    const shortfall = Math.max(0, cost - Number(current?.stats?.treasury || 0));
+    return window.XianEmperorGame?.canAffordEffects?.(effects || {}) || { cost, shortfall, ok: Boolean(current && !current.ended && !shortfall),
+      reason: current?.ended ? "本局已结束，不能新增处分。" : `国库不足，尚缺 ${shortfall}。` };
   }
 
   function openArchive(tab = "path") {

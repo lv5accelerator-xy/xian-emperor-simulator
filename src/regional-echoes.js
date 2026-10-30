@@ -97,7 +97,11 @@
     const core = coreState();
     if (!core || core.ended || event.detail?.createdAt && event.detail.createdAt !== core.createdAt) return;
     let changed = false;
-    state.echoes.forEach(echo => {
+    // Each package can synchronously reload this module through the core commit.
+    // Resolve ids against the current state instead of retaining an earlier array.
+    state.echoes.map(echo => echo.id).forEach(id => {
+      const echo = state.echoes.find(item => item.id === id);
+      if (!echo) return;
       if (echo.phase === "forming" && core.turn >= echo.dueTurn) {
         echo.phase = "decision";
         echo.dueTurn = core.turn + 1;
@@ -133,7 +137,8 @@
   function resolveEcho(echoOrId, optionId, automatic = false) {
     const core = coreState();
     if (!core || core.ended) return false;
-    const echo = typeof echoOrId === "string" ? state.echoes.find(item => item.id === echoOrId) : echoOrId;
+    const echoId = typeof echoOrId === "string" ? echoOrId : echoOrId?.id;
+    const echo = state.echoes.find(item => item.id === echoId);
     if (!echo || echo.phase !== "decision" || state.resolutionReceipts[echo.id]) return false;
     let option = getResolutionOptions(echo).find(item => item.id === optionId);
     if (automatic) option = { id: "neglect", label: "因循未决", note: "地方自行承担代价。", core: { effects: { prestige: -1 }, hidden: { peopleStability: -2 } }, city: { courtLoyalty: -3, pressure: 5 } };
@@ -152,6 +157,7 @@
     window.XianEmperorGame?.applyExternalPackage?.({
       ...option.core, causal: false,
       causalId: `regional-resolution-${echo.id}`,
+      receiptId: `regional-resolution:${echo.id}`,
       report: { title: `山河回响·${echo.cityName}`, text: automatic ? `${echo.cityName}的余波久未裁处，地方只能自行承担。` : `朝廷以“${option.label}”处置${echo.cityName}余波。两个月后将见分晓。`, type: automatic ? "danger" : "decision" },
       chronicle: `${echo.cityName}有余波，朝廷${automatic ? "久未裁处" : `命以“${option.label}”善后`}。`,
     });
@@ -171,6 +177,7 @@
     saveState();
     window.XianEmperorGame?.applyExternalPackage?.({
       effects: good ? { prestige: 1 } : {}, hidden: good ? { peopleStability: 1 } : { peopleStability: -1 }, causal: false,
+      receiptId: `regional-conclusion:${echo.id}`,
       report: { title: `地方后报·${echo.cityName}`, text: echo.outcome, type: good ? "decision" : "neutral" },
       chronicle: `${echo.cityName}善后有报：${echo.outcome}`,
     });
@@ -179,6 +186,12 @@
   function previewResolution(echo, optionId) {
     const option = getResolutionOptions(echo).find(item => item.id === optionId);
     return option ? { ...option, budget: window.XianEmperorGame?.canAffordEffects?.(option.core?.effects) } : null;
+  }
+
+  function renderOption(echo, option) {
+    const preview = previewResolution(echo, option.id);
+    const reason = preview?.budget?.ok === false ? ` ${preview.budget.reason}` : "";
+    return `<button type="button" data-echo-id="${esc(echo.id)}" data-echo-option="${option.id}"><strong>${esc(option.label)}</strong><small>${esc(option.note + reason)}</small></button>`;
   }
 
   function showBudgetFailure(budget) {
@@ -202,7 +215,7 @@
     const echo = active[0];
     const options = echo.phase === "decision" ? getResolutionOptions(echo) : [];
     const status = echo.phase === "forming" ? `第 ${echo.dueTurn} 月送达御前` : echo.phase === "watch" ? `已处置 · 第 ${echo.dueTurn} 月见后报` : "本月须作处置";
-    slot.innerHTML = `<section class="regional-echo ${echo.phase}"><header><div><span>山河回响 · ${esc(echo.cityName)}</span><strong>${esc(echo.title)}</strong></div><small>${status}${active.length > 1 ? ` · 另有 ${active.length - 1} 项` : ""}</small></header><p>${esc(echo.text)}</p>${options.length ? `<div>${options.map(option => `<button type="button" data-echo-id="${esc(echo.id)}" data-echo-option="${option.id}"><strong>${option.label}</strong><small>${option.note}</small></button>`).join("")}</div>` : ""}</section>`;
+    slot.innerHTML = `<section class="regional-echo ${echo.phase}"><header><div><span>山河回响 · ${esc(echo.cityName)}</span><strong>${esc(echo.title)}</strong></div><small>${status}${active.length > 1 ? ` · 另有 ${active.length - 1} 项` : ""}</small></header><p>${esc(echo.text)}</p>${options.length ? `<div>${options.map(option => renderOption(echo, option)).join("")}</div>` : ""}</section>`;
     slot.querySelectorAll("[data-echo-option]").forEach(button => button.addEventListener("click", () => resolveEcho(button.dataset.echoId, button.dataset.echoOption)));
   }
 

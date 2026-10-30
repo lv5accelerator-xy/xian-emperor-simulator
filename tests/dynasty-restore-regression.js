@@ -1,0 +1,25 @@
+"use strict";
+const assert = require("node:assert/strict");
+const { harness, plain } = require("./helpers/game-harness");
+const SAGA = "xian_emperor_dynasty_saga_v200";
+const source = harness(); source.api.startNewGame("standard", "xingping_195", { randomSeed: 244 });
+const baseline = source.api.getState();
+source.localStorage.setItem(SAGA, JSON.stringify({ active: true, currentIndex: 1, pendingScenarioId: "xingping_195",
+  chapterGameIds: [], chapters: [], legacies: [{ id: "people" }] }));
+let h = harness(source.stores()); h.mount("dynasty-saga");
+assert.equal(h.api.getState(), null);
+assert.equal(h.window.XianDynastySaga.getProfile().pendingScenarioId, "xingping_195", "pending inheritance must survive initialization before Continue");
+assert.deepEqual(plain(h.window.XianDynastySaga.getProfile().chapterGameIds), []);
+h.node("continue-game-btn").click(); h.flush();
+assert.equal(h.api.getState().stats.treasury, baseline.stats.treasury + 3);
+assert.equal(h.api.getState().stats.prestige, baseline.stats.prestige + 2);
+assert.equal(h.api.getState().hidden.peopleStability, baseline.hidden.peopleStability + 4);
+assert.deepEqual(h.api.getState().random, baseline.random);
+assert.equal(h.window.XianDynastySaga.getProfile().pendingScenarioId, null);
+assert.deepEqual(plain(h.window.XianDynastySaga.getProfile().chapterGameIds), [baseline.createdAt]);
+const after = plain(h.api.getState());
+h.node("save-btn").click(); h.node("load-btn").click(); h.flush();
+assert.deepEqual(h.api.getState().stats, after.stats); assert.deepEqual(h.api.getState().hidden, after.hidden);
+h = harness(h.stores()); h.mount("dynasty-saga"); h.node("continue-game-btn").click(); h.flush();
+assert.deepEqual(h.api.getState().stats, after.stats); assert.deepEqual(h.api.getState().hidden, after.hidden);
+console.log("PASS pending dynasty inheritance waits for live core, applies once, and survives reload without RNG changes");

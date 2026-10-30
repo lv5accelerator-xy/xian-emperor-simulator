@@ -96,7 +96,7 @@
   function choosePath(id) {
     const core = coreState();
     const path = PATHS.find(item => item.id === id);
-    if (!core || !state.unlocked || state.active || !state.offers.includes(id) || !path) return false;
+    if (!core || core.ended || !state.unlocked || state.active || !state.offers.includes(id) || !path) return false;
     state.active = { id, stage: 0, selectedTurn: core.turn, momentum: 0, seenEvents: [], lastEventTurn: 0, lastStageTurn: 0, completed: false };
     state.history.unshift({ turn: core.turn, type: "chosen", pathId: id, title: path.title, text: `天子选择“${path.title}”作为中期帝业。` });
     saveState();

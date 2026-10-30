@@ -100,10 +100,11 @@
       scenarioId: coreState.scenarioId,
       currentStage: 0,
       completedStages: [],
+      skippedStages: [],
       assignments: [],
       assignmentsCompleted: 0,
       lastProcessedTurn: Number(coreState.turn || 1),
-      lastEnvironmentTurn: Number(coreState.turn || 1) - 1,
+      lastEnvironmentTurn: Number(coreState.turn || 1) - (coreState.importMigration?.missingHistory ? 0 : 1),
       environment: { season: seasonForMonth(coreState.month), events: [], activeBlockades: [] },
       log: [],
       updatedAt: new Date().toISOString(),
@@ -136,6 +137,18 @@
     core = parsed;
     const loaded = safeParse(localStorage.getItem(STORE_KEY));
     state = !loaded || loaded.gameCreatedAt !== core.createdAt ? defaultState(core) : migrateState(loaded, core);
+    if ((!loaded || loaded.gameCreatedAt !== core.createdAt) && core.importMigration?.missingHistory) {
+      // Missing history is not proof of an earned reward. Keep proven receipts;
+      // otherwise advance past already-satisfied baselines without claiming success.
+      state.completedStages = stages().filter(stage => core.appliedReceipts?.includes(`stage:${core.createdAt}:${stage.id}`)).map(stage => stage.id);
+      while (state.currentStage < stages().length) {
+        const stage = stages()[state.currentStage];
+        if (!state.completedStages.includes(stage.id) && !stage.goals.every(goal => objectiveComplete(goal))) break;
+        if (!state.completedStages.includes(stage.id)) state.skippedStages.push(stage.id);
+        state.currentStage += 1;
+      }
+      state.log.unshift({ turn: core.turn, text: "旧核心未含战役历史；已满足的基线仅跳过，不记成果、不补发奖励。" });
+    }
     processElapsedTurns();
     // Complete a chain of already-met goals at this exact committed state.
     for (let index = 0; index < stages().length; index += 1) {
@@ -178,8 +191,12 @@
   }
 
   function evaluateStage() {
+    const live = window.XianEmperorGame?.getState?.();
+    // Initialization can inspect a stored core before the player loads it.
+    // Do not claim a reward until its live recipient can actually receive it.
+    if (!live || live.createdAt !== core?.createdAt || live.ended) return;
     const stage = currentStage();
-    if (!stage || state.completedStages.includes(stage.id) || !stage.goals.every(goal => objectiveComplete(goal))) return;
+    if (!stage || state.currentStage >= stages().length || state.completedStages.includes(stage.id) || !stage.goals.every(goal => objectiveComplete(goal))) return;
     state.completedStages.push(stage.id);
     state.currentStage = Math.min(stages().length, state.currentStage + 1);
     state.log.unshift({ turn: core.turn, text: `阶段目标“${stage.title}”完成。` });
@@ -401,8 +418,9 @@
     const all = stages();
     return `<section class="campaign-section"><div class="campaign-section-head"><div><span class="section-kicker">剧本阶段</span><h3>四步看清本局方向</h3></div><strong>${Math.min(state.currentStage, all.length)} / ${all.length}</strong></div><div class="stage-list">${all.map((stage, index) => {
       const done = state.completedStages.includes(stage.id);
+      const skipped = state.skippedStages?.includes(stage.id);
       const current = index === state.currentStage;
-      return `<article class="stage-card ${done ? "done" : current ? "current" : "locked"}"><span class="stage-number">${done ? "✓" : index + 1}</span><div><small>${done ? "已完成" : current ? "当前阶段" : "后续阶段"}</small><h4>${esc(stage.title)}</h4><p>${esc(stage.summary)}</p>${current ? `<div class="stage-goals">${stage.goals.map(goal => `<span>${objectiveComplete(goal) ? "✓" : "○"} ${esc(goal.label)} <b>${goalProgress(goal)}</b></span>`).join("")}</div>` : ""}</div></article>`;
+      return `<article class="stage-card ${done ? "done" : current ? "current" : "locked"}"><span class="stage-number">${done ? "✓" : index + 1}</span><div><small>${done ? "已完成" : skipped ? "旧档历史缺失 · 基线跳过，未补奖" : current ? "当前阶段" : "后续阶段"}</small><h4>${esc(stage.title)}</h4><p>${esc(stage.summary)}</p>${current ? `<div class="stage-goals">${stage.goals.map(goal => `<span>${objectiveComplete(goal) ? "✓" : "○"} ${esc(goal.label)} <b>${goalProgress(goal)}</b></span>`).join("")}</div>` : ""}</div></article>`;
     }).join("")}</div></section>`;
   }
 

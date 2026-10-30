@@ -49,6 +49,10 @@
     commitRunning = true;
     window.__xianCommitRunning = true;
     try {
+      const gameplay = () => JSON.stringify(state, (key, value) => key === "updatedAt" ? undefined : value);
+      let settled = false;
+      for (let pass = 0; pass < 32; pass += 1) {
+      const before = gameplay();
       const sync = (system, method = "syncFromCore") => system?.[method]?.(JSON.stringify(state), { kind });
       sync(window.XianWorldSystem);
       sync(window.XianDecreeWorld);
@@ -67,6 +71,9 @@
       document.dispatchEvent(new CustomEvent("xian:core-saved", { detail: { turn: state.turn, createdAt: state.createdAt, kind } }));
       // Synchronous listeners may add receipts, but cannot publish a partial core.
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      if (before === gameplay()) { settled = true; break; }
+      }
+      if (!settled) throw new Error("Gameplay commit did not converge; refusing an incomplete snapshot.");
       document.dispatchEvent(new CustomEvent("xian:commit-completed", { detail: { turn: state.turn, createdAt: state.createdAt, kind } }));
       return true;
     } finally { commitRunning = false; window.__xianCommitRunning = false; }
@@ -573,7 +580,7 @@
     if (el["chronicle-title"]) el["chronicle-title"].textContent = `《${scenario.recordTitle}·御前本》`;
     el["date-label"].textContent = `${formatReignDate(state.year, state.month)}`;
     const short = window.XianShortChallenges?.getActiveStatus?.(state);
-    el["turn-label"].textContent = `第 ${state.turn} / ${short?.duration || state.maxTurns} 月${short ? ` · ${short.name}` : ""}`;
+    el["turn-label"].textContent = `第 ${state.turn} / ${getDeadline()} 月${short ? ` · ${short.name}` : ""}`;
     el["ap-label"].textContent = `可行动 ${state.actionPoints}`;
   }
 
@@ -919,7 +926,7 @@
     });
     el["end-turn-btn"].disabled = !state.eventResolved || state.ended;
     const short = window.XianShortChallenges?.getActiveStatus?.(state);
-    el["end-turn-btn"].textContent = short && state.turn >= short.duration ? "完成短局结算" : state.turn >= state.maxTurns ? "完成终局结算" : "结束本月";
+    el["end-turn-btn"].textContent = state.turn >= getDeadline() ? (short ? "完成短局结算" : "完成终局结算") : "结束本月";
   }
 
   function openAction(actionId, fields = {}) {
@@ -1589,7 +1596,7 @@
     const goalText = short ? `<section><h3>${escapeHtml(short.name)} · ${state.turn >= short.duration ? "本月完成短局，按实际终值评分" : `还余 ${short.duration - state.turn + 1} 个月`}</h3>
       <ul class="preflight-goals">${preview.checks.map(check => `<li class="${check.afterPassed ? "safe" : "risk"}"><strong>${escapeHtml(check.label)}</strong><span>${Math.round(check.value)} → 预计 ${Math.round(check.after)} · ${check.afterPassed ? "固定结算后达到" : `还差 ${Math.ceil(check.gap)}`}${check.passed && !check.afterPassed ? "，原已达标，月末将跌出" : ""}</span></li>`).join("")}</ul></section>` : "";
     const randomText = preview.leak ? `泄密检验概率约 ${Math.round(preview.leak.chance * 100)}%；若触发，安全额外 −${preview.leak.securityLoss}、警戒额外 +${preview.leak.alertGain}。未触发时泄密风险再 −1，触发时再 −8。` : "固定结算已完成，后续系统核验仍可能改变终值。";
-    openModal({ title: "月末结算预检", wide: true, confirmText: state.turn >= (short?.duration || state.maxTurns) ? "确认结算并核验终局" : "确认结束本月",
+    openModal({ title: "月末结算预检", wide: true, confirmText: state.turn >= getDeadline() ? "确认结算并核验终局" : "确认结束本月",
       body: `<div class="month-preflight"><p class="modal-note">仅供核对。打开或返回预检不扣行动、钱粮，也不推进随机序列。</p>
         <section><h3>固定用度与守成</h3><p>${preview.settled ? "本月固定结算已完成，不再重复扣款。" : `日常用度：国库 −1。余下 ${preview.unusedActions} 次行动守成：安全 +${preview.unusedActions}，泄密风险 −${preview.unusedActions}（均受 0–100 上限限制）。`}</p>
         ${rows ? `<table><thead><tr><th>项目</th><th>当前</th><th>固定结算后</th></tr></thead><tbody>${rows}</tbody></table>` : ""}
@@ -2200,10 +2207,15 @@
     for (const key of [SCENARIO_RECORDS_KEY, "xian_emperor_audio_v023", "xian_emperor_weekly_challenge_v240", "xian_emperor_historian_v190", "xian_emperor_final_verdict_v250", "xian_emperor_command_center_v160"]) {
       if (current[key]) stores[key] = current[key];
     }
+    const archive = items => (items || []).map(item => item.gameCreatedAt === core.createdAt && !core.ended ? { ...item, archivedByCoreImport: true } : item);
+    if (stores.xian_emperor_historian_v190) stores.xian_emperor_historian_v190 = { ...stores.xian_emperor_historian_v190,
+      currentDecisions: [], runs: archive(stores.xian_emperor_historian_v190.runs) };
+    if (stores.xian_emperor_final_verdict_v250) stores.xian_emperor_final_verdict_v250 = { ...stores.xian_emperor_final_verdict_v250,
+      verdicts: archive(stores.xian_emperor_final_verdict_v250.verdicts) };
     const progress = current.xian_emperor_progression_v100;
     if (progress) stores.xian_emperor_progression_v100 = { version: progress.version, profile: progress.profile, session: {} };
     const short = current.xian_emperor_short_challenges_v230;
-    if (short) stores.xian_emperor_short_challenges_v230 = { ...short, active: null };
+    if (short) stores.xian_emperor_short_challenges_v230 = { ...short, active: null, results: archive(short.results) };
     // An old core has no evidence for world, army, challenge or month-start history.
     // All omitted session keys are removed atomically by the same restore installer.
     return { format: "xian-emperor-full-save", version: DATA.version, migration: "core-only", stores };
@@ -2318,7 +2330,7 @@
 
   function calculateScenarioChallenge(scenario, gameState) {
     const challenge = scenario?.challenge || {};
-    const survived = Boolean(gameState && gameState.turn >= gameState.maxTurns);
+    const survived = Boolean(gameState && gameState.turn >= getDeadline(gameState));
     const statMin = Object.entries(challenge.statMin || {}).every(([key, value]) => Number(gameState?.stats?.[key] || 0) >= value);
     const statMax = Object.entries(challenge.statMax || {}).every(([key, value]) => Number(gameState?.stats?.[key] || 0) <= value);
     const hiddenMin = Object.entries(challenge.hiddenMin || {}).every(([key, value]) => Number(gameState?.hidden?.[key] || 0) >= value);
@@ -2328,7 +2340,7 @@
   function calculateScenarioScore(gameState) {
     const positive = ["authority", "prestige", "security", "treasury", "officials"].reduce((sum, key) => sum + Number(gameState?.stats?.[key] || 0), 0);
     const alertControl = Math.max(0, 100 - Number(gameState?.stats?.caoAlert || 0));
-    const progress = Math.min(1, Number(gameState?.turn || 0) / Math.max(1, Number(gameState?.maxTurns || 1)));
+    const progress = Math.min(1, Number(gameState?.turn || 0) / Math.max(1, getDeadline(gameState)));
     return Math.round((positive + alertControl) * progress);
   }
 
@@ -2445,8 +2457,9 @@
       } }));
     }
     operationDepth -= 1;
-    saveGame(true);
-    renderAll();
+    // A multi-store settlement may persist its matching receipt first, then
+    // explicitly commit the whole operation before returning to the player.
+    if (!pkg.deferCommit) { saveGame(true); renderAll(); }
     return { applied: true, changes };
   }
 

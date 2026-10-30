@@ -28,14 +28,14 @@
       onMount: mountTab,
     });
     const core = readCore();
-    if (core?.ended && !store.verdicts.some(item => item.gameCreatedAt === core.createdAt)) {
+    if (core?.ended && !store.verdicts.some(item => item.gameCreatedAt === core.createdAt && !item.archivedByCoreImport)) {
       recordVerdict({ state: core, scenario: scenarioById(core.scenarioId), score: fallbackScore(core), challenge: { completed: false } });
     }
   }
 
   function recordVerdict(detail) {
     const game = detail.state;
-    if (!game?.createdAt || store.verdicts.some(item => item.gameCreatedAt === game.createdAt)) return;
+    if (!game?.createdAt || store.verdicts.some(item => item.gameCreatedAt === game.createdAt && !item.archivedByCoreImport)) return;
     const verdict = buildVerdict(game, detail);
     store.verdicts.unshift(verdict);
     store.verdicts = store.verdicts.slice(0, MAX_VERDICTS);
@@ -130,7 +130,7 @@
 
   function latestTurningPoints(game) {
     const historian = window.XianHistorian?.getState?.();
-    const run = historian?.runs?.find(item => item.gameCreatedAt === game.createdAt);
+    const run = historian?.runs?.find(item => item.gameCreatedAt === game.createdAt && !item.archivedByCoreImport);
     if (run?.turningPoints?.length) return run.turningPoints.slice(0, 5);
     const chronicle = Array.isArray(game.chronicle) ? game.chronicle : [];
     return [chronicle[0], chronicle[Math.floor(chronicle.length / 2)], chronicle[chronicle.length - 1]].filter(Boolean).map((item, index) => ({ date: item.date, title: ["开局", "中局", "终卷"][index], choice: item.text }));

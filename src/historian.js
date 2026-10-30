@@ -14,11 +14,12 @@
   ];
 
   let state = loadState();
-  let currentDecisions = [];
 
   document.addEventListener("DOMContentLoaded", init, { once: true });
   document.addEventListener("xian:decision-resolved", event => captureDecision(event.detail || {}));
   document.addEventListener("xian:campaign-concluded", event => recordRun(event.detail || {}));
+  document.addEventListener("xian:state-restored", () => { state = loadState(); });
+  document.addEventListener("xian:new-game-committed", () => { state.currentDecisions = []; saveState(); });
 
   function init() {
     window.XianCommandCenter?.registerTab?.({
@@ -30,15 +31,18 @@
       onMount: mountTab,
     });
     const core = readCore();
-    if (core?.ended && !state.runs.some(run => run.gameCreatedAt === core.createdAt)) {
+    if (core?.ended && !state.runs.some(run => run.gameCreatedAt === core.createdAt && !run.archivedByCoreImport)) {
       recordRun({ state: core, scenario: scenarioById(core.scenarioId), score: calculateFallbackScore(core), challenge: { completed: false } });
     }
   }
 
   function captureDecision(detail) {
     if (!detail.createdAt) return;
+    const id = detail.id || `decision:${detail.createdAt}:${detail.turn}:${detail.eventId}`;
+    if (state.currentDecisions.some(item => item.id === id)) return;
     const importance = Object.values(detail.relations || {}).reduce((sum, value) => sum + Math.abs(Number(value) || 0), 0);
-    currentDecisions.unshift({
+    state.currentDecisions.unshift({
+      id,
       gameCreatedAt: detail.createdAt,
       turn: detail.turn || 0,
       date: detail.date || "御前",
@@ -46,14 +50,15 @@
       choice: detail.choiceLabel || detail.chronicle || "已裁决",
       importance,
     });
-    currentDecisions = currentDecisions.filter(item => item.gameCreatedAt === detail.createdAt).slice(0, 18);
+    state.currentDecisions = state.currentDecisions.filter(item => item.gameCreatedAt === detail.createdAt).slice(0, 72);
+    saveState();
   }
 
   function recordRun(detail) {
     const game = detail.state;
-    if (!game?.createdAt || state.runs.some(run => run.gameCreatedAt === game.createdAt)) return;
+    if (!game?.createdAt || state.runs.some(run => run.gameCreatedAt === game.createdAt && !run.archivedByCoreImport)) return;
     const route = classifyRoute(game);
-    const decisions = currentDecisions.filter(item => item.gameCreatedAt === game.createdAt);
+    const decisions = state.currentDecisions.filter(item => item.gameCreatedAt === game.createdAt);
     const turningPoints = selectTurningPoints(game, decisions);
     const run = {
       id: `run-${Date.now()}`,
@@ -92,7 +97,7 @@
     const indexes = [0, Math.floor(chronicle.length / 2), Math.max(0, chronicle.length - 1)];
     indexes.forEach((index, order) => {
       const entry = chronicle[index];
-      if (entry && !selected.some(item => item.choice === entry.text)) selected.push({ turn: order * Math.max(1, Math.floor(game.maxTurns / 2)), date: entry.date, title: order === 0 ? "开局" : order === 2 ? "终卷" : "中局", choice: entry.text, importance: 0 });
+      if (entry && !selected.some(item => item.choice === entry.text)) selected.push({ turn: Math.min(game.turn, order * Math.max(1, Math.floor((window.XianEmperorGame?.getDeadline?.(game) || game.maxTurns) / 2))), date: entry.date, title: order === 0 ? "开局" : order === 2 ? "终卷" : "中局", choice: entry.text, importance: 0 });
     });
     return selected.slice(0, 5).sort((a, b) => a.turn - b.turn);
   }
@@ -167,8 +172,8 @@
   function avg(...values) { return values.reduce((sum, value) => sum + Number(value || 0), 0) / Math.max(1, values.length); }
   function calculateFallbackScore(game) { return Math.round(["authority", "prestige", "security", "treasury", "officials"].reduce((sum, key) => sum + Number(game.stats?.[key] || 0), Math.max(0, 100 - Number(game.stats?.caoAlert || 0)))); }
   function scenarioById(id) { return window.GAME_DATA?.scenarios?.find(item => item.id === id); }
-  function defaultState() { return { version: 1, runs: [] }; }
-  function loadState() { try { const value = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); return { ...defaultState(), ...(value || {}), runs: Array.isArray(value?.runs) ? value.runs : [] }; } catch (_) { return defaultState(); } }
+  function defaultState() { return { version: 2, runs: [], currentDecisions: [] }; }
+  function loadState() { try { const value = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); return { ...defaultState(), ...(value || {}), version: 2, currentDecisions: Array.isArray(value?.currentDecisions) ? value.currentDecisions : [], runs: Array.isArray(value?.runs) ? value.runs : [] }; } catch (_) { return defaultState(); } }
   function saveState() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (error) { console.warn("史官档案保存失败", error); } }
   function readCore() { try { const value = JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
   function escapeHtml(value) { return window.XianCommandCenter?.escapeHtml?.(value) || String(value ?? ""); }
