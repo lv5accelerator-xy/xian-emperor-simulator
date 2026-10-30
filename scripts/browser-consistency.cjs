@@ -33,4 +33,3 @@ function normalize(value,key=""){
  assert.deepEqual(allErrors,[]);fs.writeFileSync(path.join(out,"result.json"),JSON.stringify({pageErrors:allErrors,score:baseline.stores.xian_emperor_short_challenges_v230?.results?.[0]?.score},null,2));
  }finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});
-
