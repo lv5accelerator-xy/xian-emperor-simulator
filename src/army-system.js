@@ -147,6 +147,8 @@
       lastProcessedTurn: core.turn,
       armies,
       orders: [],
+      orderSequence: 0,
+      promiseAttempts: {},
       battleReports: [],
       sieges: {},
       conquests: [],
@@ -166,6 +168,8 @@
       gameCreatedAt: core.createdAt,
       armies: { ...(current.armies || {}) },
       orders: Array.isArray(current.orders) ? current.orders : [],
+      orderSequence: Number(current.orderSequence || current.orders?.length || 0),
+      promiseAttempts: { ...(current.promiseAttempts || {}) },
       battleReports: Array.isArray(current.battleReports) ? current.battleReports : [],
       sieges: current.sieges && typeof current.sieges === "object" ? current.sieges : {},
       conquests: Array.isArray(current.conquests) ? current.conquests : [],
@@ -279,19 +283,23 @@
       army.status = "marching";
     }
 
-    state.orders.unshift({
-      id: `army-order-${Number(timestamp) || Date.now()}-${army.id}`,
+    const order = {
+      id: `army-order-${Number(timestamp) || `${turn}-${++state.orderSequence}`}-${army.id}`,
       turn,
       armyId: army.id,
       owner,
       task,
       originCityId: army.originCityId,
       targetCityId: destination,
+      targetOwner: readStrategyState()?.cities?.[destination]?.controller || null,
       routeIds: [...routeIds],
       execution,
       text: shortText(text, 120),
       status: routeIds.length ? "executing" : "arrived",
-    });
+      arrivedTurn: routeIds.length ? null : turn,
+    };
+    army.currentOrderId = order.id;
+    state.orders.unshift(order);
 
     addLog(
       turn,
@@ -299,6 +307,7 @@
       `${armyName(army)}奉诏${taskLabel(task)}，${routeIds.length ? `自${cityName(army.originCityId)}向${cityName(destination)}进发，预计${routeIds.length}个月抵达` : `在${cityName(destination)}就地执行`}。`
     );
     routeIds.forEach(routeId => adjustStrategyRoute(routeId, { pressure: task === "attack" ? 3 : 1, supply: task === "supply" ? 2 : -1 }, `${armyName(army)}奉诏进入军路`));
+    return order;
   }
 
   function getCommandAccess(army, core = window.XianEmperorGame?.getState?.() || coreState, strategy = readStrategyState()) {
@@ -378,6 +387,7 @@
       originCityId: army.cityId,
       originName: cityName(army.cityId),
       targetCityId,
+      targetOwner: strategyState?.cities?.[targetCityId]?.controller || null,
       targetName: cityName(targetCityId),
       routeIds,
       routeNames: routeIds.map(routeName),
@@ -418,19 +428,23 @@
     army.fatigue = clamp(army.fatigue + (task === "retreat" ? 5 : 3), 0, 100);
     army.status = preview.eta ? (task === "retreat" ? "routing" : "marching") : task === "defend" ? "defending" : task === "supply" ? "supplying" : "recovering";
     army.lastChange = `舆图军令：${preview.taskLabel}至${preview.targetName}`;
+    const orderId = `map-order-${turn}-${++state.orderSequence}-${army.id}`;
+    army.currentOrderId = orderId;
     state.orders.unshift({
-      id: `map-order-${Date.now()}-${army.id}`,
+      id: orderId,
       turn,
       armyId: army.id,
       owner: army.owner,
       task,
       originCityId: preview.originCityId,
       targetCityId,
+      targetOwner: preview.targetOwner,
       routeIds: [...preview.routeIds],
       execution: preview.execution,
       text: `御前舆图直令：${preview.armyName}${preview.taskLabel}至${preview.targetName}`,
       status: preview.eta ? "executing" : "arrived",
       source: "grand-map",
+      arrivedTurn: preview.eta ? null : turn,
     });
     preview.routeIds.forEach(routeId => adjustStrategyRoute(routeId, { pressure: task === "attack" ? 3 : task === "retreat" ? -1 : 1, supply: task === "supply" ? 2 : -1 }, `${preview.armyName}奉舆图军令进入军路`));
     addLog(turn, task, `${preview.armyName}奉舆图军令${preview.taskLabel}，目标${preview.targetName}。`);
@@ -438,6 +452,7 @@
     saveState();
     renderAll();
     document.dispatchEvent(new CustomEvent("xian:map-order", { detail: preview }));
+    game.commit?.("map-order");
     return { ...preview, ok: true, message: "军令已进入大司马府军籍。" };
   }
 
@@ -501,7 +516,7 @@
 
     processSieges(turn, core, rng);
     resolveCityBattles(turn, core, rng);
-    updateOrderStatuses();
+    updateOrderStatuses(turn);
     state.log = state.log.slice(0, MAX_LOG);
     state.battleReports = state.battleReports.slice(0, MAX_REPORTS);
   }
@@ -577,6 +592,7 @@
   }
 
   function arriveArmy(army, turn) {
+    army.arrivedTurn = turn;
     army.cityId = army.targetCityId || army.cityId;
     army.currentRouteId = null;
     army.eta = 0;
@@ -1149,12 +1165,15 @@
     return army.troops * (0.4 + army.morale / 200) * (0.45 + army.supply / 200) * (0.5 + army.training / 220);
   }
 
-  function updateOrderStatuses() {
+  function updateOrderStatuses(turn) {
     state.orders.forEach(order => {
       const army = state.armies[order.armyId];
+      if (["arrived", "failed", "superseded"].includes(order.status)) return;
+      const currentOrderId = army?.currentOrderId || state.orders.find(item => item.armyId === order.armyId)?.id;
+      if (currentOrderId !== order.id) { order.status = "superseded"; return; }
       if (!army || army.status === "destroyed") order.status = "failed";
       else if (["marching", "routing"].includes(army.status)) order.status = "executing";
-      else if (army.cityId === order.targetCityId) order.status = "arrived";
+      else if (army.cityId === order.targetCityId) { order.status = "arrived"; order.arrivedTurn = turn; }
     });
   }
 
@@ -1360,7 +1379,7 @@
     const date = document.getElementById("army-system-date");
     if (!content || !date) return;
     document.querySelectorAll("[data-army-tab]").forEach(button => button.classList.toggle("active", button.dataset.armyTab === activeTab));
-    date.textContent = coreState ? `建安军务 · 第 ${coreState.turn}/${coreState.maxTurns || 24} 月` : "尚未载入本局";
+    date.textContent = coreState ? `建安军务 · 第 ${coreState.turn}/${window.XianEmperorGame?.getDeadline?.(coreState) || coreState.maxTurns || 24} 月` : "尚未载入本局";
     if (!state) { content.innerHTML = '<p class="empty-state">请先开启或读取一局游戏。</p>'; return; }
     const renderers = { armies: renderArmies, movements: renderMovements, sieges: renderSieges, judgments: renderJudgments, battles: renderBattles };
     content.innerHTML = renderArmySummary() + (renderers[activeTab] || renderArmies)();
@@ -1450,6 +1469,26 @@
   }
 
   window.XianArmySystem = Object.freeze({
+    acceptPromiseMission: promise => {
+      if (!state || !coreState || coreState.ended || !promise?.contract) return false;
+      const existing = state.orders.find(item => item.sourcePromiseId === promise.id);
+      if (existing) return existing;
+      const core = window.XianEmperorGame?.getState?.() || coreState;
+      if (core.turn > promise.deadlineTurn) return false;
+      const issued = state.orders.find(item => !promise.contract.initialOrderIds.includes(item.id) && !item.sourcePromiseId && item.owner === promise.lordId && item.targetCityId === promise.contract.targetCityId && item.turn >= promise.createdTurn && ["support", "defend"].includes(item.task));
+      if (issued) { issued.sourcePromiseId = promise.id; saveState(); return issued; }
+      const army = selectArmy(promise.lordId, promise.contract.targetCityId);
+      const access = getCommandAccess(army, core, readStrategyState());
+      const signature = JSON.stringify([core.turn, core.stats.authority, core.relations?.[promise.lordId], access.trust, army?.id, army?.cityId, army?.status, army?.troops]);
+      if (state.promiseAttempts[promise.id] === signature) return false;
+      state.promiseAttempts[promise.id] = signature;
+      const order = assignArmyOrder(promise.lordId, [promise.contract.targetCityId], "support", 65, `外交援军 ${promise.id}`, core.turn, 0);
+      if (!order) { saveState(); return false; }
+      order.sourcePromiseId = promise.id;
+      order.id = `promise-order:${promise.id}`;
+      state.armies[order.armyId].currentOrderId = order.id;
+      saveState(); return true;
+    },
     syncFromCore: raw => processCoreSave(raw ?? localStorage.getItem(CORE_KEY)),
     settleMonth: () => {
       processCoreSave(localStorage.getItem(CORE_KEY));

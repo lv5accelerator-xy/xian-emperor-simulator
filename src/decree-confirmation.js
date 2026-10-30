@@ -116,6 +116,7 @@
       lordIds,
       orders,
       promises,
+      contracts: API.previewContracts?.(effectiveText) || [],
       primaryOrder,
       routeIds,
       route,
@@ -152,6 +153,8 @@
       <section class="decree-confirmation-promises">
         <div><span class="section-kicker">外交承诺</span><h3>${promiseNames.length ? `${promiseNames.length} 项` : "未建立承诺"}</h3></div>
         ${promiseNames.length ? `<ul>${promiseNames.map(name => `<li>${escapeHtml(name)}</li>`).join("")}</ul>` : "<p>写明奉表、贡赋、援军、结盟、停战、互市、质子或官爵，可建立有期限的履约记录。</p>"}
+        ${(analysis.contracts || []).map(contract => `<p><strong>${escapeHtml(lordDef(contract.responsible)?.name || contract.responsible)}</strong> → 汉廷：${escapeHtml(contract.condition)}；${contract.type === "tribute" ? `约定 ${contract.quantity} 钱粮（未写数量默认 6），从责任方治所粮秣扣除，分月到账` : contract.type === "military_aid" ? `目标 ${escapeHtml(cityDef(contract.targetCityId)?.name || contract.targetCityId)}（未写地点默认许都），须有军团承接并抵达` : `双方 ${contract.parties.map(id => escapeHtml(lordDef(id)?.name || id)).join("、")}，敌对军令或战报将判违约`}；第 ${contract.startTurn}—${contract.deadlineTurn} 月。</p>`).join("")}
+        ${analysis.promises.some(type => !["tribute", "military_aid", "ceasefire"].includes(type)) ? "<p>其他承诺沿用信任与准备度推演，仅影响关系和地方忠诚；不表示钱粮、军团或质子已经实际交付。</p>" : ""}
       </section>
       ${analysis.warnings.length ? `<section class="decree-confirmation-warnings"><strong>复核提醒</strong>${analysis.warnings.map(text => `<p>${escapeHtml(text)}</p>`).join("")}</section>` : ""}
       <p class="decree-confirmation-note">最终执行度仍包含地方阻力与少量随机波动；军团命令将在圣旨正式写入御前记录后生效。</p>`;

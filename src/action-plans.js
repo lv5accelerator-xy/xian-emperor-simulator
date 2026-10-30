@@ -2,6 +2,11 @@
 (() => {
   "use strict";
   const clamp = value => Math.max(0, Math.min(100, value));
+  const RULES = Object.freeze({ repeatMultiplier: .5, repeatRounding: "toward-zero", repeatFromOrdinal: 2 });
+  const repeatKey = (actionId, targetId) => `${actionId}:${targetId || "none"}`;
+  const beneficial = (key, value) => ["caoAlert", "leakRisk"].includes(key) ? value < 0 : value > 0;
+  const actionTags = { audience: ["court", "relationship"], appointment: ["court", "office"], secret: ["secret", "network"],
+    revenue: ["finance"], relief: ["people", "relief"], ritual: ["court", "ritual"], appease: ["palace", "cao"], regional: ["regional", "diplomacy"] };
   const people = () => window.GAME_DATA.characters.filter(person => person.id !== "liu_xie");
   const fieldNames = { audience: "audience-mode", appointment: "modal-appointment-type", secret: "modal-secret-type",
     revenue: "revenue-method", relief: "relief-level", ritual: "ritual-type", appease: "appease-type", regional: "regional-type" };
@@ -63,21 +68,41 @@
         tribute: ["以官爵换取贡赋", { treasury: 7, authority: -1, prestige: 2, caoAlert: 5 }, { externalBalance: 5 }, 7] }[type];
       label = `${item[0]}·${person.name}`; effects = item[1]; hidden = item[2]; relations[person.id] = item[3];
     }
-    const cost = Math.max(0, -Number(effects.treasury || 0));
-    return { actionId, fields: { ...fields }, label, cost, affordable: state.stats.treasury >= cost,
-      effects: { ...effects }, hidden: { ...hidden }, relations: { ...relations } };
+    const targetId = person?.id || null;
+    const key = repeatKey(actionId, targetId);
+    const prior = state.actionRepetitions && state.actionRepetitions.turn === state.turn ? Number(state.actionRepetitions.counts?.[key] || 0) : 0;
+    const ordinal = prior + 1, multiplier = ordinal >= RULES.repeatFromOrdinal ? RULES.repeatMultiplier : 1;
+    const plan = { actionId, targetId, type, tags: [...actionTags[actionId], `${actionId}:${type}`], fields: { ...fields }, label,
+      effects: { ...effects }, hidden: { ...hidden }, relations: { ...relations },
+      repetition: { key, ordinal, multiplier, reason: `本月同类同对象第 ${ordinal} 次；${multiplier < 1 ? "有利变化按 50% 计算，小数向零取整；费用、行动与不利影响照常" : "本次完整收益"}。切换方式共享次数。` } };
+    const advice = window.XianCouncilAdvice?.getActionModifier?.(plan, state) || null;
+    for (const group of ["effects", "hidden", "relations"]) {
+      for (const [name, value] of Object.entries(advice?.[group] || {})) plan[group][name] = Number(plan[group][name] || 0) + value;
+      for (const [name, value] of Object.entries(plan[group])) {
+        if (beneficial(name, value)) plan[group][name] = Math.trunc(value * multiplier);
+      }
+    }
+    const cost = Math.max(0, -Number(plan.effects.treasury || 0));
+    // Display the actual change at a cap. Unaffordable fees remain intact for the budget gate.
+    for (const [group, source] of [["effects", "stats"], ["hidden", "hidden"], ["relations", "relations"]]) {
+      for (const [name, value] of Object.entries(plan[group])) {
+        const current = state[source]?.[name] ?? (source === "relations" ? 50 : undefined);
+        if (current != null && !(name === "treasury" && value < 0 && state.stats.treasury < cost)) plan[group][name] = clamp(Number(current) + value) - Number(current);
+      }
+    }
+    return { ...plan, cost, affordable: state.stats.treasury >= cost, advice };
   }
   function list(state) {
     return Object.keys(variants).flatMap(actionId => targets(actionId).flatMap(person => variants[actionId].map(type =>
       build(actionId, { [fieldNames[actionId]]: type, ...(person ? { "modal-character-select": person.id } : {}) }, state))));
   }
   function project(state, plan) {
-    const next = { ...state, stats: { ...state.stats }, hidden: { ...state.hidden } };
-    for (const [group, changes] of [["stats", plan.effects], ["hidden", plan.hidden]]) {
-      for (const [key, delta] of Object.entries(changes)) next[group][key] = clamp(Number(next[group][key] || 0) + delta);
+    const next = { ...state, stats: { ...state.stats }, hidden: { ...state.hidden }, relations: { ...state.relations } };
+    for (const [group, changes] of [["stats", plan.effects], ["hidden", plan.hidden], ["relations", plan.relations]]) {
+      for (const [key, delta] of Object.entries(changes)) next[group][key] = clamp(Number(next[group][key] ?? (group === "relations" ? 50 : 0)) + delta);
     }
     next.actionPoints = Math.max(0, next.actionPoints - 1);
     return next;
   }
-  window.XianActionPlans = Object.freeze({ build, list, project });
+  window.XianActionPlans = Object.freeze({ build, list, project, repeatKey, rules: RULES });
 })();

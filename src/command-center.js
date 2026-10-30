@@ -269,7 +269,8 @@
       .filter(([key, delta]) => key === "caoAlert" || key === "leakRisk" ? delta > 0 : delta < 0)
       .map(([key, delta]) => `${names[key] || key}${delta > 0 ? "+" : ""}${delta}`));
     return { actionId: plan.actionId, fields: { ...plan.fields }, label: plan.label, ...summarizePlan(state, plan),
-      reason: `${prefix}${changed.length ? changed.join("；") + "。" : ""}${costs.length ? "代价：" + costs.join("、") + "。" : "不耗国库。"}比较已计入固定月末用度；即时回响与随机风险仍会改变结果。` };
+      repetition: plan.repetition || null, advice: plan.advice || null,
+      reason: `${prefix}${changed.length ? changed.join("；") + "。" : ""}${costs.length ? "代价：" + costs.join("、") + "。" : "不耗国库。"}${plan.repetition?.reason || ""}${plan.advice ? `主议修正已计入：${plan.advice.description}。` : ""}比较已计入固定月末用度；即时回响与随机风险仍会改变结果。` };
   }
 
   function metricName(path) {
@@ -286,8 +287,10 @@
     })).filter(item => item.delta !== 0));
     const gains = changes.filter(item => direction(item.path) * item.delta > 0);
     const losses = changes.filter(item => item.path !== "stats.treasury" && direction(item.path) * item.delta < 0);
-    return { benefit: gains.slice(0, 3).map(item => `${metricName(item.path)} ${signed(item.delta)}`).join(" · ") || "经营人物关系",
-      cost: [`行动 1`, plan.cost ? `国库 ${plan.cost}` : "不耗国库", ...losses.slice(0, 2).map(item => `${metricName(item.path)} ${signed(item.delta)}`)].join(" · ") };
+    const benefit = gains.slice(0, 3).map(item => `${metricName(item.path)} ${signed(item.delta)}`).join(" · ") || "经营人物关系";
+    return { benefit: `${benefit}${plan.advice ? `；已含主议修正（本季尚余 ${plan.advice.remaining} 次）` : ""}`,
+      cost: [`行动 1`, plan.cost ? `国库 ${plan.cost}` : "不耗国库", ...losses.slice(0, 2).map(item => `${metricName(item.path)} ${signed(item.delta)}`),
+        ...(plan.repetition ? [`同类同对象第 ${plan.repetition.ordinal} 次${plan.repetition.multiplier < 1 ? "，有利变化 50%（向零取整）" : "，完整收益"}`] : [])].join(" · ") };
   }
 
   function compareActions(state) {
@@ -318,6 +321,7 @@
       };
       return { actionId: plan?.actionId || "end", fields: plan ? { ...plan.fields } : null,
         label: plan?.label || `留 ${state.actionPoints} 次行动守成`, recommended, ...summary, changes, relations,
+        repetition: plan?.repetition || null, advice: plan?.advice || null,
         checks: estimate.checks, leak: estimate.leak, vector, plan,
         score: goals.length ? planScore(state, next, goals) : vector.slice(0, -1).reduce((sum, value, index) => sum + (value - direction(paths[index]) * baseline.projected[paths[index].split(".")[0]][paths[index].split(".")[1]]), 0) };
     };
