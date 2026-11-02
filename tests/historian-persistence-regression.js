@@ -1,0 +1,13 @@
+"use strict";
+const assert = require("node:assert/strict");
+const { harness, plain } = require("./helpers/game-harness");
+const h = harness(); h.mount("historian"); h.api.startNewGame(); h.decide(0);
+const before = plain(h.window.XianHistorian.getState());
+const resumed = harness(h.stores()); resumed.mount("historian"); resumed.node("continue-game-btn").click();
+assert.equal(resumed.window.XianHistorian.getState().currentDecisions?.length, 1, "saved decisions must survive a real module reload");
+const detail = {createdAt:h.api.getState().createdAt,turn:1,eventId:h.api.getState().currentEventId,eventTitle:"duplicate"};
+resumed.document.dispatchEvent({type:"xian:decision-resolved",detail});
+assert.deepEqual(plain(resumed.window.XianHistorian.getState()),before,"decision receipt survives reload and deduplicates");
+resumed.api.startNewGame();
+assert.equal(resumed.window.XianHistorian.getState().currentDecisions.length,0,"successful new game clears only current decisions");
+console.log("PASS historian decisions persist, deduplicate after reload, and reset on committed new game");

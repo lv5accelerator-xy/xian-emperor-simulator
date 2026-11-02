@@ -2,6 +2,15 @@
 (() => {
   "use strict";
   const VERSION = "2.11.0";
+  const MODIFIERS = Object.freeze({
+    yang_biao: { actions: ["ritual", "appointment", "revenue"], effects: { officials: 2 }, discount: 1, description: "朝仪、任官、筹措：百官额外 +2；有费用时减少国库用度 1" },
+    xun_yu: { actions: ["relief", "revenue"], effects: { officials: 1 }, hidden: { peopleStability: 2 }, description: "赈济、筹措：百官额外 +1、民间稳定 +2" },
+    cao_cao: { actions: ["appease", "revenue"], effects: { security: 2 }, discount: 1, description: "安抚、筹措：安全额外 +2；有费用时减少国库用度 1" },
+    dong_cheng: { actions: ["secret", "regional"], hidden: { loyalNetwork: 2 }, description: "密联、外镇：忠汉网络额外 +2" },
+    empress_fu: { actions: ["audience", "relief", "appease"], effects: { security: 2 }, hidden: { leakRisk: -1 }, description: "召见、赈济、安抚：安全额外 +2、泄密风险 -1" },
+    liu_biao: { actions: ["regional", "relief"], hidden: { externalBalance: 2 }, effects: { prestige: 1 }, description: "外镇、赈济：制衡额外 +2、威望 +1" },
+  });
+  const MAX_USES = 2;
   const STORAGE_KEY = "xian_emperor_council_advice_v2110";
   const SPEAKERS = {
     yang_biao: { name: "杨彪", title: "太尉", stance: "守制", keywords: ["朝会", "任免", "冗费", "礼制"], package: { effects: { officials: 2, treasury: -1 }, relations: { yang_biao: 3 } } },
@@ -32,8 +41,7 @@
   document.addEventListener("DOMContentLoaded", sync);
   document.addEventListener("xian:quarterly-agenda-updated", sync);
   document.addEventListener("xian:quarterly-panel-rendered", render);
-  document.addEventListener("xian:external-action-completed", event => rewardAlignedAction(event.detail || {}));
-  document.addEventListener("xian:decision-resolved", event => rewardAlignedAction(event.detail || {}));
+  document.addEventListener("xian:state-restored", () => { state = loadState(); sync(); });
 
   function blankState() { return { version: 1, gameCreatedAt: null, cycle: 0, agendaId: null, chosen: null, processed: [], history: [] }; }
   function loadState() { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); return { ...blankState(), ...(value || {}) }; } catch (_) { return blankState(); } }
@@ -65,17 +73,30 @@
       const speaker = SPEAKERS[id];
       const relation = Number(core?.relations?.[id] ?? 50);
       const remembered = memories.filter(item => item.characterId === id && (!item.gameCreatedAt || item.gameCreatedAt === core?.createdAt)).length;
+      const cost = Math.max(0, -Number(speaker.package.effects?.treasury || 0));
+      const shortfall = core?.stats ? Math.max(0, cost - Number(core.stats.treasury || 0)) : 0;
       return {
         id, ...speaker, proposal: proposals[index], relation, remembered,
+        modifier: MODIFIERS[id], cost, shortfall, affordable: !shortfall,
+        immediateSummary: describePackage(speaker.package),
         trust: relation >= 70 ? "愿以身任事" : relation >= 48 ? "愿意进言" : "仍有保留",
       };
     });
   }
 
+  function describePackage(pkg) {
+    const names = { authority: "皇权", officials: "百官", treasury: "国库", security: "安全", prestige: "威望", caoAlert: "警戒", loyalNetwork: "忠汉网络", leakRisk: "泄密风险", externalBalance: "外部制衡" };
+    const signed = value => `${value >= 0 ? "+" : "−"}${Math.abs(value)}`;
+    return [...Object.entries({ ...pkg.effects, ...pkg.hidden }).map(([key, value]) => `${names[key] || key} ${signed(value)}`),
+      ...Object.entries(pkg.relations || {}).map(([id, value]) => `${SPEAKERS[id]?.name || id}关系 ${signed(value)}`)].join("；");
+  }
+
   function chooseAdvice(id) {
     const core = coreState();
     const adviser = buildAdvice(core).find(item => item.id === id);
-    if (!core || !adviser || state.chosen) return false;
+    if (!core || core.ended || !adviser || state.chosen || !agendaState()?.active || state.gameCreatedAt !== core.createdAt) return false;
+    const budget = window.XianEmperorGame?.canAffordEffects?.(adviser.package.effects || {});
+    if (budget && !budget.ok) { window.XianEmperorGame?.notify?.(budget.reason, "warning"); return false; }
     state.chosen = { id, turn: core.turn, proposal: adviser.proposal, alignedActions: 0 };
     state.history.unshift({ cycle: state.cycle, agendaId: state.agendaId, adviserId: id, adviserName: adviser.name, proposal: adviser.proposal });
     state.history = state.history.slice(0, 12);
@@ -90,20 +111,24 @@
     return true;
   }
 
-  function rewardAlignedAction(detail) {
-    if (!state.chosen || !state.agendaId) return;
-    const core = coreState();
-    if (!core || detail.createdAt && detail.createdAt !== core.createdAt) return;
-    const adviser = SPEAKERS[state.chosen.id];
-    const id = detail.id || `${detail.eventId || "decision"}-${detail.turn || core.turn}`;
-    if (!adviser || state.processed.includes(id)) return;
-    const text = `${detail.title || detail.eventTitle || ""} ${detail.text || detail.choiceLabel || ""}`;
-    if (!adviser.keywords.some(keyword => text.includes(keyword))) return;
+  function getActionModifier(plan, core = coreState()) {
+    const agenda = agendaState(), rule = MODIFIERS[state.chosen?.id];
+    if (!core || core.ended || state.gameCreatedAt !== core.createdAt || !agenda?.active || agenda.cycle !== state.cycle || !rule
+      || Number(state.chosen.alignedActions || 0) >= MAX_USES || !rule.actions.includes(plan.actionId)) return null;
+    const effects = { ...(rule.effects || {}) };
+    if (rule.discount && Number(plan.effects?.treasury) < 0) effects.treasury = Math.min(rule.discount, -plan.effects.treasury);
+    return { adviserId: state.chosen.id, cycle: state.cycle, description: rule.description, remaining: MAX_USES - Number(state.chosen.alignedActions || 0), effects, hidden: { ...(rule.hidden || {}) } };
+  }
+
+  function consumeActionModifier(plan, id, core = coreState()) {
+    if (!plan.advice || !id || state.processed.includes(id)) return false;
+    const modifier = getActionModifier(plan, core);
+    if (!modifier || modifier.adviserId !== plan.advice.adviserId || modifier.cycle !== plan.advice.cycle) return false;
     state.processed.push(id);
-    state.processed = state.processed.slice(-16);
     state.chosen.alignedActions += 1;
     saveState();
-    window.XianQuarterlyAgenda?.addContribution?.(10, `依${adviser.name}对策施行政务`);
+    window.XianQuarterlyAgenda?.addContribution?.(10, `依${SPEAKERS[modifier.adviserId].name}对策施行政务`);
+    return true;
   }
 
   function render() {
@@ -114,14 +139,14 @@
     const advisers = buildAdvice();
     if (state.chosen) {
       const adviser = advisers.find(item => item.id === state.chosen.id) || SPEAKERS[state.chosen.id];
-      slot.innerHTML = `<section class="council-chosen"><div><span>本季主议</span><strong>${esc(adviser.name)} · ${esc(adviser.stance)}</strong></div><p>“${esc(state.chosen.proposal)}”</p><small>已循此策推进 ${state.chosen.alignedActions || 0} 次；匹配的裁决或行动将获得额外进度。</small></section>`;
+      slot.innerHTML = `<section class="council-chosen"><div><span>本季主议</span><strong>${esc(adviser.name)} · ${esc(adviser.stance)}</strong></div><p>“${esc(state.chosen.proposal)}”</p><small>${esc(MODIFIERS[state.chosen.id]?.description)}。本季剩余 ${Math.max(0, MAX_USES - (state.chosen.alignedActions || 0))}/${MAX_USES} 次；重复行动仍按递减规则。御题以实际成果判定。</small></section>`;
       return;
     }
-    slot.innerHTML = `<section class="council-advice"><header><div><span>群臣对策</span><strong>三人三策，只采纳一议</strong></div><small>不消耗行动</small></header><div>${advisers.map(item => `<button type="button" data-adviser-id="${item.id}"><span>${esc(item.title)} · ${esc(item.stance)}</span><strong>${esc(item.name)}</strong><p>“${esc(item.proposal)}”</p><small>关系 ${Math.round(item.relation)} · ${item.trust}${item.remembered ? ` · 记得 ${item.remembered} 件旧事` : ""}</small><b>采纳此议</b></button>`).join("")}</div></section>`;
+    slot.innerHTML = `<section class="council-advice"><header><div><span>群臣对策</span><strong>三人三策，只采纳一议</strong></div><small>不消耗行动</small></header><div>${advisers.map(item => `<button type="button" data-adviser-id="${item.id}" ${item.affordable ? "" : "disabled"}><span>${esc(item.title)} · ${esc(item.stance)}</span><strong>${esc(item.name)}</strong><p>“${esc(item.proposal)}”</p><small>采纳即生效：${esc(item.immediateSummary)}</small><p>本季最多 ${MAX_USES} 次：${esc(item.modifier.description)}。重复行动的有利变化仍递减。</p><small>关系 ${Math.round(item.relation)} · ${item.trust}${item.remembered ? ` · 记得 ${item.remembered} 件旧事` : ""}</small><b>${item.affordable ? "采纳此议" : `国库不足，尚缺 ${item.shortfall}`}</b></button>`).join("")}</div></section>`;
     slot.querySelectorAll("[data-adviser-id]").forEach(button => button.addEventListener("click", () => chooseAdvice(button.dataset.adviserId)));
   }
 
   function getState() { return JSON.parse(JSON.stringify(state)); }
   function esc(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }
-  window.XianCouncilAdvice = Object.freeze({ version: VERSION, speakers: { ...SPEAKERS }, buildAdvice, chooseAdvice, getState });
+  window.XianCouncilAdvice = Object.freeze({ version: VERSION, speakers: { ...SPEAKERS }, buildAdvice, chooseAdvice, getState, getActionModifier, consumeActionModifier, rules: MODIFIERS });
 })();

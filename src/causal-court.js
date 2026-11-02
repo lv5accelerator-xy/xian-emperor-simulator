@@ -5,8 +5,8 @@
   const VERSION = "2.9.0";
   const MAX_HISTORY = 36;
   const MAX_PENDING = 16;
-  const MAX_PROCESSED = 80;
   let renderTimer = null;
+  let migrating = false;
 
   document.addEventListener("DOMContentLoaded", init, { once: true });
   document.addEventListener("xian:core-saved", queueRender);
@@ -20,6 +20,7 @@
 
   function init() {
     document.getElementById("causal-court-panel")?.addEventListener("click", handlePanelClick);
+    syncFromCore();
     render();
   }
 
@@ -36,6 +37,7 @@
       processedEventIds: [],
       metrics: {
         battles: 0,
+        courtBattles: 0,
         courtVictories: 0,
         courtDefeats: 0,
         citiesTaken: 0,
@@ -57,7 +59,7 @@
       version: 290,
       pending: Array.isArray(current.pending) ? current.pending.slice(0, MAX_PENDING) : [],
       history: Array.isArray(current.history) ? current.history.slice(0, MAX_HISTORY) : [],
-      processedEventIds: Array.isArray(current.processedEventIds) ? current.processedEventIds.slice(-MAX_PROCESSED) : [],
+      processedEventIds: Array.isArray(current.processedEventIds) ? current.processedEventIds : [],
       metrics: { ...base.metrics, ...(current.metrics || {}) },
     };
   }
@@ -75,13 +77,15 @@
   }
 
   function addHistory(next, item) {
+    next.historySequence = Number(next.historySequence || 0) + 1;
     next.history.unshift({
-      id: item.id || `cause-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: item.id || `cause-${item.turn || 1}-${next.historySequence}`,
       turn: Number(item.turn || 1),
       type: item.type || "decision",
       title: item.title || "朝局变化",
       text: item.text || "一项御前处置改变了后续局势。",
       tags: Array.isArray(item.tags) ? item.tags : [],
+      participants: item.participants || null,
       createdAt: new Date().toISOString(),
     });
     next.history = next.history.slice(0, MAX_HISTORY);
@@ -90,8 +94,48 @@
   function markProcessed(next, id) {
     if (!id || next.processedEventIds.includes(id)) return false;
     next.processedEventIds.push(id);
-    next.processedEventIds = next.processedEventIds.slice(-MAX_PROCESSED);
     return true;
+  }
+
+  // Display history is bounded; receipts and participation evidence last the whole run.
+  function migrateParticipation(next, core, excludingId = null) {
+    if (next.participationVersion === 1) return false;
+    const evidence = new Map();
+    const consider = report => {
+      if (!report?.id || report.id === excludingId || Number(report.turn || 0) > Number(core.turn || 0)) return;
+      const participants = Array.isArray(report.participants) ? report.participants : [report.attackerOwner, report.defenderOwner];
+      if (participants.length < 2 || participants.some(owner => typeof owner !== "string" || !owner)) return;
+      evidence.set(report.id, { turn: Number(report.turn || 0), participants, courtInvolved: participants.includes("court"), migrated: true });
+    };
+    (next.history || []).filter(item => item.type === "battle").forEach(consider);
+    try {
+      const army = typeof localStorage !== "undefined" ? JSON.parse(localStorage.getItem("xian_emperor_armies_v050") || "null") : null;
+      if (army?.gameCreatedAt === core.createdAt) (army.battleReports || []).forEach(consider);
+    } catch (_) { /* An absent or malformed optional history is not evidence. */ }
+    next.battleReceipts = { ...Object.fromEntries(evidence), ...(next.battleReceipts || {}) };
+    const courtCount = Object.values(next.battleReceipts).filter(receipt => receipt.courtInvolved).length;
+    // Existing explicit counters belong to this rule; old `battles` is never a substitute.
+    next.metrics.courtBattles = Math.max(Number(next.metrics.courtBattles || 0), courtCount);
+    next.processedEventIds = [...new Set([...next.processedEventIds, ...Object.keys(next.battleReceipts)])];
+    const excludedDebts = [];
+    next.pending = next.pending.filter(item => {
+      if (item.kind !== "war_debt") return true;
+      const sourceId = item.sourceEventId || String(item.id || "").replace(/^war-debt-/, "");
+      const supported = item.courtExpenseEvidence === true || next.battleReceipts[sourceId]?.courtInvolved;
+      if (!supported) excludedDebts.push(item.id);
+      return Boolean(supported);
+    });
+    next.participationVersion = 1;
+    next.participationMigration = { evidenceBattleIds: [...evidence.keys()], excludedUnsubstantiatedDebtIds: excludedDebts, noRetroactivePayment: true };
+    return true;
+  }
+
+  function syncFromCore() {
+    const core = window.XianEmperorGame?.getState?.();
+    if (!core || core.ended || migrating || core.causality?.participationVersion === 1) return;
+    migrating = true;
+    try { commit((next, current) => migrateParticipation(next, current)); }
+    finally { migrating = false; }
   }
 
   function recordDecision(detail) {
@@ -138,12 +182,16 @@
   function recordBattle(report) {
     const id = report.id || `battle-${report.turn || 0}-${report.cityId || "field"}`;
     const courtInvolved = [report.attackerOwner, report.defenderOwner].includes("court");
-    const courtWon = report.victor === "court";
+    const courtWon = courtInvolved && report.victor === "court";
     const courtLost = courtInvolved && Boolean(report.victor) && report.victor !== "court";
     const losses = Number(report.attackerLosses || 0) + Number(report.defenderLosses || 0);
-    const saved = commit(next => {
+    const saved = commit((next, core) => {
+      migrateParticipation(next, core, id);
       if (!markProcessed(next, id)) return false;
+      next.battleReceipts ||= {};
+      next.battleReceipts[id] = { turn: Number(report.turn || 0), participants: [report.attackerOwner, report.defenderOwner], courtInvolved };
       next.metrics.battles += 1;
+      if (courtInvolved) next.metrics.courtBattles += 1;
       next.metrics.lastBattleTurn = Number(report.turn || 0);
       if (courtWon) next.metrics.courtVictories += 1;
       if (courtLost) next.metrics.courtDefeats += 1;
@@ -152,12 +200,15 @@
         turn: report.turn,
         type: "battle",
         title: report.title || "前线交兵",
-        text: `${report.result || "战事未决"}，两军合计折损约${Math.round(losses).toLocaleString("zh-CN")}人；伤亡、军粮与抚恤将回到朝堂。`,
+        text: `${report.result || "战事未决"}，两军合计折损约${Math.round(losses).toLocaleString("zh-CN")}人；${courtInvolved ? "汉军费用与抚恤记入朝廷" : "诸侯战事由当地战场与地方回响记录"}。`,
         tags: ["war", "finance", "people"],
+        participants: [report.attackerOwner, report.defenderOwner],
       });
-      next.pending.unshift({
+      if (courtInvolved) next.pending.unshift({
         id: `war-debt-${id}`,
         kind: "war_debt",
+        sourceEventId: id,
+        courtExpenseEvidence: true,
         dueTurn: Number(report.turn || 0) + 1,
         source: report.title || "前线战事",
         text: "阵亡抚恤与伤兵转运将在下月继续消耗朝廷。",
@@ -180,6 +231,7 @@
         type: courtLost ? "danger" : "military",
       },
       causal: false,
+      receiptId: `court-battle:${id}`,
     });
   }
 
@@ -657,6 +709,7 @@
     deriveIssues,
     selectEventId,
     buildMonthlyConsequences,
+    syncFromCore,
     getState: () => normalize(window.XianEmperorGame?.getState?.()?.causality),
   });
 })();

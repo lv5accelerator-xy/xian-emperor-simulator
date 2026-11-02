@@ -1,0 +1,14 @@
+{
+  "baseCommit": "ce80401",
+  "testedBeforeFix": true,
+  "cases": [
+    { "id": "A6-durable", "handler": "xian:battle-report, 90 xian:decree-world-impact, reload, same battle replay", "expectedCourtBattles": 1, "actualCourtBattles": 2 },
+    { "id": "A6-migration", "handler": "load legacy causality with one explicit court participant", "expectedCourtBattles": 1, "actualCourtBattles": 0 },
+    { "id": "regional-delayed", "handler": "xian:before-month-end with two watch echoes due", "expected": "both phases resolved", "actual": "second echo still watch after receipt" },
+    { "id": "A2-historian-same", "handler": "import-file core month 1 from same game after month 3", "expected": "no future currentDecisions", "actual": "month 3 currentDecisions retained" },
+    { "id": "A2-historian-different", "handler": "import-file core month 1 with another createdAt after month 3", "expected": "no foreign currentDecisions", "actual": "old game currentDecisions retained" },
+    { "id": "A2-missing-stages", "handler": "import-file legacy core without campaign store or reward receipt", "expected": "no fabricated completed stage", "actual": "196-capital recorded completed" },
+    { "id": "A2-import-run-count", "handler": "core-only import, fresh page modules, continue-game button", "expectedTotalRuns": 1, "actualTotalRuns": 2, "observedOn": "working tree after initial A2 fixes" }
+  ],
+  "alreadyPassing": "Regional 0, cost-1, exact-cost boundaries for all three paid options; stale preview; ended; rejected core, world, pending state and RNG unchanged"
+}

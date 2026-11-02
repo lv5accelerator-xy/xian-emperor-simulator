@@ -50,6 +50,7 @@
   }
 
   function queueSync(raw, reason) {
+    if (window.XianEmperorGame?.commit) return;
     if (syncQueued) return;
     syncQueued = true;
     setTimeout(() => {
@@ -692,7 +693,7 @@
     const windowElement = content.closest(".xian-world-window");
     windowElement?.classList.toggle("map-mode", overlayState.tab === "world");
     document.querySelectorAll("[data-world-panel]").forEach((button) => button.classList.toggle("active", button.dataset.worldPanel === overlayState.tab));
-    date.textContent = lastCoreState ? `${formatTurnDate(lastCoreState.turn)} · 第 ${lastCoreState.turn}/${lastCoreState.maxTurns || 24} 月` : "尚未载入本局；以下为汉末历史基础态势";
+    date.textContent = lastCoreState ? `${formatTurnDate(lastCoreState.turn)} · 第 ${lastCoreState.turn}/${window.XianEmperorGame?.getDeadline?.(lastCoreState) || lastCoreState.maxTurns || 24} 月` : "尚未载入本局；以下为汉末历史基础态势";
     const renderers = { world: renderWorldPanel, people: renderPeoplePanel, timeline: renderTimelinePanel, sources: renderSourcesPanel };
     const titles = { world: "九州舆图与天下军政", people: "人物政治人格四维模型", timeline: "汉末历史与本局时间线", sources: "史料库与事件依据" };
     title.textContent = titles[overlayState.tab] || titles.world;
@@ -829,6 +830,7 @@
   function clamp(value, min, max) { return Math.min(max, Math.max(min, Number(value) || 0)); }
   function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;"); }
   window.XianWorldSystem = Object.freeze({
+    syncFromCore: syncFromCoreRaw,
     settleMonth: () => syncFromCoreStorage("month-end"),
     getState: () => worldState ? JSON.parse(JSON.stringify(worldState)) : null,
   });

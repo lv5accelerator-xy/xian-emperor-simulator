@@ -16,9 +16,11 @@
 
   let profile = loadProfile();
   let finishing = false;
+  let applyingLegacy = false;
 
   document.addEventListener("DOMContentLoaded", init, { once: true });
   document.addEventListener("xian:campaign-concluded", event => concludeChapter(event.detail || {}));
+  document.addEventListener("xian:core-saved", applyPendingLegacy);
 
   function init() {
     installLauncher();
@@ -38,7 +40,7 @@
       render: renderTab,
       onMount: mountTab,
     });
-    if (profile.active && profile.pendingScenarioId) setTimeout(applyPendingLegacy, 120);
+    if (profile.active && profile.pendingScenarioId) applyPendingLegacy();
   }
 
   function installLauncher() {
@@ -117,29 +119,39 @@
     }
     document.getElementById("difficulty-select").value = "standard";
     document.getElementById("new-game-btn")?.click();
-    setTimeout(applyPendingLegacy, 90);
+    applyPendingLegacy();
   }
 
   function applyPendingLegacy() {
-    if (!profile.active || !profile.pendingScenarioId) return;
-    const core = readCore();
+    if (applyingLegacy || window.__xianFullSaveImporting || !profile.active || !profile.pendingScenarioId) return;
+    // Stored core may exist before Continue has installed a live game. Keep the
+    // pending chapter until its package can actually be applied to that game.
+    const game = window.XianEmperorGame;
+    const core = game?.getState?.();
     if (!core || core.ended || core.scenarioId !== profile.pendingScenarioId) return;
     if (profile.chapterGameIds.includes(core.createdAt)) {
       profile.pendingScenarioId = null;
       saveProfile();
       return;
     }
-    profile.chapterGameIds.push(core.createdAt);
     const inherited = combineLegacies(profile.legacies.slice(-3));
+    if (profile.legacies.length) {
+      const names = profile.legacies.slice(-3).map(item => LEGACIES[item.id]?.name).filter(Boolean);
+      applyingLegacy = true;
+      try {
+        const result = game.applyExternalPackage?.({
+          ...inherited,
+          receiptId: `saga-legacy:${core.createdAt}`,
+          report: { title: "长卷继承", text: `${names.join("、")}随车驾进入本章。`, type: "important" },
+          chronicle: `前章留下的${names.join("、")}影响了新的开局。`,
+        });
+        if (!result?.applied && !result?.duplicate) return;
+      } finally { applyingLegacy = false; }
+    }
+    profile.chapterGameIds.push(core.createdAt);
     profile.pendingScenarioId = null;
     saveProfile();
-    if (!profile.legacies.length) return;
-    const names = profile.legacies.slice(-3).map(item => LEGACIES[item.id]?.name).filter(Boolean);
-    window.XianEmperorGame?.applyExternalPackage?.({
-      ...inherited,
-      report: { title: "长卷继承", text: `${names.join("、")}随车驾进入本章。`, type: "important" },
-      chronicle: `前章留下的${names.join("、")}影响了新的开局。`,
-    });
+    game.commit?.("dynasty-inheritance");
   }
 
   function concludeChapter(detail) {
@@ -284,6 +296,7 @@
     chapters: CHAPTERS.slice(),
     legacies: LEGACIES,
     combineLegacies,
+    syncFromCore: applyPendingLegacy,
     isFailureEnding,
     getProfile: () => JSON.parse(JSON.stringify(profile)),
     isActive: () => Boolean(profile.active),

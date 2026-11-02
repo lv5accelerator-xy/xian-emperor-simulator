@@ -209,7 +209,7 @@
     if (weak) alerts.push({ type: "城防", title: weak.name, detail: `守备 ${Math.round(cityRuntime(weak, runtime.strategy).defense || 0)}`, city: weak.id });
     const hot = criticalRoutes.sort((a, b) => Number(routeRuntime(b, runtime.strategy).pressure || 0) - Number(routeRuntime(a, runtime.strategy).pressure || 0))[0];
     if (hot) alerts.push({ type: "战线", title: hot.name, detail: `军压 ${Math.round(routeRuntime(hot, runtime.strategy).pressure || 0)}`, route: hot.id });
-    return `<div class="map-inspector-head"><span>总览</span><h4>御前军政图</h4><p>${escapeHtml(core ? `第 ${core.turn}/${core.maxTurns || 24} 月 · ${core.scenarioName || "本局"}` : "尚未开启本局")}</p></div>
+    return `<div class="map-inspector-head"><span>总览</span><h4>御前军政图</h4><p>${escapeHtml(core ? `第 ${core.turn}/${window.XianEmperorGame?.getDeadline?.(core) || core.maxTurns || 24} 月 · ${core.scenarioName || "本局"}` : "尚未开启本局")}</p></div>
       <div class="map-inspector-metrics"><article><span>行动军团</span><strong>${activeArmies.length}</strong></article><article><span>高压军路</span><strong>${criticalRoutes.length}</strong></article><article><span>薄弱城池</span><strong>${weakCities.length}</strong></article></div>
       <div class="map-inspector-note"><strong>本月读图顺序</strong><p>只处理下方三条关键警讯，再决定是否查看完整势力与军路。选择军团后可直接在地图下令。</p></div>
       <div class="map-inspector-list map-alert-list"><strong>本月关键警讯 · 最多三条</strong>${alerts.slice(0, 3).map(alert => `<button type="button" ${alert.city ? `data-map-locate-city="${alert.city}"` : alert.route ? `data-map-locate-route="${alert.route}"` : `data-map-locate-city="${alert.armyCity}"`}><span><em>${alert.type}</em>${escapeHtml(alert.title)}</span><b>${escapeHtml(alert.detail)} · 定位</b></button>`).join("") || "<p>本月没有必须立即处理的地图警讯。</p>"}</div>`;

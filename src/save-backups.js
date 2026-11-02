@@ -38,6 +38,8 @@
       const bundle = api().captureFullSave();
       if (!bundle) return;
       const core = bundle.stores[CORE_KEY], id = keyFor(core), store = readStore();
+      const active = bundle.stores.xian_emperor_short_challenges_v230?.active;
+      if (active && !active.gameCreatedAt) return;
       // Refreshing or saving an action does not overwrite this month's checkpoint.
       if (lastMonth === id && store.months.some(entry => entry.id === id)) return;
       store.months = [makeEntry(bundle, "月度自动留档"), ...store.months.filter(entry => entry.id !== id)].slice(0, 3);
@@ -46,6 +48,7 @@
     } catch (_) { fail(); }
   }
   function queueCapture() {
+    if (api()?.commit) return;
     if (window.__xianFullSaveImporting) return;
     clearTimeout(timer);
     // Let world, army, short-review and delayed chapter setup finish their save handlers.
@@ -131,6 +134,7 @@
   }
 
   const keys = new Set(api().getPortableStorageKeys());
+  document.addEventListener("xian:commit-completed", captureMonth);
   const previousSet = Storage.prototype.setItem, previousRemove = Storage.prototype.removeItem;
   Storage.prototype.setItem = function(key, value) {
     if (this === localStorage && keys.has(key) && window.__xianFullSaveImporting && !window.__xianFullSaveWriting) return;

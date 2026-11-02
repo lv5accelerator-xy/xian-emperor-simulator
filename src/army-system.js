@@ -48,6 +48,7 @@
         window.__xianArmyRefreshOnly ||
         window.__xianStrategyRefreshOnly
       ) return;
+      if (window.XianEmperorGame?.commit) return;
       window.clearTimeout(processTimer);
       processTimer = window.setTimeout(() => processCoreSave(value), 240);
     };
@@ -146,6 +147,8 @@
       lastProcessedTurn: core.turn,
       armies,
       orders: [],
+      orderSequence: 0,
+      promiseAttempts: {},
       battleReports: [],
       sieges: {},
       conquests: [],
@@ -165,6 +168,8 @@
       gameCreatedAt: core.createdAt,
       armies: { ...(current.armies || {}) },
       orders: Array.isArray(current.orders) ? current.orders : [],
+      orderSequence: Number(current.orderSequence || current.orders?.length || 0),
+      promiseAttempts: { ...(current.promiseAttempts || {}) },
       battleReports: Array.isArray(current.battleReports) ? current.battleReports : [],
       sieges: current.sieges && typeof current.sieges === "object" ? current.sieges : {},
       conquests: Array.isArray(current.conquests) ? current.conquests : [],
@@ -278,19 +283,23 @@
       army.status = "marching";
     }
 
-    state.orders.unshift({
-      id: `army-order-${Number(timestamp) || Date.now()}-${army.id}`,
+    const order = {
+      id: `army-order-${Number(timestamp) || `${turn}-${++state.orderSequence}`}-${army.id}`,
       turn,
       armyId: army.id,
       owner,
       task,
       originCityId: army.originCityId,
       targetCityId: destination,
+      targetOwner: readStrategyState()?.cities?.[destination]?.controller || null,
       routeIds: [...routeIds],
       execution,
       text: shortText(text, 120),
       status: routeIds.length ? "executing" : "arrived",
-    });
+      arrivedTurn: routeIds.length ? null : turn,
+    };
+    army.currentOrderId = order.id;
+    state.orders.unshift(order);
 
     addLog(
       turn,
@@ -298,6 +307,7 @@
       `${armyName(army)}奉诏${taskLabel(task)}，${routeIds.length ? `自${cityName(army.originCityId)}向${cityName(destination)}进发，预计${routeIds.length}个月抵达` : `在${cityName(destination)}就地执行`}。`
     );
     routeIds.forEach(routeId => adjustStrategyRoute(routeId, { pressure: task === "attack" ? 3 : 1, supply: task === "supply" ? 2 : -1 }, `${armyName(army)}奉诏进入军路`));
+    return order;
   }
 
   function getCommandAccess(army, core = window.XianEmperorGame?.getState?.() || coreState, strategy = readStrategyState()) {
@@ -377,6 +387,7 @@
       originCityId: army.cityId,
       originName: cityName(army.cityId),
       targetCityId,
+      targetOwner: strategyState?.cities?.[targetCityId]?.controller || null,
       targetName: cityName(targetCityId),
       routeIds,
       routeNames: routeIds.map(routeName),
@@ -417,19 +428,23 @@
     army.fatigue = clamp(army.fatigue + (task === "retreat" ? 5 : 3), 0, 100);
     army.status = preview.eta ? (task === "retreat" ? "routing" : "marching") : task === "defend" ? "defending" : task === "supply" ? "supplying" : "recovering";
     army.lastChange = `舆图军令：${preview.taskLabel}至${preview.targetName}`;
+    const orderId = `map-order-${turn}-${++state.orderSequence}-${army.id}`;
+    army.currentOrderId = orderId;
     state.orders.unshift({
-      id: `map-order-${Date.now()}-${army.id}`,
+      id: orderId,
       turn,
       armyId: army.id,
       owner: army.owner,
       task,
       originCityId: preview.originCityId,
       targetCityId,
+      targetOwner: preview.targetOwner,
       routeIds: [...preview.routeIds],
       execution: preview.execution,
       text: `御前舆图直令：${preview.armyName}${preview.taskLabel}至${preview.targetName}`,
       status: preview.eta ? "executing" : "arrived",
       source: "grand-map",
+      arrivedTurn: preview.eta ? null : turn,
     });
     preview.routeIds.forEach(routeId => adjustStrategyRoute(routeId, { pressure: task === "attack" ? 3 : task === "retreat" ? -1 : 1, supply: task === "supply" ? 2 : -1 }, `${preview.armyName}奉舆图军令进入军路`));
     addLog(turn, task, `${preview.armyName}奉舆图军令${preview.taskLabel}，目标${preview.targetName}。`);
@@ -437,6 +452,7 @@
     saveState();
     renderAll();
     document.dispatchEvent(new CustomEvent("xian:map-order", { detail: preview }));
+    game.commit?.("map-order");
     return { ...preview, ok: true, message: "军令已进入大司马府军籍。" };
   }
 
@@ -500,7 +516,7 @@
 
     processSieges(turn, core, rng);
     resolveCityBattles(turn, core, rng);
-    updateOrderStatuses();
+    updateOrderStatuses(turn);
     state.log = state.log.slice(0, MAX_LOG);
     state.battleReports = state.battleReports.slice(0, MAX_REPORTS);
   }
@@ -576,6 +592,7 @@
   }
 
   function arriveArmy(army, turn) {
+    army.arrivedTurn = turn;
     army.cityId = army.targetCityId || army.cityId;
     army.currentRouteId = null;
     army.eta = 0;
@@ -619,17 +636,36 @@
 
     byCity.forEach((armies, cityId) => {
       const pair = findHostilePair(armies, cityId);
-      if (!pair) return;
-      const [attacker, defender] = pair;
-      resolveBattle(attacker, defender, cityId, turn, core, rng);
+      if (pair) {
+        const [attacker, defender] = pair;
+        resolveBattle(attacker, defender, cityId, turn, core, rng);
+      }
+      // A city can have walls and a local garrison without a field army.
+      // Re-read control after the field battle: the previous defender may have
+      // retreated, dissolved, or lost the city to a third party while we marched.
+      armies.filter(army => army.task === "attack" && army.targetCityId === cityId && army.status !== "destroyed" && army.status !== "routing")
+        .sort((a, b) => armyReadiness(b) - armyReadiness(a)).forEach(attacker => {
+          const enemy = armies.some(other => other.id !== attacker.id && other.troops >= 500 && !["destroyed", "routing", "marching"].includes(other.status) && areHostile(attacker.owner, other.owner));
+          if (enemy) return;
+          const city = readStrategyState()?.cities?.[cityId];
+          if (!city) return;
+          if (!areHostile(attacker.owner, city.controller)) {
+            attacker.task = "defend";
+            attacker.status = "defending";
+            attacker.lastChange = `抵达友方${cityName(cityId)}，转入驻防`;
+            return;
+          }
+          const siege = beginSiege(attacker, null, cityId, turn, null);
+          if (siege && Number(city.defense || 0) <= 0) captureCity(siege, attacker, turn, "城防失效，守军接受接管");
+        });
     });
   }
 
   function findHostilePair(armies, cityId) {
-    const attackers = armies.filter(army => army.task === "attack" && army.targetCityId === cityId);
+    const attackers = armies.filter(army => army.task === "attack" && army.targetCityId === cityId && !["marching", "routing"].includes(army.status));
     for (const attacker of attackers.sort((a, b) => armyReadiness(b) - armyReadiness(a))) {
       const defender = armies
-        .filter(army => army.owner !== attacker.owner && areHostile(attacker.owner, army.owner))
+        .filter(army => !["marching", "routing"].includes(army.status) && army.owner !== attacker.owner && areHostile(attacker.owner, army.owner))
         .sort((a, b) => armyReadiness(b) - armyReadiness(a))[0];
       if (defender) return [attacker, defender];
     }
@@ -691,7 +727,7 @@
     checkDestroyed(attacker, turn);
     checkDestroyed(defender, turn);
     const report = {
-      id: `battle-${turn}-${cityId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      id: `battle-${turn}-${cityId}-${attacker.id}-${defender.id}`,
       turn,
       date: formatTurnDate(core, turn),
       cityId,
@@ -725,7 +761,7 @@
   function beginSiege(attacker, defender, cityId, turn, report) {
     const strategy = readStrategyState();
     const city = strategy?.cities?.[cityId];
-    if (!city || city.controller === attacker.owner) {
+    if (!city || !areHostile(city.controller, attacker.owner)) {
       attacker.status = "defending";
       attacker.task = "defend";
       return null;
@@ -735,10 +771,12 @@
       existing.attackerArmyId = attacker.id;
       existing.attackerOwner = attacker.owner;
       existing.lastChange = `${armyName(attacker)}接替围城阵地`;
+      attacker.status = "besieging";
+      attacker.task = "siege";
       return existing;
     }
     const siege = {
-      id: `siege-${cityId}-${turn}-${Date.now()}`,
+      id: `siege-${cityId}-${turn}-${attacker.id}`,
       cityId,
       attackerArmyId: attacker.id,
       attackerOwner: attacker.owner,
@@ -752,13 +790,13 @@
       startedTurn: turn,
       lastResolvedTurn: turn,
       status: "active",
-      lastChange: "野战得胜，进攻军开始围城",
+      lastChange: report ? "野战得胜，进攻军开始围城" : "城外没有敌对野战军，开始围攻城防与当地守军",
     };
     state.sieges[cityId] = siege;
     attacker.status = "besieging";
     attacker.task = "siege";
     attacker.targetCityId = cityId;
-    report.siegeId = siege.id;
+    if (report) report.siegeId = siege.id;
     addLog(turn, "siege", `${armyName(attacker)}包围${cityName(cityId)}，城内尚有守军与粮秣。`);
     return siege;
   }
@@ -774,6 +812,19 @@
         siege.lastChange = "围城军已经撤离，城围解除";
         addLog(turn, "retreat", `${cityName(siege.cityId)}之围已经解除。`);
         return;
+      }
+      if (!areHostile(army.owner, city.controller)) {
+        siege.status = "lifted";
+        siege.lastChange = "目标已归友方，围城军转入驻防";
+        army.task = "defend";
+        army.status = "defending";
+        return;
+      }
+      if (siege.defenderOwner !== city.controller) {
+        siege.defenderOwner = city.controller;
+        siege.walls = Number(city.defense || 0);
+        siege.citySupply = Number(city.supply || 0);
+        siege.lastChange = "目标控制者改变，按现有城防继续围城";
       }
       const outcome = calculateSiegeTurn(siege, army, city, core, rng());
       siege.progress = clamp(siege.progress + outcome.progress, 0, 100);
@@ -849,6 +900,7 @@
   }
 
   function captureCity(siege, army, turn, reason) {
+    if (siege.status === "captured" || state.conquests.some(item => item.id === `conquest-${siege.id}`)) return;
     const strategy = readStrategyState();
     const city = strategy?.cities?.[siege.cityId];
     if (!city) return;
@@ -888,6 +940,7 @@
   }
 
   function setSiegeStance(cityId, stance) {
+    if ((window.XianEmperorGame?.getState?.() || coreState)?.ended) return false;
     const siege = state?.sieges?.[cityId];
     if (!siege || siege.status !== "active" || !["assault", "blockade", "persuade"].includes(stance)) return false;
     siege.stance = stance;
@@ -974,14 +1027,25 @@
         text: captive ? `尝试以汉室名分招纳${captive.name}，预计成功率 ${recruitChance}%。` : "收编降官与守军骨干，为朝廷补充可用之人。",
       },
     };
-    return choices[decision] || null;
+    const result = choices[decision] || null;
+    if (result) result.treasuryCost = Math.max(0, -Number(result.effects?.treasury || 0));
+    return result;
   }
 
   function resolvePostwarJudgment(judgmentId, decision) {
     const judgment = state?.pendingJudgments?.find(item => item.id === judgmentId && item.status === "pending");
     if (!judgment) return false;
-    const result = getJudgmentDecision(decision, judgment, coreState);
+    const currentCore = window.XianEmperorGame?.getState?.() || coreState;
+    if (currentCore?.ended || !window.XianEmperorGame?.applyExternalPackage) return false;
+    const result = getJudgmentDecision(decision, judgment, currentCore);
     if (!result) return false;
+    const budget = window.XianEmperorGame?.canAffordEffects?.(result.effects) || { ok: Number(currentCore?.stats?.treasury || 0) >= Math.max(0, -Number(result.effects?.treasury || 0)), shortfall: Math.max(0, -Number(result.effects?.treasury || 0) - Number(currentCore?.stats?.treasury || 0)) };
+    if (!budget.ok) {
+      window.XianEmperorGame?.toast?.(budget.reason || `国库不足，尚缺${budget.shortfall}。`);
+      const content = document.getElementById("army-system-content");
+      if (content) { let warning = content.querySelector("[data-army-budget-warning]"); if (!warning) { warning = document.createElement("p"); warning.dataset.armyBudgetWarning = "true"; content.prepend(warning); } warning.textContent = budget.reason || `国库不足，尚缺${budget.shortfall}。待决事项已保留。`; }
+      return false;
+    }
     const strategy = readStrategyState();
     const city = strategy?.cities?.[judgment.cityId];
     if (!city) return false;
@@ -1101,12 +1165,15 @@
     return army.troops * (0.4 + army.morale / 200) * (0.45 + army.supply / 200) * (0.5 + army.training / 220);
   }
 
-  function updateOrderStatuses() {
+  function updateOrderStatuses(turn) {
     state.orders.forEach(order => {
       const army = state.armies[order.armyId];
+      if (["arrived", "failed", "superseded"].includes(order.status)) return;
+      const currentOrderId = army?.currentOrderId || state.orders.find(item => item.armyId === order.armyId)?.id;
+      if (currentOrderId !== order.id) { order.status = "superseded"; return; }
       if (!army || army.status === "destroyed") order.status = "failed";
       else if (["marching", "routing"].includes(army.status)) order.status = "executing";
-      else if (army.cityId === order.targetCityId) order.status = "arrived";
+      else if (army.cityId === order.targetCityId) { order.status = "arrived"; order.arrivedTurn = turn; }
     });
   }
 
@@ -1312,7 +1379,7 @@
     const date = document.getElementById("army-system-date");
     if (!content || !date) return;
     document.querySelectorAll("[data-army-tab]").forEach(button => button.classList.toggle("active", button.dataset.armyTab === activeTab));
-    date.textContent = coreState ? `建安军务 · 第 ${coreState.turn}/${coreState.maxTurns || 24} 月` : "尚未载入本局";
+    date.textContent = coreState ? `建安军务 · 第 ${coreState.turn}/${window.XianEmperorGame?.getDeadline?.(coreState) || coreState.maxTurns || 24} 月` : "尚未载入本局";
     if (!state) { content.innerHTML = '<p class="empty-state">请先开启或读取一局游戏。</p>'; return; }
     const renderers = { armies: renderArmies, movements: renderMovements, sieges: renderSieges, judgments: renderJudgments, battles: renderBattles };
     content.innerHTML = renderArmySummary() + (renderers[activeTab] || renderArmies)();
@@ -1364,7 +1431,7 @@
   function renderJudgmentCard(judgment) {
     const captive = state.captives.find(item => item.id === judgment.captiveId);
     const recruit = getJudgmentDecision("recruit", judgment, coreState);
-    return `<article class="judgment-card"><div class="judgment-card-head"><div><span>第 ${judgment.turn} 月克城</span><strong>${escapeHtml(cityName(judgment.cityId))}</strong><small>${escapeHtml(ownerName(judgment.previousOwner))} → ${escapeHtml(ownerName(judgment.newOwner))}</small></div><b>${captive ? `俘将 ${escapeHtml(captive.name)}` : "守军请降"}</b></div><p>城池已经易手，但由谁治理、如何安民以及怎样处置降将，将决定皇权与诸侯关系。</p><div class="judgment-actions"><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="pacify"><strong>赦降安民</strong><span>威望与民稳上升</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="appoint"><strong>汉官接掌</strong><span>皇权上升 · 曹氏警戒</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="reward"><strong>论功行赏</strong><span>功臣保有城池</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="recruit"><strong>纳降任用</strong><span>${captive ? `归降机会 ${recruit.recruitChance}%` : "收编降官"}</span></button></div></article>`;
+    return `<article class="judgment-card"><div class="judgment-card-head"><div><span>第 ${judgment.turn} 月克城</span><strong>${escapeHtml(cityName(judgment.cityId))}</strong><small>${escapeHtml(ownerName(judgment.previousOwner))} → ${escapeHtml(ownerName(judgment.newOwner))}</small></div><b>${captive ? `俘将 ${escapeHtml(captive.name)}` : "守军请降"}</b></div><p>城池已经易手，但由谁治理、如何安民以及怎样处置降将，将决定皇权与诸侯关系。</p><div class="judgment-actions"><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="pacify"><strong>赦降安民</strong><span>威望与民稳上升</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="appoint"><strong>汉官接掌</strong><span>国库−6 · 皇权上升 · 曹氏警戒</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="reward"><strong>论功行赏</strong><span>国库−5 · 功臣保有城池</span></button><button type="button" data-judgment-id="${escapeHtml(judgment.id)}" data-judgment-decision="recruit"><strong>纳降任用</strong><span>${captive ? `归降机会 ${recruit.recruitChance}%` : "收编降官"}</span></button></div></article>`;
   }
 
   function renderSiegeCard(siege) {
@@ -1402,6 +1469,27 @@
   }
 
   window.XianArmySystem = Object.freeze({
+    acceptPromiseMission: promise => {
+      if (!state || !coreState || coreState.ended || !promise?.contract) return false;
+      const existing = state.orders.find(item => item.sourcePromiseId === promise.id);
+      if (existing) return existing;
+      const core = window.XianEmperorGame?.getState?.() || coreState;
+      if (core.turn > promise.deadlineTurn) return false;
+      const issued = state.orders.find(item => !promise.contract.initialOrderIds.includes(item.id) && !item.sourcePromiseId && item.owner === promise.lordId && item.targetCityId === promise.contract.targetCityId && item.turn >= promise.createdTurn && ["support", "defend"].includes(item.task));
+      if (issued) { issued.sourcePromiseId = promise.id; saveState(); return issued; }
+      const army = selectArmy(promise.lordId, promise.contract.targetCityId);
+      const access = getCommandAccess(army, core, readStrategyState());
+      const signature = JSON.stringify([core.turn, core.stats.authority, core.relations?.[promise.lordId], access.trust, army?.id, army?.cityId, army?.status, army?.troops]);
+      if (state.promiseAttempts[promise.id] === signature) return false;
+      state.promiseAttempts[promise.id] = signature;
+      const order = assignArmyOrder(promise.lordId, [promise.contract.targetCityId], "support", 65, `外交援军 ${promise.id}`, core.turn, 0);
+      if (!order) { saveState(); return false; }
+      order.sourcePromiseId = promise.id;
+      order.id = `promise-order:${promise.id}`;
+      state.armies[order.armyId].currentOrderId = order.id;
+      saveState(); return true;
+    },
+    syncFromCore: raw => processCoreSave(raw ?? localStorage.getItem(CORE_KEY)),
     settleMonth: () => {
       processCoreSave(localStorage.getItem(CORE_KEY));
       if (state && coreState && state.lastProcessedTurn <= Number(coreState.monthlySettledTurn || 0)) processCoreSave(localStorage.getItem(CORE_KEY));

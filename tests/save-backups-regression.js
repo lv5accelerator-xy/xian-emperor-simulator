@@ -21,7 +21,7 @@ const run = ready();
 const definition = { ...run.window.XianShortChallenges.getChallenges()[0], randomSeed: 1818 };
 run.window.XianShortChallenges.startCustom(definition);
 run.advance(400);
-assert.equal(run.window.XianSaveBackups.getEntries().length, 0, "backup must wait for delayed army and campaign saves");
+assert.equal(run.window.XianSaveBackups.getEntries().length, 1, "complete committed state is backed up without waiting on gameplay timers");
 run.flush();
 let entries = run.window.XianSaveBackups.getEntries();
 assert.equal(entries.length, 1); assert.equal(entries[0].turn, 1);

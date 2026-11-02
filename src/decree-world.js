@@ -69,6 +69,7 @@
   }
 
   function queueProcess(raw) {
+    if (window.XianEmperorGame?.commit) return;
     window.clearTimeout(processTimer);
     processTimer = window.setTimeout(() => processCoreSave(raw, 0), 60);
   }
@@ -77,6 +78,7 @@
     const core = safeParse(raw);
     if (!isValidCore(core)) return;
 
+    extensionState = loadExtensionState();
     if (!extensionState || extensionState.gameCreatedAt !== core.createdAt) {
       extensionState = createExtensionState(core);
       saveExtensionState();
@@ -105,7 +107,7 @@
 
     const world = safeParse(localStorage.getItem(WORLD_SAVE_KEY));
     if (!isValidWorld(world, core)) {
-      if (attempt < 4) {
+      if (!window.XianEmperorGame?.commit && attempt < 4) {
         window.setTimeout(() => processCoreSave(raw, attempt + 1), 80 * (attempt + 1));
       }
       return;
@@ -114,8 +116,11 @@
     let changed = false;
     let latestImpact = null;
     edictReports.forEach(report => {
+      const receipt = report.id || `edict:${core.createdAt}:${report.turn}:${report.timestamp}`;
+      if (extensionState.processedReportIds.includes(receipt)) return;
       const impact = applyEdictToWorld(report, core, world);
       if (!impact) return;
+      extensionState.processedReportIds.push(receipt);
       changed = true;
       latestImpact = impact;
       extensionState.history.unshift(impact);
@@ -443,6 +448,7 @@
       version: VERSION,
       gameCreatedAt: state.gameCreatedAt || null,
       lastReportTimestamp: Number(state.lastReportTimestamp) || 0,
+      processedReportIds: Array.isArray(state.processedReportIds) ? state.processedReportIds : [],
       history: Array.isArray(state.history) ? state.history : [],
       updatedAt: state.updatedAt || null,
     };
@@ -453,6 +459,7 @@
       version: VERSION,
       gameCreatedAt: core?.createdAt || null,
       lastReportTimestamp: getLatestTimestamp(core?.reports),
+      processedReportIds: [],
       history: [],
       updatedAt: new Date().toISOString(),
     };
@@ -505,6 +512,7 @@
   }
 
   window.XianDecreeWorld = Object.freeze({
+    syncFromCore: raw => processCoreSave(raw, 0),
     processCurrentSave: () => processCoreSave(localStorage.getItem(GAME_SAVE_KEY), 0),
     getState: () => extensionState ? JSON.parse(JSON.stringify(extensionState)) : null,
     detectTargets: text => ({ regions: detectRegions(String(text || "")), lords: detectLords(String(text || "")) }),

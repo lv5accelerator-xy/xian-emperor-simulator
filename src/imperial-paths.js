@@ -96,7 +96,7 @@
   function choosePath(id) {
     const core = coreState();
     const path = PATHS.find(item => item.id === id);
-    if (!core || !state.unlocked || state.active || !state.offers.includes(id) || !path) return false;
+    if (!core || core.ended || !state.unlocked || state.active || !state.offers.includes(id) || !path) return false;
     state.active = { id, stage: 0, selectedTurn: core.turn, momentum: 0, seenEvents: [], lastEventTurn: 0, lastStageTurn: 0, completed: false };
     state.history.unshift({ turn: core.turn, type: "chosen", pathId: id, title: path.title, text: `天子选择“${path.title}”作为中期帝业。` });
     saveState();
@@ -121,7 +121,7 @@
       return dualProgress("御题与专属奏报", successes, 3, state.active.momentum, 2);
     }
     if (stage === 0) return alternativeProgress("胜利或新附", metrics.courtVictories, 1, metrics.citiesTaken, 1);
-    if (stage === 1) return alternativeProgress("新附或战历", metrics.citiesTaken, 1, metrics.battles, 3);
+    if (stage === 1) return alternativeProgress("新附或汉军战历", metrics.citiesTaken, 1, metrics.courtBattles || 0, 3);
     return dualProgress("胜绩与专属奏报", metrics.courtVictories, 2, state.active.momentum, 2);
   }
 

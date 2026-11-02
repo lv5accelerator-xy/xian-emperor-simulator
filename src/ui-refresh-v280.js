@@ -74,6 +74,22 @@
   function initialize() {
     installSecondaryPanelToggles();
     installMobileNavigation();
+    const toolbar = document.querySelector(".mobile-reading-toolbar");
+    if (toolbar && !document.getElementById("mobile-save-tools")) {
+      const button = document.createElement("button");
+      button.id = "mobile-save-tools";
+      button.type = "button";
+      button.textContent = "存档工具";
+      button.addEventListener("click", () => {
+        const entries = [["save-btn", "保存"], ["load-btn", "读取"], ["backups-btn", "存档备份"], ["export-btn", "导出"], ["import-btn", "导入"]];
+        window.XianEmperorGame.openUtilityModal({ title: "存档工具", body: `<div class="option-grid">${entries.map(([id, label]) => `<button type="button" data-mobile-tool="${id}">${label}</button>`).join("")}</div>`, confirmText: "关闭", cancelHidden: true, onConfirm: window.XianEmperorGame.closeUtilityModal });
+        document.querySelectorAll("[data-mobile-tool]").forEach(item => item.addEventListener("click", () => {
+          window.XianEmperorGame.closeUtilityModal();
+          document.getElementById(item.dataset.mobileTool)?.click();
+        }));
+      });
+      toolbar.appendChild(button);
+    }
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize, { once: true });
