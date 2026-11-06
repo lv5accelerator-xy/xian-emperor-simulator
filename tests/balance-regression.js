@@ -1,5 +1,6 @@
 "use strict";
 const assert = require("node:assert/strict");
+const fs = require("node:fs"), path = require("node:path");
 const { harness } = require("./helpers/game-harness");
 
 // Paired seeds, actual event buttons and common-action confirmations; no stat patches.
@@ -136,6 +137,11 @@ function simulate(samples = 24) {
 
 if (require.main === module) {
   const report = simulate(Number(process.env.BALANCE_SAMPLES || 24));
+  if (process.env.BALANCE_REPORT) {
+    const target = path.resolve(process.env.BALANCE_REPORT);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, JSON.stringify(report, null, 2));
+  }
   if (!process.argv.includes("--json")) {
     for (const cell of report.cells) console.log(`${cell.name} / ${cell.policyName}: gold ${cell.gold}/${cell.samples}, completed ${cell.completed}/${cell.samples}, spent ${cell.spent}, treasury ${cell.treasury}`);
   } else console.log(JSON.stringify(report, null, 2));
