@@ -39,10 +39,11 @@ for (const scenario of scenarios) for (const seed of seeds) {
   while (!run.api.getState().ended) {
     let core = run.api.getState(); assert.ok(core.turn <= scenario.maxTurns, "normal trajectory cannot overrun the scenario");
     const choices = run.api.getCurrentEvent().choices;
-    const decision = choices.map((choice, index) => ({ index, score: scorePackage(choice, core) }))
+    const decision = choices.map((choice, index) => ({ index, choice, score: scorePackage(choice, core) })).filter(item => !item.choice.disabledReason)
       .sort((a, b) => b.score - a.score || a.index - b.index)[0].index;
     trace.push({ turn: core.turn, kind: "decision", eventId: core.currentEventId, choice: decision });
     run.decide(decision);
+    assert.ok(run.api.getState().eventResolved, `real decision failed: ${scenario.id} turn ${core.turn}`);
     if (run.api.getState().ended) break;
     const quarter = run.window.XianQuarterlyAgenda;
     if (!quarter.getState().active && quarter.getState().offers.length) quarter.selectAgenda(quarter.getState().offers[0]);
@@ -77,7 +78,8 @@ for (const scenario of scenarios) for (const seed of seeds) {
       const recommendation = run.window.XianCommandCenter.recommendAction(core);
       if (!recommendation.fields || recommendation.actionId === "end") break;
       const plan = run.window.XianActionPlans.build(recommendation.actionId, recommendation.fields, core);
-      if (!plan?.affordable || !run.act(plan.actionId, plan.fields)) break;
+      if (!plan?.affordable) { trace.push({ turn: core.turn, kind: "rejected", recommendation, reason: "recommended plan missing or unaffordable" }); break; }
+      if (!run.act(plan.actionId, plan.fields)) { trace.push({ turn: core.turn, kind: "rejected", actionId: plan.actionId, fields: plan.fields, reason: "real confirmation did not increase successful action count" }); break; }
       treasurySpent += plan.cost;
       trace.push({ turn: core.turn, kind: "action", actionId: plan.actionId, fields: plan.fields, cost: plan.cost,
         ordinal: plan.repetition.ordinal, adviser: plan.advice?.adviserId || null });

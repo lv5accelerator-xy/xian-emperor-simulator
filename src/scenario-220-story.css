@@ -1,0 +1,30 @@
+/* Keep the main decision in its existing scroll flow; historical detail starts closed. */
+.story220-status {
+  margin: .8rem 0 1rem;
+  padding: .8rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 6px;
+  background: rgba(212, 173, 93, .06);
+  font-family: var(--font-serif);
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.story220-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem 1rem; }
+.story220-heading span { color: var(--muted); font-size: .85rem; }
+.story220-status p { margin: .5rem 0; }
+.story220-status details { font-size: .9rem; }
+.story220-status summary { min-height: 44px; display: list-item; align-content: center; cursor: pointer; }
+.story220-status ol { margin: .3rem 0; padding-left: 1.3rem; }
+.story220-status li { margin-bottom: .5rem; }
+.story220-status summary:focus-visible { outline: 2px solid var(--gold2); outline-offset: 3px; }
+.event-choices .choice-button:disabled { cursor: default; opacity: .65; }
+.choice-button .story220-requirement { color: var(--gold2); line-height: 1.75; }
+.story220-afterword { margin: 1.2rem 0; padding: 1rem; border: 1px solid var(--border); border-radius: 6px; text-align: left; font-family: var(--font-serif); line-height: 1.9; overflow-wrap: anywhere; }
+.story220-afterword h3 { font-size: 1.2rem; color: var(--gold2); }
+.story220-afterword p { font-size: 1rem; margin: .8rem 0; }
+@media (max-width: 420px) {
+  .story220-status { padding: .65rem; }
+  .story220-afterword { padding: .65rem; }
+}
