@@ -43,7 +43,9 @@
 
 ## 当前版本
 
-当前版本为 **v2.24.0「令出有据」**。
+当前版本为 **v2.25.0「延康有据」**。
+
+- **v2.25.0**：停战解除失效围城、按真实军事事实核验；召见国家收益公共计次与人物关系分计；当前人物及势力身份统一解析；移植延康四幕并同步保存实际选择与后续。详见 [规则](docs/RULES_V225.md)、[验证](docs/VALIDATION_V225.md)、[主线](docs/SCENARIO_220_STORY.md)。
 
 - **v2.24.0**：同步提交玩法、统一预算与期限、完整恢复及旧核心迁移；主议每季两次实际修正、同月同类同对象收益递减，贡赋／援军／停战按真实凭据履约。详见 [规则与兼容](docs/RULES_V224.md)、[配对策略对照](docs/BALANCE_V224.md)。
 
@@ -158,7 +160,7 @@ node tests/settlement-replay-regression.js
 发布检查还需要设置当前预期版本：
 
 ```bash
-EXPECTED_VERSION=2.15.0 node tests/release-regression.js
+EXPECTED_VERSION=2.25.0 node tests/release-regression.js
 ```
 
 GitHub Actions 会额外检查脚本语法、音频资源、圣旨目标顺序、军团计算、页面资源引用和独立版本说明。
