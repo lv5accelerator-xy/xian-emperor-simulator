@@ -126,6 +126,20 @@ check("old contracts lacking siege history retain unknown observation instead of
   const p = h.strategy().promises[0];
   assert.equal(p.status, "unverified"); assert.equal(p.contract.receipts.length, 0); assert.match(p.lastChange, /未知/);
 });
+check("bilateral field attacks stop even when the city is controlled by a third party", () => {
+  const h = harness(), a = h.army(), s = h.strategy();
+  Object.values(a.armies).forEach(army => { army.status = "destroyed"; army.troops = 0; });
+  Object.assign(a.armies.yuan_main, { cityId: "luoyang", targetCityId: "luoyang", task: "attack", status: "engaged", troops: 6000, supply: 90 });
+  Object.assign(a.armies.cao_central, { cityId: "luoyang", targetCityId: "luoyang", task: "defend", status: "defending", troops: 1800 });
+  s.cities.luoyang.controller = "sun_ce"; s.strategies.yuan_shao.trust = 90; h.core.relations.yuan_shao = 90;
+  h.restoreArmy(a); h.restoreStrategy(s); decree(h, "令袁绍与曹操停战");
+  assert.equal(h.army().armies.yuan_main.task, "idle");
+  h.core.turn = 2; h.flush(); reconcile(h); assert.equal(h.army().battleReports.length, 0);
+  const relocated = h.army(); relocated.armies.yuan_main.cityId = "ye"; relocated.armies.yuan_main.targetCityId = "ye"; h.restoreArmy(relocated);
+  const preview = h.window.XianArmySystem.previewMapOrder("yuan_main", "luoyang", "attack");
+  assert.equal(preview.ceasefireBreaches.length, 0); assert.equal(preview.ceasefireRisks.length, 1);
+  assert.match(h.window.XianStrategyNetwork.previewHostilities("令袁绍攻取洛阳")[0].message, /停战风险/);
+});
 check("active ceasefire previews identify a deliberate new attack and result records one breach", () => {
   const h = fixture(); decree(h, "令袁绍与曹操停战");
   const a = h.army(); a.armies.yuan_main.cityId = "ye"; a.armies.yuan_main.targetCityId = "ye"; h.restoreArmy(a);

@@ -405,6 +405,11 @@
       promise.type === "ceasefire" && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
       && promise.contract?.parties?.includes(army.owner) && promise.contract.parties.includes(targetOwner) && army.owner !== targetOwner).map(promise => promise.id) : [];
     if (ceasefireBreaches.length) warnings.push(`主动违约：此攻击军令将违背 ${ceasefireBreaches.length} 份当前停战约定`);
+    const ceasefireRisks = task === "attack" ? (STRATEGY_API.getState()?.promises || []).filter(promise =>
+      promise.type === "ceasefire" && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
+      && promise.contract?.parties?.includes(army.owner) && attackTargetOwners(army.owner, targetCityId).some(owner => promise.contract.parties.includes(owner))
+      && !ceasefireBreaches.includes(promise.id)).map(promise => promise.id) : [];
+    if (ceasefireRisks.length) warnings.push("停战风险：目的地存在约定对方的野战军，实际交战将构成违约");
 
     return {
       ok: true,
@@ -430,6 +435,7 @@
       minSupply: Math.round(minSupply),
       warnings,
       ceasefireBreaches,
+      ceasefireRisks,
     };
   }
 
@@ -509,8 +515,8 @@
     const rejected = [];
     Object.values(state.armies).forEach(army => {
       if (!owners.includes(army.owner) || army.status === "destroyed" || !["attack", "siege"].includes(army.task)) return;
-      const opponent = readStrategyState()?.cities?.[army.targetCityId]?.controller;
-      if (opponent === army.owner || !owners.includes(opponent)) return;
+      const opponents = army.task === "siege" ? [readStrategyState()?.cities?.[army.targetCityId]?.controller] : attackTargetOwners(army.owner, army.targetCityId);
+      if (!opponents.some(opponent => opponent !== army.owner && owners.includes(opponent))) return;
       const access = getCommandAccess(army, coreState);
       if (!access.allowed) { rejected.push({ armyId: army.id, reason: access.message }); army.lastChange = `停战未获承接：${access.message}`; return; }
       liftArmySieges(army.id, turn, "军团接受停战，城围解除");
@@ -535,6 +541,13 @@
     return Boolean(army && army.troops >= 500 && army.owner === siege.attackerOwner && army.status === "besieging"
       && army.task === "siege" && army.cityId === siege.cityId && army.targetCityId === siege.cityId
       && (!siege.sourceOrderId || army.currentOrderId === siege.sourceOrderId));
+  }
+
+  function attackTargetOwners(owner, cityId) {
+    return [...new Set([readStrategyState()?.cities?.[cityId]?.controller,
+      ...Object.values(state?.armies || {}).filter(army => army.cityId === cityId && army.troops >= 500
+        && !["destroyed", "routing", "marching"].includes(army.status) && areHostile(owner, army.owner)).map(army => army.owner)])]
+      .filter(opponent => opponent && opponent !== owner);
   }
 
   function liftArmySieges(armyId, turn, reason) {

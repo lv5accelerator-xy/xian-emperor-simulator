@@ -1041,11 +1041,15 @@
     if (!state || !isValidCore(core) || choosePrimaryOrder(detectOrders(text)) !== "attack") return [];
     const owners = detectLordTargets(text), targetCityId = detectCityTargets(text).at(-1);
     const targetOwner = state.cities[targetCityId]?.controller;
+    const fieldOwners = Object.values(window.XianArmySystem?.getState?.()?.armies || {}).filter(army => army.cityId === targetCityId
+      && army.troops >= 500 && !["destroyed", "routing", "marching"].includes(army.status)).map(army => army.owner);
     return state.promises.filter(promise => promise.type === "ceasefire" && promise.status === "active"
-      && core.turn <= promise.deadlineTurn && promise.contract?.parties?.includes(targetOwner)
-      && (owners.length ? owners : ["court"]).some(owner => owner !== targetOwner && promise.contract.parties.includes(owner)))
+      && core.turn <= promise.deadlineTurn
+      && (owners.length ? owners : ["court"]).some(owner => promise.contract?.parties?.includes(owner)
+        && [targetOwner, ...fieldOwners].some(opponent => opponent !== owner && promise.contract.parties.includes(opponent))))
       .map(promise => ({ promiseId: promise.id, targetOwner, targetCityId,
-        message: `主动违约：若此攻击军令被承接，将违背 ${promise.contract.parties.map(controllerName).join("与")} 的停战约定；旧军令也不能豁免签约后继续围城或占领。` }));
+        message: promise.contract.parties.includes(targetOwner) ? `主动违约：若此攻击军令被承接，将违背 ${promise.contract.parties.map(controllerName).join("与")} 的停战约定；旧军令也不能豁免签约后继续围城或占领。`
+          : `停战风险：目标城外存在约定对方的野战军，实际交战将违背 ${promise.contract.parties.map(controllerName).join("与")} 的停战约定。` }));
   }
 
   window.XianStrategyNetwork = Object.freeze({
