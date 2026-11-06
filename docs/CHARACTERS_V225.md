@@ -43,6 +43,6 @@
 
 ## 已运行验证
 
-修改前 `node tests/character-availability-regression.js` 失败于“220 opening says Cao Cao died: current actions must not target him”，证明当前版本仍把曹操放入可行动对象。修改后该文件通过 13 组功能回归，组数不是断言数：新局列表、伪造处理器对象、具名圣旨拒绝、曹丕独立关系、旧核心/完整导入、六类主议、其他四剧本、220 短局、当前事件复制、势力/军司身份、推荐器/比较、旧待决篇章和真实圣旨至天下落实。包含诏文对象顺序颠倒的专门断言。
+修改前 `node tests/character-availability-regression.js` 失败于“220 opening says Cao Cao died: current actions must not target him”，证明当前版本仍把曹操放入可行动对象。修改后该文件通过 14 组功能回归，组数不是断言数：新局列表、伪造处理器对象、具名圣旨拒绝、曹丕独立关系、旧核心/完整导入、六类主议、其他四剧本、220 短局、当前事件复制、势力/军司身份、推荐器/比较、旧待决篇章和真实圣旨至天下落实。包含诏文对象顺序颠倒的专门断言。另新增五个剧本逐张点击真实人物卡片、打开详情并确认只读的回归；先复现机构角色缺少 publicTraits 导致详情报错，再为查询输出补齐明确的机构简介与公开特征。
 
 另外运行 `council-advice-regression`、`progression-regression`、`progression-action-consistency-regression`、`legacy-systems-regression`、`grand-map-regression`、`campaign-evolution-regression`、`contract-parsing-regression`、`decree-resume-regression`，均退出 0。真实页面、移动布局及全量检查结果以本轮统一验证文档为准，本页的测试 DOM 适配器不充当浏览器验收。

@@ -20,7 +20,13 @@
     const scenario = window.GAME_DATA?.scenarios?.find(item => item.id === core?.scenarioId);
     return Number(scenario?.startYear || 196) + Math.floor((Number(scenario?.startMonth || 1) - 1 + Math.max(0, Number(core?.turn || 1) - 1)) / 12);
   }
-  function allCharacters() { return [...BASE(), ...EXTRAS].map(item => ({ ...item })); }
+  function allCharacters() {
+    return [...BASE(), ...EXTRAS].map(item => ({
+      profile: item.institution ? "游戏化地区使署，承办当前往来与奉表；不是某位已故人物的延续，机构关系独立记录。" : "当前剧本人物。",
+      ...item,
+      publicTraits: Array.isArray(item.publicTraits) ? [...item.publicTraits] : item.institution ? ["机构联络", "有条件合作"] : [],
+    }));
+  }
   function getCharacter(id) { return allCharacters().find(item => item.id === id) || null; }
   function isAvailable(id, core) {
     const person = getCharacter(id); if (!person) return false;

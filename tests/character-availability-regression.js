@@ -5,6 +5,21 @@ let groups = 0;
 const check = (name, fn) => { fn(); groups++; console.log(`PASS ${name}`); };
 function ready(id = "yankang_220") { const r = harness(); r.api.startNewGame("standard", id, { randomSeed: 225 }); const c = r.api.getState(); r.replaceCore({ eventResolved: true, stats: { ...c.stats, treasury: 70, caoAlert: 40, security: 65 } }); return r; }
 const dead220 = ["cao_cao", "xun_yu", "empress_fu", "dong_cheng", "yuan_shao", "yuan_shu", "liu_biao", "sun_ce"];
+check("every current character card opens a complete real detail modal across five scenarios", () => {
+  for (const id of ["zhongping_189", "xingping_195", "jianan_196", "jianan_200", "yankang_220"]) {
+    const r = ready(id), before = plain(r.api.getState());
+    const cards = r.node("character-list").querySelectorAll("[data-character-id]");
+    assert.equal(cards.length, r.window.XianCharacterAvailability.availableCharacters(before).length);
+    for (const card of cards) {
+      const person = r.window.XianCharacterAvailability.getCharacter(card.dataset.characterId);
+      assert.doesNotThrow(() => card.click(), `${id}:${person.id} current card detail must render`);
+      assert.equal(r.node("modal-title").textContent, `${person.name}｜${person.title}`);
+      assert.doesNotMatch(r.node("modal-body").innerHTML, /undefined/);
+      r.api.closeUtilityModal();
+    }
+    assert.deepEqual(plain(r.api.getState()), before, "character inspection is read-only");
+  }
+});
 check("220 current action plans exclude deceased actors and keep four usable target lists", () => {
   const r = ready(), c = r.api.getState(), api = r.window.XianCharacterAvailability;
   assert.ok(!r.window.XianActionPlans.list(c).some(plan => dead220.includes(plan.targetId)), "220 opening says Cao Cao died: current actions must not target him");
