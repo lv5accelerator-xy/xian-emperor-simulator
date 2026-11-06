@@ -222,6 +222,19 @@
       };
     });
     migrated.promises.forEach(promise => {
+      const availability = window.XianCharacterAvailability;
+      if (!promise.identity) {
+        const personal = ["hostage", "title"].includes(promise.type);
+        const priorPerson = availability?.getCharacter?.(promise.lordId);
+        const unavailablePrior = personal && priorPerson && !availability.isAvailable(promise.lordId, core);
+        promise.identity = unavailablePrior ? { scope: "legacy-person", factionId: promise.lordId, representativeId: promise.lordId, representativeName: priorPerson.name, migrated: true }
+          : promiseIdentity(promise.type, promise.lordId, core);
+      }
+      if (promise.status === "active" && ["legacy-person", "person"].includes(promise.identity.scope)
+        && availability && !availability.isAvailable(promise.identity.representativeId, core)) {
+        promise.status = "unverified";
+        promise.lastChange = `原对象${promise.identity.representativeName}当前不可受命；个人承诺保留历史，不自动转交现任代表、不补记兑现`;
+      }
       if (!["tribute", "military_aid", "ceasefire"].includes(promise.type)) return;
       if (!promise.contract) {
         if (promise.status !== "active") {
@@ -514,6 +527,7 @@
           progress: immediate ? 100 : ["tribute", "military_aid", "ceasefire"].includes(type) ? 0 : clamp(Math.round(execution * 0.35 + (strategy?.trust || 40) * 0.2), 12, 62),
           status: immediate ? "fulfilled" : "active",
           text: shortText(text, 90),
+          identity: promiseIdentity(type, lordId, core),
           lastChange: immediate ? "诏书颁下即已履行" : "等待履约",
           contract,
         });
@@ -627,6 +641,16 @@
       receipts: [], lastDeliveryTurn: Number(core.turn) - 1,
       initialOrderIds: (army.orders || []).map(item => item.id), initialBattleIds: (army.battleReports || []).map(item => item.id),
       initialFactIds: (army.militaryFacts || []).map(item => item.id), initialConquestIds: (army.conquests || []).map(item => item.id) };
+  }
+
+  function promiseIdentity(type, factionId, core) {
+    const representative = window.XianCharacterAvailability?.representative?.(factionId, core);
+    return { scope: ["hostage", "title"].includes(type) ? (representative?.institution ? "institution" : "person") : "faction",
+      factionId, representativeId: representative?.id || factionId, representativeName: representative?.name || lordDef(factionId)?.name || factionId };
+  }
+
+  function promiseName(promise) {
+    return ["legacy-person", "person"].includes(promise.identity?.scope) ? `${promise.identity.representativeName}${promise.identity.scope === "legacy-person" ? "（历史对象）" : ""}` : strategyName(promise.lordId);
   }
 
   function deliverTribute(promise, turn, core) {
@@ -746,7 +770,7 @@
       id: `promise-result-${promise.id}`,
       turn: state.lastProcessedTurn,
       type: fulfilled ? "diplomacy" : "warning",
-      text: `${strategyName(promise.lordId)}${fulfilled ? "履行" : "违背"}${promise.label}：${reason}。`,
+      text: `${promiseName(promise)}${fulfilled ? "履行" : "违背"}${promise.label}：${reason}。`,
     });
   }
 
@@ -916,11 +940,12 @@
   function renderPromises() {
     const order = { active: 0, broken: 1, fulfilled: 2 };
     const promises = [...state.promises].sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3) || b.createdTurn - a.createdTurn);
-    return `<section><div class="strategy-section-head"><div><span class="section-kicker">外交承诺</span><h3>盟约与履约</h3></div><small>贡赋按实收、援军按军令抵达、停战按行为凭据结算</small></div><div class="promise-list">${promises.length ? promises.map(promise => `<article class="promise-card ${promise.status}"><div class="promise-card-head"><div><span>${escapeHtml(promise.label)}</span><strong>${escapeHtml(strategyName(promise.lordId))}</strong></div><b>${promiseStatus(promise.status)}</b></div><p>${escapeHtml(promise.text)}</p>${renderContract(promise)}<div class="promise-progress"><i><b style="width:${clamp(promise.progress, 0, 100)}%"></b></i><em>${Math.round(promise.progress)}%</em></div><small>第 ${promise.createdTurn} 月立约 · 第 ${promise.deadlineTurn} 月期限 · ${escapeHtml(promise.lastChange)}</small></article>`).join("") : '<p class="empty-state">在圣旨中写明奉表、出兵、结盟、停战、互市、质子或官爵，即可建立外交承诺。</p>'}</div></section>`;
+    return `<section><div class="strategy-section-head"><div><span class="section-kicker">外交承诺</span><h3>盟约与履约</h3></div><small>贡赋按实收、援军按军令抵达、停战按行为凭据结算</small></div><div class="promise-list">${promises.length ? promises.map(promise => `<article class="promise-card ${promise.status}"><div class="promise-card-head"><div><span>${escapeHtml(promise.label)}</span><strong>${escapeHtml(promiseName(promise))}</strong></div><b>${promiseStatus(promise.status)}</b></div><p>${escapeHtml(promise.text)}</p>${renderContract(promise)}<div class="promise-progress"><i><b style="width:${clamp(promise.progress, 0, 100)}%"></b></i><em>${Math.round(promise.progress)}%</em></div><small>第 ${promise.createdTurn} 月立约 · 第 ${promise.deadlineTurn} 月期限 · ${escapeHtml(promise.lastChange)}</small></article>`).join("") : '<p class="empty-state">在圣旨中写明奉表、出兵、结盟、停战、互市、质子或官爵，即可建立外交承诺。</p>'}</div></section>`;
   }
 
   function renderContract(promise) {
     const contract = promise.contract;
+    if (promise.identity?.scope === "legacy-person") return "<p>此项以原人物为对象的承诺仅作历史保留，当前代表不继承个人承诺；缺少重新约定时不推定兑现。</p>";
     if (!contract) return `<p>${promise.evidenceStatus ? "旧档保留原结论：缺少实物或军务凭据，不补发钱粮，不补记抵达。" : "此类承诺按信任、准备度与期限推演，仅影响信任与地方忠诚；不代表实物交付。"}</p>`;
     const detail = promise.type === "tribute"
       ? `${controllerName(contract.responsible)} → ${controllerName(contract.beneficiary)}：约定钱粮 ${contract.quantity}，实收 ${contract.delivered}；来源 ${cityDef(contract.payerCityId)?.name || "责任方治所"}，每月最多 3，实收等额扣除当地粮秣。`

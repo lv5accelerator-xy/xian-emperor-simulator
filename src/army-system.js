@@ -375,7 +375,8 @@
     const routeStates = routeIds.map(id => strategyState?.routes?.[id] || STRATEGY_DATA.routes.find(route => route.id === id) || {});
     const maxPressure = routeStates.length ? Math.max(...routeStates.map(route => Number(route.pressure || 0))) : 0;
     const minSupply = routeStates.length ? Math.min(...routeStates.map(route => Number(route.supply ?? 100))) : 100;
-    const relation = Number(coreState.relations?.[army.commander] ?? 55);
+    const commander = window.XianCharacterAvailability?.commander?.(army.commander, army.owner, currentCore);
+    const relation = Number(currentCore.relations?.[commander?.id || army.commander] ?? 55);
     const ownerTrust = Number(strategyState?.strategies?.[army.owner]?.trust ?? 50);
     const courtBonus = army.owner === "court" ? 20 : 0;
     const treasury = Number(currentCore.stats.treasury || 0);
@@ -1559,7 +1560,7 @@
       if (issued) { issued.sourcePromiseId = promise.id; saveState(); return issued; }
       const army = selectArmy(promise.lordId, promise.contract.targetCityId);
       const access = getCommandAccess(army, core, readStrategyState());
-      const signature = JSON.stringify([core.turn, core.stats.authority, core.relations?.[promise.lordId], access.trust, army?.id, army?.cityId, army?.status, army?.troops]);
+      const signature = JSON.stringify([core.turn, core.stats.authority, access.relation, access.trust, army?.id, army?.cityId, army?.status, army?.troops]);
       if (state.promiseAttempts[promise.id] === signature) return false;
       state.promiseAttempts[promise.id] = signature;
       const order = assignArmyOrder(promise.lordId, [promise.contract.targetCityId], "support", 65, `外交援军 ${promise.id}`, core.turn, 0);
