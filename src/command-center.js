@@ -290,7 +290,9 @@
     const benefit = gains.slice(0, 3).map(item => `${metricName(item.path)} ${signed(item.delta)}`).join(" · ") || "经营人物关系";
     return { benefit: `${benefit}${plan.advice ? `；已含主议修正（本季尚余 ${plan.advice.remaining} 次）` : ""}`,
       cost: [`行动 1`, plan.cost ? `国库 ${plan.cost}` : "不耗国库", ...losses.slice(0, 2).map(item => `${metricName(item.path)} ${signed(item.delta)}`),
-        ...(plan.repetition ? [`同类同对象第 ${plan.repetition.ordinal} 次${plan.repetition.multiplier < 1 ? "，有利变化 50%（向零取整）" : "，完整收益"}`] : [])].join(" · ") };
+        ...(plan.repetition ? [plan.actionId === "audience"
+          ? `召见国家第 ${plan.repetition.ordinal} 次，有利变化 ${plan.repetition.multiplier * 100}%；人物第 ${plan.repetition.personalOrdinal} 次，关系有利变化 ${plan.repetition.personalMultiplier * 100}%（向零取整）`
+          : `同类同对象第 ${plan.repetition.ordinal} 次${plan.repetition.multiplier < 1 ? "，有利变化 50%（向零取整）" : "，完整收益"}`] : [])].join(" · ") };
   }
 
   function compareActions(state) {
