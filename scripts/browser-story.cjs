@@ -25,7 +25,8 @@ try{
       const bundle=await page.evaluate(()=>window.XianEmperorGame.captureFullSave());await Promise.all([page.waitForEvent("domcontentloaded"),page.evaluate(b=>window.XianEmperorGame.restoreFullSave(b),bundle)]);await page.locator("#continue-game-btn").click();assert.deepEqual(signature(await core()),before);fullImport=true;}
     await page.screenshot({path:path.join(out,`${setup.route}-${c.turn}.png`),fullPage:true});
    }
-   const i=eventIndex({api:{getCurrentEvent:()=>ev,getState:()=>c}},setup.route);assert.ok(i>=0&&!ev.choices[i].disabledReason);await page.locator(`[data-choice-index='${i}']`).click();assert.equal((await core()).eventResolved,true);
+   const actualNodes=await page.evaluate(()=>window.XianScenario220Story.nodes());
+   const i=eventIndex({api:{getCurrentEvent:()=>ev,getState:()=>c},window:{XianScenario220Story:{nodes:()=>actualNodes}}},setup.route);assert.ok(i>=0&&!ev.choices[i].disabledReason);await page.locator(`[data-choice-index='${i}']`).click();assert.equal((await core()).eventResolved,true);
    for(let step=0;step<2;step++){const a=nextAction(await core(),setup.route,step);if(a)await act(a);}
    await page.locator("#end-turn-btn").click();assert.match(await page.locator("#modal-title").innerText(),/预检/);
    if(c.turn===9){const before=signature(await core());await page.locator("#modal-cancel").click();assert.deepEqual(signature(await core()),before);await page.locator("#end-turn-btn").click();}
