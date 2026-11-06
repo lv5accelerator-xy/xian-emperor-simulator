@@ -223,6 +223,11 @@
 
     core = nextCore;
     let changed = false;
+    if (progress.session.pendingArc && window.XianCharacterAvailability && !window.XianCharacterAvailability.isAvailable(progress.session.pendingArc.arcId, core)) {
+      // Retain completed personal chapters; an old pending chapter cannot summon a deceased actor.
+      progress.session.pendingArc = null;
+      changed = true;
+    }
     if (progress.session.gameCreatedAt !== core.createdAt) {
       progress.session = defaultSession(core.createdAt);
       progress.session.lastSeenTurn = Number(core.turn || 1);
@@ -345,7 +350,7 @@
       balance: ["xun_yu", "yang_biao", "cao_cao", "empress_fu", "dong_cheng"],
       guard: ["cao_cao", "xun_yu", "empress_fu", "yang_biao", "dong_cheng"],
     }[pathId] || [];
-    return priority.map(id => getArc(id)).filter(Boolean);
+    return priority.filter(id => !window.XianCharacterAvailability || window.XianCharacterAvailability.isAvailable(id, core)).map(id => getArc(id)).filter(Boolean);
   }
 
   function arcStateFor(id) {
@@ -357,7 +362,7 @@
     const pending = progress.session.pendingArc;
     const arc = getArc(pending?.arcId);
     const chapter = arc?.chapters?.[pending?.chapterIndex];
-    if (!arc || !chapter || !overlay) return;
+    if (!arc || !chapter || !overlay || (window.XianCharacterAvailability && !window.XianCharacterAvailability.isAvailable(arc.id, core))) return;
     overlay.innerHTML = `
       <section class="imperial-dialog arc-dialog" role="dialog" aria-modal="true" aria-labelledby="arc-dialog-title">
         <header><div><span class="imperial-kicker">人物事件 · ${escapeHtml(arc.title)}</span><h2 id="arc-dialog-title">${escapeHtml(chapter.title)}</h2></div><button type="button" data-imperial-close aria-label="关闭">×</button></header>
@@ -372,7 +377,7 @@
     const arc = getArc(pending?.arcId);
     const chapter = arc?.chapters?.[pending?.chapterIndex];
     const choice = chapter?.choices?.[choiceIndex];
-    if (!arc || !chapter || !choice || !core || core.ended) return;
+    if (!arc || !chapter || !choice || !core || core.ended || (window.XianCharacterAvailability && !window.XianCharacterAvailability.isAvailable(arc.id, core))) return;
     const budget = actionBudget(choice.effects);
     if (!budget.ok) { showToast(budget.reason, "warning"); return; }
     const arcState = arcStateFor(arc.id);

@@ -147,7 +147,7 @@
   }
 
   function applyEdictToWorld(report, core, world) {
-    const parsed = parseEdictReport(report);
+    const parsed = parseEdictReport(report, core);
     if (parsed.empty) return null;
     if (parsed.regionIds.length === 0 && parsed.lordIds.length === 0) return null;
 
@@ -189,7 +189,7 @@
         ? `对朝廷诏令提高戒备：${shorten(report.title || "圣旨", 22)}`
         : `回应朝廷诏令：${shorten(report.title || "圣旨", 22)}`;
       if (Object.keys(actual).length > 0) {
-        lordChanges.push({ id: lordId, name: definition.name, changes: actual });
+        lordChanges.push({ id: lordId, name: window.XianCharacterAvailability?.faction(lordId, core).name || definition.name, changes: actual });
       }
     });
 
@@ -227,7 +227,7 @@
     return impact;
   }
 
-  function parseEdictReport(report) {
+  function parseEdictReport(report, core) {
     const effective = window.XianEdictRules?.reportText(report);
     const combined = effective ?? `${report.title || ""} ${report.text || ""}`;
     const categories = [];
@@ -249,7 +249,7 @@
     if (categories.length === 0) categories.push("generic");
 
     const regionIds = detectRegions(combined);
-    const lordIds = detectLords(combined);
+    const lordIds = detectLords(combined, core);
     const efficiencyMatch = String(report.text || "").match(/[（(](\d{1,3})%[）)]/);
     const efficiency = efficiencyMatch
       ? clamp(Number(efficiencyMatch[1]) / 100, 0.28, 0.94)
@@ -269,7 +269,8 @@
     return [...matches];
   }
 
-  function detectLords(text) {
+  function detectLords(text, core = window.XianEmperorGame?.getState?.() || safeParse(localStorage.getItem(GAME_SAVE_KEY))) {
+    if (window.XianCharacterAvailability && core) return window.XianCharacterAvailability.diplomaticTargets(text, core);
     const matches = new Set();
     DATA.lords.forEach(lord => {
       const terms = [lord.name, lord.seat].filter(term => typeof term === "string" && term.length >= 2);

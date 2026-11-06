@@ -23,7 +23,8 @@
 
   function targets(policyId) {
     const policy = POLICIES.find(item => item.id === policyId) || POLICIES[0];
-    const characters = (window.GAME_DATA?.characters || []).filter(item => item.id !== "liu_xie");
+    const core = window.XianEmperorGame?.getState?.();
+    const characters = window.XianCharacterAvailability?.availableCharacters(core, { action: policyId }) || (window.GAME_DATA?.characters || []).filter(item => item.id !== "liu_xie");
     if (policy.lords) return characters.filter(item => item.faction === "regional_lords").map(item => ({ id: item.id, name: item.name }));
     if (policy.people) return characters.map(item => ({ id: item.id, name: item.name }));
     return [{ id: "court", name: "汉廷" }, ...(window.XIAN_STRATEGY_DATA?.cities || []).map(item => ({ id: `city:${item.id}`, name: item.name }))];
@@ -83,7 +84,7 @@
     const preview = window.XianEmperorGame?.previewEdict?.(text, core);
     if (!preview) return "";
     const interpretation = preview.interpretation;
-    const people = (interpretation.targets || []).map(id => window.GAME_DATA.characters.find(item => item.id === id)?.name).filter(Boolean);
+    const people = (interpretation.targets || []).map(id => (window.XianCharacterAvailability?.getCharacter(id, core) || window.GAME_DATA.characters.find(item => item.id === id))?.name).filter(Boolean);
     const cities = window.XianStrategyNetwork?.detectCityTargets?.(interpretation.effectiveText || "") || [];
     const cityNames = cities.map(id => window.XIAN_STRATEGY_DATA?.cities.find(item => item.id === id)?.name).filter(Boolean);
     const warnings = [...(interpretation.warnings || [])];

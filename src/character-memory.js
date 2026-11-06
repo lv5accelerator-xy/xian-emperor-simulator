@@ -39,7 +39,7 @@
 
   function recordDecision(detail) {
     if (!detail.createdAt || detail.createdAt !== readCore()?.createdAt) return;
-    const entries = Object.entries(detail.relations || {}).filter(([id, delta]) => CHARACTER_IDS.includes(id) && Number(delta));
+    const entries = Object.entries(detail.relations || {}).filter(([id, delta]) => (CHARACTER_IDS.includes(id) || window.XianCharacterAvailability?.getCharacter(id)) && Number(delta));
     if (!entries.length) return;
     entries.forEach(([characterId, delta]) => addMemory({
       characterId,
@@ -63,8 +63,8 @@
   function renderTab() {
     core = readCore();
     if (!core) return '<div class="command-empty">开启或读取一局后，人物才会留下记忆。</div>';
-    const people = window.GAME_DATA?.characters?.filter(item => CHARACTER_IDS.includes(item.id)) || [];
     const visible = visibleMemories();
+    const people = (window.XianCharacterAvailability?.allCharacters() || window.GAME_DATA?.characters?.filter(item => CHARACTER_IDS.includes(item.id)) || []).filter(item => item.id !== "liu_xie" && (!window.XianCharacterAvailability || window.XianCharacterAvailability.isAvailable(item.id, core) || visible.some(memory => memory.characterId === item.id)));
     return `
       <div class="memory-summary"><div><span>被记住的选择</span><strong>${visible.length}</strong></div><p>单章只读取本局记忆；汉祚长卷会让人物旧事跨章延续，但不会新增好感货币。</p></div>
       <div class="memory-people">${people.map(person => renderPerson(person, visible)).join("")}</div>`;
@@ -74,9 +74,10 @@
     const relation = Number(core?.relations?.[person.id] ?? person.relation ?? 50);
     const memories = visible.filter(item => item.characterId === person.id);
     const balance = memories.reduce((sum, item) => sum + Number(item.weight || 0), 0);
-    const attitude = relation >= 72 ? "深信" : relation >= 55 ? "愿意合作" : relation >= 36 ? "观望" : "心存芥蒂";
+    const available = !window.XianCharacterAvailability || window.XianCharacterAvailability.isAvailable(person.id, core);
+    const attitude = available ? relation >= 72 ? "深信" : relation >= 55 ? "愿意合作" : relation >= 36 ? "观望" : "心存芥蒂" : "留档 · 当前不可受命";
     return `<article class="memory-person">
-      <header><div class="memory-avatar">${escapeHtml(person.initials || person.name.slice(0, 1))}</div><div><strong>${escapeHtml(person.name)}</strong><span>${attitude} · 记忆 ${memories.length}</span></div><button type="button" data-memory-consult="${person.id}" ${Number(core?.actionPoints || 0) <= 0 || !core?.eventResolved ? "disabled" : ""}>问策</button></header>
+      <header><div class="memory-avatar">${escapeHtml(person.initials || person.name.slice(0, 1))}</div><div><strong>${escapeHtml(person.name)}</strong><span>${attitude} · 记忆 ${memories.length}</span></div><button type="button" data-memory-consult="${person.id}" ${!available || Number(core?.actionPoints || 0) <= 0 || !core?.eventResolved ? "disabled" : ""}>问策</button></header>
       <div class="memory-balance"><i style="--memory:${Math.max(4, Math.min(96, 50 + balance * 7))}%"></i></div>
       ${memories.length ? `<div class="memory-latest"><span>${escapeHtml(memories[0].date)}</span><strong>${escapeHtml(memories[0].title)}</strong><p>${escapeHtml(memories[0].text)}</p></div>` : '<p class="memory-none">尚无足以被此人记住的裁决。</p>'}
     </article>`;
@@ -88,8 +89,8 @@
 
   function consult(characterId) {
     core = readCore();
-    const person = window.GAME_DATA?.characters?.find(item => item.id === characterId);
-    if (!person || !core || Number(core.actionPoints || 0) <= 0 || !core.eventResolved) return;
+    const person = window.XianCharacterAvailability?.getCharacter(characterId, core) || window.GAME_DATA?.characters?.find(item => item.id === characterId);
+    if (!person || !core || Number(core.actionPoints || 0) <= 0 || !core.eventResolved || (window.XianCharacterAvailability && !window.XianCharacterAvailability.isAvailable(characterId, core))) return;
     const memories = visibleMemories().filter(item => item.characterId === characterId);
     const balance = memories.reduce((sum, item) => sum + Number(item.weight || 0), 0);
     const tone = CHARACTER_TONES[characterId] || ["臣会记得陛下今日之问。", "朝局无常，惟选择不可追回。"];
@@ -110,9 +111,10 @@
   }
 
   function buildAdvicePackage(characterId, favorable) {
-    if (characterId === "cao_cao") return { effects: { caoAlert: favorable ? -5 : -2, security: 2 }, hidden: {} };
-    if (["yuan_shao", "yuan_shu", "liu_biao", "sun_ce"].includes(characterId)) return { effects: { prestige: favorable ? 3 : 1, caoAlert: 1 }, hidden: { externalBalance: favorable ? 4 : 2 } };
-    if (["empress_fu", "dong_cheng"].includes(characterId)) return { effects: { security: favorable ? 3 : 1 }, hidden: { loyalNetwork: favorable ? 3 : 1, leakRisk: favorable ? -1 : 1 } };
+    const person = window.XianCharacterAvailability?.getCharacter(characterId, core);
+    if (characterId === "cao_cao" || person?.faction === "cao_group") return { effects: { caoAlert: favorable ? -5 : -2, security: 2 }, hidden: {} };
+    if (["yuan_shao", "yuan_shu", "liu_biao", "sun_ce"].includes(characterId) || person?.faction === "regional_lords") return { effects: { prestige: favorable ? 3 : 1, caoAlert: 1 }, hidden: { externalBalance: favorable ? 4 : 2 } };
+    if (["empress_fu", "dong_cheng"].includes(characterId) || person?.id === "palace_office") return { effects: { security: favorable ? 3 : 1 }, hidden: { loyalNetwork: favorable ? 3 : 1, leakRisk: favorable ? -1 : 1 } };
     return { effects: { authority: favorable ? 2 : 1, officials: favorable ? 3 : 1 }, hidden: {} };
   }
 

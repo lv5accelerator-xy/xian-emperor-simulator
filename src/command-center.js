@@ -306,7 +306,7 @@
       const relations = Object.entries(plan?.relations || {}).flatMap(([id, delta]) => {
         const before = state.relations?.[id] ?? 50;
         const actual = Math.max(0, Math.min(100, before + delta)) - before;
-        return actual ? [{ name: window.GAME_DATA.characters.find(person => person.id === id)?.name || id, delta: actual }] : [];
+        return actual ? [{ name: (window.XianCharacterAvailability?.getCharacter(id, state) || window.GAME_DATA.characters.find(person => person.id === id))?.name || id, delta: actual }] : [];
       });
       const paths = ["stats", "hidden"].flatMap(group => Object.keys(state[group]).map(key => `${group}.${key}`));
       const vector = paths.map(path => { const [group, key] = path.split("."); return direction(path) * estimate.projected[group][key]; });
