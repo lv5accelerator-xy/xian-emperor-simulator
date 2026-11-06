@@ -1,5 +1,6 @@
 "use strict";
 const assert = require("node:assert/strict");
+const fs = require("node:fs"), path = require("node:path");
 const { harness } = require("./helpers/game-harness");
 
 // Paired seeds, actual event buttons and common-action confirmations; no stat patches.
@@ -7,7 +8,22 @@ const POLICIES = {
   cautious: { name: "守成", weights: { security: 1.4, officials: 1, treasury: .6, caoAlert: -1, leakRisk: -1, authority: .4 } },
   welfare: { name: "民生", weights: { prestige: 1, peopleStability: 1.6, officials: .7, treasury: .4, security: .4, caoAlert: -.5 } },
   intrigue: { name: "密谋", weights: { loyalNetwork: 1.6, escapeRoute: .6, authority: .5, security: .5, leakRisk: -.5, caoAlert: -.5 } },
+  rotation: { name: "轮换召见", weights: { security: 1.4, officials: 1, treasury: .6, caoAlert: -1, leakRisk: -1, authority: .4 } },
 };
+function targetFor(run, action, preferred) {
+  const core = run.api.getState();
+  if (!run.window.XianCharacterAvailability) return preferred;
+  const available = run.window.XianCharacterAvailability.availableCharacters(core, { action });
+  return available.find(item => item.id === preferred)?.id || available[0]?.id;
+}
+function actChecked(run, actionId, fields, attempts) {
+  const core = run.api.getState(), plan = run.window.XianActionPlans.build(actionId, fields, core);
+  const success = run.act(actionId, fields);
+  const reason = !plan ? "无有效行动计划／对象" : !plan.affordable ? "国库不足" : !core.actionPoints ? "行动点不足" : core.ended ? "本局已结束" : "处理器拒绝";
+  attempts.push({ turn: core.turn, actionId, fields, success, ...(!success ? { reason } : { cost: plan.cost }) });
+  assert.ok(success, `${actionId} strategy action did not execute: ${reason}`);
+  return success;
+}
 
 function scoreChoice(choice, weights) {
   return Object.entries({ ...choice.effects, ...choice.hidden }).reduce((sum, [key, value]) => sum + Number(value) * (weights[key] || 0), 0);
@@ -24,25 +40,25 @@ function goalWeights(definition, core) {
   return weights;
 }
 
-function fillGoal(run, definition) {
+function fillGoal(run, definition, attempts) {
   const core = run.api.getState();
   if (core.ended) return;
   const missing = definition.goals.filter(goal => goal.min != null && goal.path.split(".").reduce((value, key) => value[key], core) < goal.min);
   const paths = new Set(missing.map(goal => goal.path));
-  if (paths.has("stats.treasury")) run.act("revenue", { "revenue-method": "austerity" });
-  else if (core.stats.caoAlert >= 80) run.act("appease", { "appease-type": "praise" });
-  else if (paths.has("hidden.loyalNetwork") && core.hidden.leakRisk < 50) run.act("secret", { "modal-character-select": "dong_cheng", "modal-secret-type": "intelligence" });
-  else if (paths.has("stats.authority") && core.stats.treasury >= 4) run.act("ritual", { "ritual-type": "court" });
-  else if (paths.has("stats.officials") && core.stats.treasury >= 3) run.act("ritual", { "ritual-type": "lecture" });
-  else if (paths.has("stats.prestige") && core.stats.treasury >= 5) run.act("ritual", { "ritual-type": "temple" });
-  else if (paths.has("hidden.peopleStability") && core.stats.treasury >= 4) run.act("relief", { "relief-level": "small" });
+  if (paths.has("stats.treasury")) actChecked(run, "revenue", { "revenue-method": "audit" }, attempts);
+  else if (core.stats.caoAlert >= 80) actChecked(run, "appease", { "appease-type": "praise" }, attempts);
+  else if (paths.has("hidden.loyalNetwork") && core.hidden.leakRisk < 50) actChecked(run, "secret", { "modal-character-select": targetFor(run, "secret", "dong_cheng"), "modal-secret-type": "intelligence" }, attempts);
+  else if (paths.has("stats.authority") && core.stats.treasury >= 4) actChecked(run, "ritual", { "ritual-type": "court" }, attempts);
+  else if (paths.has("stats.officials") && core.stats.treasury >= 3) actChecked(run, "ritual", { "ritual-type": "lecture" }, attempts);
+  else if (paths.has("stats.prestige") && core.stats.treasury >= 5) actChecked(run, "ritual", { "ritual-type": "temple" }, attempts);
+  else if (paths.has("hidden.peopleStability") && core.stats.treasury >= 4) actChecked(run, "relief", { "relief-level": "small" }, attempts);
 }
 
 function runChallenge(definition, policyId, seed) {
   const run = harness(); run.loadMechanics();
   run.window.XianShortChallenges.startCustom({ ...definition, kind: "balance", randomSeed: seed }); run.flush();
   const policy = POLICIES[policyId];
-  const trace = []; let spent = 0; let raised = 0;
+  const trace = [], attempts = []; let spent = 0; let raised = 0;
   for (let month = 0; month < definition.duration && !run.api.getState().ended; month++) {
     const choices = run.api.getCurrentEvent().choices;
     const weights = policyId === "goalAware" ? goalWeights(definition, run.api.getState()) : policy.weights;
@@ -50,14 +66,19 @@ function runChallenge(definition, policyId, seed) {
       .sort((a, b) => b.score - a.score || a.index - b.index)[0].index;
     run.decide(index); run.flush();
     let core = run.api.getState();
-    if (policyId === "goalAware") { fillGoal(run, definition); run.flush(); }
+    if (policyId === "goalAware") { fillGoal(run, definition, attempts); run.flush(); }
     else if (!core.ended && policyId !== "cautious") {
-      if (policyId === "welfare") {
-        if (core.stats.treasury < 10) run.act("revenue", { "revenue-method": "austerity" });
-        else run.act("relief", { "relief-level": "small" });
+      if (policyId === "rotation") {
+        const people = run.window.XianCharacterAvailability?.availableCharacters(core, { action: "audience" })
+          || run.window.GAME_DATA.characters.filter(item => item.id !== "liu_xie");
+        const loyalists = people.filter(item => item.faction === "han_loyalists");
+        for (const person of loyalists.slice(0, 2)) actChecked(run, "audience", { "modal-character-select": person.id, "audience-mode": "public" }, attempts);
+      } else if (policyId === "welfare") {
+        if (core.stats.treasury < 10) actChecked(run, "revenue", { "revenue-method": "audit" }, attempts);
+        else actChecked(run, "relief", { "relief-level": "small" }, attempts);
       } else if (core.hidden.leakRisk >= 50 || core.stats.security <= 28 || core.stats.caoAlert >= 75) {
-        run.act("audience", { "modal-character-select": "xun_yu", "audience-mode": "public" });
-      } else run.act("secret", { "modal-character-select": "dong_cheng", "modal-secret-type": "intelligence" });
+        actChecked(run, "audience", { "modal-character-select": targetFor(run, "audience", "xun_yu"), "audience-mode": "public" }, attempts);
+      } else actChecked(run, "secret", { "modal-character-select": targetFor(run, "secret", "dong_cheng"), "modal-secret-type": "intelligence" }, attempts);
       run.flush();
     }
     run.api.endTurn(); run.flush();
@@ -76,9 +97,10 @@ function runChallenge(definition, policyId, seed) {
   for (const check of result.checks) {
     assert.equal(check.value, check.path.split(".").reduce((value, key) => value[key], core));
   }
-  return { medal: result.medal, endedEarly: result.endedEarly, completed: result.completed, checks: result.checks,
+  return { seed, challenge: definition.id, policy: policyId, medal: result.medal, endedEarly: result.endedEarly, completed: result.completed, checks: result.checks,
     stats: core.stats, stability: core.hidden.peopleStability, network: core.hidden.loyalNetwork,
-    leak: core.hidden.leakRisk, spent, raised, actions: core.totalActions, ending: core.ending.title, trace };
+    leak: core.hidden.leakRisk, spent, raised, actions: core.totalActions, ending: core.ending.title, trace, attempts,
+    failedActions: attempts.filter(item => !item.success) };
 }
 
 function simulate(samples = 24) {
@@ -93,14 +115,14 @@ function simulate(samples = 24) {
       gold: runs.filter(run => run.medal === "gold").length, completed: runs.filter(run => !run.endedEarly).length,
       spent: mean("spent"), raised: mean("raised"), actions: mean("actions"), stability: mean("stability"),
       network: mean("network"), leak: mean("leak"), treasury: Math.round(runs.reduce((sum, run) => sum + run.stats.treasury, 0) / samples * 10) / 10,
-      failedGoals, earlyEndings: Object.fromEntries([...new Set(runs.filter(run => run.endedEarly).map(run => run.ending))]
+      failedGoals, runs, earlyEndings: Object.fromEntries([...new Set(runs.filter(run => run.endedEarly).map(run => run.ending))]
         .map(ending => [ending, runs.filter(run => run.endedEarly && run.ending === ending).length])) });
   }
   const controls = definitions.map(definition => {
     const runs = Array.from({ length: samples }, (_, index) => runChallenge(definition, "goalAware", (index + 1) * 2654435761 >>> 0));
     const gold = runs.filter(run => run.medal === "gold").length;
     assert.ok(gold > 0, `${definition.name} must remain achievable with actual goal-aware decisions`);
-    return { challenge: definition.id, name: definition.name, samples, gold, completed: runs.filter(run => !run.endedEarly).length };
+    return { challenge: definition.id, name: definition.name, samples, gold, completed: runs.filter(run => !run.endedEarly).length, runs };
   });
   const intrigue = cells.filter(cell => cell.policy === "intrigue");
   assert.ok(intrigue.some(cell => cell.gold > 0) && intrigue.some(cell => cell.gold < cell.samples), "intrigue must have both a suitable challenge and real tradeoffs");
@@ -115,6 +137,11 @@ function simulate(samples = 24) {
 
 if (require.main === module) {
   const report = simulate(Number(process.env.BALANCE_SAMPLES || 24));
+  if (process.env.BALANCE_REPORT) {
+    const target = path.resolve(process.env.BALANCE_REPORT);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, JSON.stringify(report, null, 2));
+  }
   if (!process.argv.includes("--json")) {
     for (const cell of report.cells) console.log(`${cell.name} / ${cell.policyName}: gold ${cell.gold}/${cell.samples}, completed ${cell.completed}/${cell.samples}, spent ${cell.spent}, treasury ${cell.treasury}`);
   } else console.log(JSON.stringify(report, null, 2));

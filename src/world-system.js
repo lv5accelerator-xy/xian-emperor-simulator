@@ -23,6 +23,20 @@
   let overlayState = { tab: "world", sourceFilter: null, characterId: null };
   let syncQueued = false;
 
+  function currentLords(core = lastCoreState) {
+    return DATA.lords.map(lord => {
+      const current = window.XianCharacterAvailability?.faction(lord.id, core);
+      return current ? { ...lord, name: current.name, title: window.XianCharacterAvailability.representative(lord.id, core).title } : lord;
+    });
+  }
+  function characterProfiles(core = lastCoreState) {
+    const profiles = { ...DATA.characterProfiles };
+    for (const person of window.XianCharacterAvailability?.availableCharacters(core) || []) if (!profiles[person.id]) profiles[person.id] = {
+      loyalty: 50, fear: 50, ambition: 50, interest: 50, archetype: person.institution ? "机构关系" : "当前代表", assessment: "当前关系独立建立；中性初值是游戏参数，不继承旧人物人格。", sourceIds: [],
+    };
+    return profiles;
+  }
+
   installStorageWatcher();
   document.addEventListener("DOMContentLoaded", init);
 
@@ -154,7 +168,7 @@
     });
 
     const lords = {};
-    DATA.lords.forEach((lord) => {
+    currentLords(core).forEach((lord) => {
       lords[lord.id] = {
         power: lord.power,
         courtNeed: lord.courtNeed,
@@ -165,7 +179,7 @@
     });
 
     const characters = {};
-    Object.entries(DATA.characterProfiles).forEach(([id, profile]) => {
+    Object.entries(characterProfiles()).forEach(([id, profile]) => {
       characters[id] = {
         loyalty: profile.loyalty,
         fear: profile.fear,
@@ -231,7 +245,7 @@
       };
     });
 
-    DATA.lords.forEach((lord) => {
+    currentLords(core).forEach((lord) => {
       migrated.lords[lord.id] = {
         power: lord.power,
         courtNeed: lord.courtNeed,
@@ -242,7 +256,7 @@
       };
     });
 
-    Object.entries(DATA.characterProfiles).forEach(([id, profile]) => {
+    Object.entries(characterProfiles()).forEach(([id, profile]) => {
       migrated.characters[id] = {
         loyalty: profile.loyalty,
         fear: profile.fear,
@@ -310,7 +324,7 @@
     const appointment = /(任免|封赏|官爵|加其官|征辟)/.test(combined);
 
     Object.keys(worldState.characters).forEach((id) => {
-      const character = window.GAME_DATA?.characters?.find((item) => item.id === id);
+      const character = window.XianCharacterAvailability?.getCharacter(id, lastCoreState) || window.GAME_DATA?.characters?.find((item) => item.id === id);
       if (!character || !combined.includes(character.name)) return;
       const metrics = worldState.characters[id];
       if (positive) {
@@ -331,7 +345,7 @@
     const date = formatTurnDate(completedTurn);
     const key = window.XianEmperorGame?.getRandomKey?.("world", worldState.gameCreatedAt, core) ?? worldState.gameCreatedAt;
     const rng = seededRandom(`${key}-${completedTurn}-${core.stats.prestige}`);
-    const lordPool = [...DATA.lords]
+    const lordPool = currentLords(core)
       .map((lord) => ({ lord, score: rng() + (worldState.lords[lord.id]?.expansion || lord.expansion) / 300 }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 4)
@@ -344,7 +358,8 @@
       const runtime = worldState.lords[lord.id];
       const templates = DATA.dynamicTemplates[lord.id] || ["继续观察天下形势。"];
       const templateIndex = Math.floor(rng() * templates.length) % templates.length;
-      const text = templates[templateIndex];
+      const rawText = templates[templateIndex];
+      const text = window.XianCharacterAvailability?.presentEvent({ text: rawText, choices: [] }, core)?.text || rawText;
       const primaryRegionId = lord.regions[0];
       const region = worldState.regions[primaryRegionId];
 
@@ -368,6 +383,7 @@
         id: `${completedTurn}-${lord.id}-${index}`,
         date,
         lordId: lord.id,
+        lordName: lord.name,
         regionId: primaryRegionId,
         type: classifyLordAction(lord.id, text),
         mode: "simulation",
@@ -472,7 +488,8 @@
     const external = Number(core.hidden.externalBalance || 0);
 
     Object.entries(worldState.characters).forEach(([id, metrics]) => {
-      const profile = DATA.characterProfiles[id];
+      const profile = characterProfiles(core)[id];
+      if (window.XianCharacterAvailability && !window.XianCharacterAvailability.isAvailable(id, core)) return;
       if (!profile) return;
       if (["empress_fu", "dong_cheng", "yang_biao", "xun_yu"].includes(id)) {
         metrics.loyalty = clamp(metrics.loyalty + Math.round((prestige - 60) / 40), 0, 100);
@@ -615,7 +632,7 @@
     if (!worldState || !characterId) return;
     const modalBody = document.getElementById("modal-body");
     if (!modalBody || document.getElementById("character-four-dim-panel")) return;
-    const profile = DATA.characterProfiles[characterId];
+    const profile = characterProfiles()[characterId];
     const metrics = worldState.characters[characterId];
     if (!profile || !metrics) return;
     const panel = document.createElement("section");
@@ -709,18 +726,19 @@
     const latest = worldState?.worldLog?.slice(0, 12) || [];
     const fallbackMap = `<div class="schematic-map-card"><div class="world-section-head"><div><span class="section-kicker">政治态势示意</span><h3>全国局势地图</h3></div><small>点击地区审阅详情</small></div><div class="schematic-map" aria-label="汉末全国局势示意图">${DATA.regions.map((region) => renderRegionTile(region, regions[region.id])).join("")}</div><p class="map-disclaimer">注：本图用于表现势力与局势，不代表精确疆界、比例或古代行政区测绘。</p></div>`;
     const grandMap = window.XianGrandMap?.render?.(worldState, lastCoreState) || fallbackMap;
-    return `<div class="world-map-page">${grandMap}<aside class="world-map-status-rail" aria-label="天下态势摘要"><article><span>朝廷辐射</span><strong>${escapeHtml(calculateCourtReach(lastCoreState))}</strong><small>皇权与威望</small></article><article><span>最强诸侯</span><strong>${escapeHtml(strongestLord?.name || "未定")}</strong><small>实力 ${Math.round(strongestLord?.runtime?.power || 0)}</small></article><article><span>动荡之地</span><strong>${escapeHtml(unstable?.name || "未定")}</strong><small>稳定 ${Math.round(unstable?.runtime?.stability || 0)}</small></article><article><span>天下趋势</span><strong>${escapeHtml(buildWorldTrend())}</strong><small>本局动态推演</small></article><button type="button" data-world-intel-toggle aria-expanded="false">展开天下情报</button></aside><section class="world-map-intel-drawer" data-world-intel-drawer aria-hidden="true"><header><div><span class="section-kicker">御前案牍</span><h3>天下情报</h3></div><button type="button" data-world-intel-close aria-label="收起天下情报">×</button></header><div class="world-map-intel-content"><div class="world-dynamics-card"><div class="world-section-head"><div><span class="section-kicker">月度急递</span><h3>诸侯动态</h3></div><small>${latest.length} 条</small></div><div class="world-log-list">${latest.length ? latest.map(renderWorldLogEntry).join("") : '<p class="empty-state">结束一个月份后，各镇动态将在此汇总。</p>'}</div></div><section class="lords-card"><div class="world-section-head"><div><span class="section-kicker">外镇评估</span><h3>主要诸侯</h3></div><small>实力 · 对朝廷需求 · 扩张倾向</small></div><div class="lord-grid">${DATA.lords.map(renderLordCard).join("")}</div></section></div></section></div>`;
+    return `<div class="world-map-page">${grandMap}<aside class="world-map-status-rail" aria-label="天下态势摘要"><article><span>朝廷辐射</span><strong>${escapeHtml(calculateCourtReach(lastCoreState))}</strong><small>皇权与威望</small></article><article><span>最强诸侯</span><strong>${escapeHtml(strongestLord?.name || "未定")}</strong><small>实力 ${Math.round(strongestLord?.runtime?.power || 0)}</small></article><article><span>动荡之地</span><strong>${escapeHtml(unstable?.name || "未定")}</strong><small>稳定 ${Math.round(unstable?.runtime?.stability || 0)}</small></article><article><span>天下趋势</span><strong>${escapeHtml(buildWorldTrend())}</strong><small>本局动态推演</small></article><button type="button" data-world-intel-toggle aria-expanded="false">展开天下情报</button></aside><section class="world-map-intel-drawer" data-world-intel-drawer aria-hidden="true"><header><div><span class="section-kicker">御前案牍</span><h3>天下情报</h3></div><button type="button" data-world-intel-close aria-label="收起天下情报">×</button></header><div class="world-map-intel-content"><div class="world-dynamics-card"><div class="world-section-head"><div><span class="section-kicker">月度急递</span><h3>诸侯动态</h3></div><small>${latest.length} 条</small></div><div class="world-log-list">${latest.length ? latest.map(renderWorldLogEntry).join("") : '<p class="empty-state">结束一个月份后，各镇动态将在此汇总。</p>'}</div></div><section class="lords-card"><div class="world-section-head"><div><span class="section-kicker">外镇评估</span><h3>主要诸侯</h3></div><small>实力 · 对朝廷需求 · 扩张倾向</small></div><div class="lord-grid">${currentLords().map(renderLordCard).join("")}</div></section></div></section></div>`;
   }
 
   function renderRegionTile(region, runtime) {
-    const controller = DATA.controllers[runtime?.controller || region.controller] || DATA.controllers.fragmented;
+    const owner = runtime?.controller || region.controller;
+    const controller = { ...(DATA.controllers[owner] || DATA.controllers.fragmented), ...(window.XianCharacterAvailability ? { name: window.XianCharacterAvailability.faction(owner, lastCoreState).name } : {}) };
     return `<button class="map-region ${region.area}${overlayState.regionId === region.id ? " selected" : ""}" type="button" data-region-id="${region.id}" style="--controller:${controller.color};--controller-text:${controller.text}"><span class="region-short">${region.short}</span><strong>${region.name}</strong><small>${controller.name}</small><i title="地区稳定">稳 ${Math.round(runtime?.stability ?? region.stability)}</i></button>`;
   }
 
   function renderWorldLogEntry(entry) {
     const lord = DATA.lords.find((item) => item.id === entry.lordId);
     const region = DATA.regions.find((item) => item.id === entry.regionId);
-    return `<article class="world-log-entry ${entry.type}"><span class="world-log-icon">${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><div><div><strong>${escapeHtml(lord?.name || (entry.lordId === "court" ? "汉廷" : "天下"))}</strong><time>${escapeHtml(entry.date)}</time></div><p>${escapeHtml(entry.text)}</p><small>${escapeHtml(region?.name || "全国")} · ${entry.mode === "historical-anchor" ? "历史锚点" : "本局推演"}</small></div></article>`;
+    return `<article class="world-log-entry ${entry.type}"><span class="world-log-icon">${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><div><div><strong>${escapeHtml(entry.lordName || lord?.name || (entry.lordId === "court" ? "汉廷" : "天下"))}</strong><time>${escapeHtml(entry.date)}</time></div><p>${escapeHtml(entry.text)}</p><small>${escapeHtml(region?.name || "全国")} · ${entry.mode === "historical-anchor" ? "历史锚点" : "本局推演"}</small></div></article>`;
   }
 
   function renderLordCard(lord) {
@@ -731,8 +749,8 @@
   function renderCompactGauge(label, value) { return `<div class="compact-gauge"><span>${label}</span><i><b style="width:${clamp(value, 0, 100)}%"></b></i><em>${Math.round(value)}</em></div>`; }
 
   function renderPeoplePanel() {
-    const characters = window.GAME_DATA?.characters || [];
-    return `<div class="people-intro"><p>旧版单一“关系值”仍用于兼容核心规则；本页增加忠诚、恐惧、野心、利益四维政治人格。四项数值会随召见、封赏、密令、曹氏警戒与天下威望变化。</p></div><div class="political-character-grid">${Object.entries(DATA.characterProfiles).filter(([id]) => id !== "liu_xie").map(([id, profile]) => { const character = characters.find((item) => item.id === id); const metrics = worldState?.characters?.[id] || profile; return `<button class="political-character-card" type="button" data-world-character="${id}"><div class="political-character-head"><span>${escapeHtml(character?.initials || character?.name?.slice(0, 1) || "人")}</span><div><strong>${escapeHtml(character?.name || id)}</strong><small>${escapeHtml(character?.title || profile.archetype)}</small></div><b>${escapeHtml(classifyCharacter(metrics, profile))}</b></div><div class="political-mini-bars">${Object.keys(DATA.metricMeta).map((key) => `<div><span>${DATA.metricMeta[key].short}</span><i><b style="width:${clamp(metrics[key], 0, 100)}%"></b></i><em>${Math.round(metrics[key])}</em></div>`).join("")}</div><p>${escapeHtml(buildCharacterAssessment(id, metrics, profile))}</p></button>`; }).join("")}</div>`;
+    const characters = window.XianCharacterAvailability?.allCharacters() || window.GAME_DATA?.characters || [];
+    return `<div class="people-intro"><p>旧版单一“关系值”仍用于兼容核心规则；本页增加忠诚、恐惧、野心、利益四维政治人格。四项数值会随召见、封赏、密令、曹氏警戒与天下威望变化。</p></div><div class="political-character-grid">${Object.entries(characterProfiles()).filter(([id]) => id !== "liu_xie" && (!window.XianCharacterAvailability || window.XianCharacterAvailability.isAvailable(id, lastCoreState))).map(([id, profile]) => { const character = characters.find((item) => item.id === id); const metrics = worldState?.characters?.[id] || profile; return `<button class="political-character-card" type="button" data-world-character="${id}"><div class="political-character-head"><span>${escapeHtml(character?.initials || character?.name?.slice(0, 1) || "人")}</span><div><strong>${escapeHtml(character?.name || id)}</strong><small>${escapeHtml(character?.title || profile.archetype)}</small></div><b>${escapeHtml(classifyCharacter(metrics, profile))}</b></div><div class="political-mini-bars">${Object.keys(DATA.metricMeta).map((key) => `<div><span>${DATA.metricMeta[key].short}</span><i><b style="width:${clamp(metrics[key], 0, 100)}%"></b></i><em>${Math.round(metrics[key])}</em></div>`).join("")}</div><p>${escapeHtml(buildCharacterAssessment(id, metrics, profile))}</p></button>`; }).join("")}</div>`;
   }
 
   function renderTimelinePanel() {
@@ -777,7 +795,8 @@
     const region = DATA.regions.find((item) => item.id === regionId);
     const runtime = worldState?.regions?.[regionId] || region;
     if (!region) return;
-    const controller = DATA.controllers[runtime.controller || region.controller] || DATA.controllers.fragmented;
+    const owner = runtime.controller || region.controller;
+    const controller = { ...(DATA.controllers[owner] || DATA.controllers.fragmented), ...(window.XianCharacterAvailability ? { name: window.XianCharacterAvailability.faction(owner, lastCoreState).name } : {}) };
     const relatedLogs = worldState?.worldLog?.filter((entry) => entry.regionId === regionId).slice(0, 6) || [];
     const content = document.getElementById("xian-world-content");
     if (!content) return;
@@ -790,8 +809,8 @@
   function renderRegionGauge(label, value) { return `<div><span>${label}</span><strong>${Math.round(value)}</strong><i><b style="width:${clamp(value, 0, 100)}%"></b></i></div>`; }
 
   function showWorldCharacterDetail(id) {
-    const character = window.GAME_DATA?.characters?.find((item) => item.id === id);
-    const profile = DATA.characterProfiles[id];
+    const character = window.XianCharacterAvailability?.getCharacter(id, lastCoreState) || window.GAME_DATA?.characters?.find((item) => item.id === id);
+    const profile = characterProfiles()[id];
     const metrics = worldState?.characters?.[id] || profile;
     const content = document.getElementById("xian-world-content");
     if (!profile || !metrics || !content) return;
@@ -800,7 +819,7 @@
     content.querySelector("[data-world-character-sources]")?.addEventListener("click", () => openOverlay("sources", { sourceFilter: profile.sourceIds || [], characterId: id }));
   }
 
-  function getStrongestLord() { return DATA.lords.map((lord) => ({ ...lord, runtime: worldState?.lords?.[lord.id] || lord })).sort((a, b) => b.runtime.power - a.runtime.power)[0]; }
+  function getStrongestLord() { return currentLords().map((lord) => ({ ...lord, runtime: worldState?.lords?.[lord.id] || lord })).sort((a, b) => b.runtime.power - a.runtime.power)[0]; }
   function getMostUnstableRegion() { return DATA.regions.map((region) => ({ ...region, runtime: worldState?.regions?.[region.id] || region })).sort((a, b) => a.runtime.stability - b.runtime.stability)[0]; }
 
   function buildWorldTrend() {

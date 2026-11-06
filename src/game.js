@@ -41,7 +41,7 @@
   let settlementStage = "";
   let commitRunning = false;
   let operationDepth = 0;
-  const RULES_VERSION = 224;
+  const RULES_VERSION = 225;
 
   // One synchronous boundary owns gameplay. Timers may repaint, never settle a save.
   function commit(kind = "save") {
@@ -396,9 +396,9 @@
       hidden.leakRisk += 5;
     }
 
-    return {
+    const initial = {
       version: DATA.version,
-      schemaVersion: 102,
+      schemaVersion: 103,
       rulesVersion: RULES_VERSION,
       operationSequence: 0,
       appliedReceipts: [],
@@ -434,6 +434,8 @@
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+    initial.relations = window.XianCharacterAvailability?.initialRelations(initial, initial.relations) || initial.relations;
+    return initial;
   }
 
   // Only seeded challenges use this stream. Cosmetic IDs and previews do not consume it.
@@ -468,6 +470,7 @@
     if (window.XianSaveBackups?.beforeNewGame?.() === false) return false;
     const scenario = getScenarioById(scenarioId);
     state = createInitialState(difficulty, scenario.id, options);
+    if (window.XianScenario220Story?.enabled(state)) state.story220 = window.XianScenario220Story.initial();
     if (options.setup) applyPackage(options.setup);
     addChronicle(
       formatReignDate(scenario.startYear, scenario.startMonth),
@@ -495,6 +498,8 @@
     if (state.actionRepetitions?.turn !== state.turn) state.actionRepetitions = { turn: state.turn, counts: {} };
     state.actionPoints = 2;
     state.eventResolved = false;
+    settleScenario220Story();
+    if (checkImmediateEnding()) return;
     state.currentEventId = selectEventForTurn().id;
     addReport(
       "本月奏报",
@@ -517,6 +522,9 @@
     if (scenarioOpening) return scenarioOpening;
     const fixed = scenarioId === "jianan_196" ? DATA.fixedEvents.find((event) => event.fixedTurn === state.turn) : null;
     if (fixed) return fixed;
+
+    const storyEvent = window.XianScenario220Story?.selectEvent(state);
+    if (storyEvent) return storyEvent;
 
     const pathEventId = window.XianImperialPaths?.selectEventId?.(JSON.parse(JSON.stringify(state)));
     const pathEvent = (DATA.pathEvents || []).find(event => event.id === pathEventId);
@@ -553,7 +561,10 @@
   }
 
   function getCurrentEvent() {
-    return allEvents().find((event) => event.id === state.currentEventId);
+    const storyEvent = window.XianScenario220Story?.buildEvent(state?.currentEventId, state);
+    if (storyEvent) return storyEvent;
+    const event = allEvents().find(event => event.id === state.currentEventId);
+    return window.XianCharacterAvailability?.presentEvent?.(event, state) || event;
   }
 
   function renderAll() {
@@ -572,6 +583,11 @@
     window.XianDecreeHelper?.refresh?.();
     window.XianMonthlyFlow?.refresh?.();
     window.XianShortChallenges?.refreshStatus?.(state);
+    const storyPanel = document.getElementById("story220-status");
+    if (storyPanel) {
+      const html = window.XianScenario220Story?.statusHtml(state) || "";
+      storyPanel.hidden = !html; storyPanel.innerHTML = html;
+    }
   }
 
   function renderHeader() {
@@ -701,8 +717,7 @@
   }
 
   function renderCharacters() {
-    el["character-list"].innerHTML = DATA.characters
-      .filter((character) => character.id !== "liu_xie")
+    el["character-list"].innerHTML = currentCharacters()
       .map((character) => {
         const faction = DATA.factions.find((item) => item.id === character.faction);
         const relation = state.relations[character.id] ?? 50;
@@ -743,11 +758,12 @@
     el["event-choices"].innerHTML = event.choices
       .map(
         (choice, index) => `
-          <button class="choice-button" type="button" data-choice-index="${index}">
+          <button class="choice-button" type="button" data-choice-index="${index}" ${choice.disabledReason ? 'disabled aria-disabled="true"' : ""}>
             <span class="choice-number">${index + 1}</span>
             <span>
-              <strong>${choice.label}</strong>
-              <small>${choice.hint}</small>
+              <strong>${escapeHtml(choice.label)}</strong>
+              <small>${escapeHtml(choice.hint)}</small>
+              ${choice.disabledReason ? `<small class="story220-requirement">当前不可行：${escapeHtml(choice.disabledReason)}</small>` : ""}
               ${renderOutcomePreview(choice)}
             </span>
           </button>
@@ -764,18 +780,22 @@
     if (!state || state.eventResolved || state.ended) return;
     const event = getCurrentEvent();
     const choice = event?.choices[choiceIndex];
-    if (!choice) return;
+    if (!choice || choice.disabledReason) return;
+    if (event.story220 && state.story220?.decisions?.[event.id]) return;
+    if (event.story220 && state.appliedReceipts.includes(window.XianScenario220Story.decisionReceipt(state, event.id))) return;
 
     const before = captureOutcomeState();
     operationDepth += 1;
     state.operationSequence += 1;
     state.eventResolved = true;
     const deltaText = applyPackage(choice);
+    if (event.story220) window.XianScenario220Story.record(state, event, choice, before);
     document.dispatchEvent(new CustomEvent("xian:decision-resolved", { detail: {
       eventId: event.id,
       id: `decision:${state.createdAt}:${state.turn}:${event.id}`,
       eventTitle: event.title,
       choiceIndex,
+      storyManaged: event.story220 === true,
       choiceLabel: choice.label,
       chronicle: choice.chronicle,
       relations: { ...(choice.relations || {}) },
@@ -959,7 +979,7 @@
       if (!plan || !container) return;
       container.querySelectorAll(".outcome-preview, .action-rule-note").forEach(item => item.remove());
       container.insertAdjacentHTML("beforeend", renderOutcomePreview(plan, Object.entries(plan.relations).map(([id,value]) => `${getCharacter(id)?.name || id}关系 ${formatSigned(value)}`))
-        + `<small class="action-rule-note">${escapeHtml(plan.repetition?.reason || "本次完整收益")}${plan.advice ? ` 主议：${escapeHtml(plan.advice.description)}；剩余 ${plan.advice.remaining} 次。` : ""}${plan.affordable ? "" : ` 国库尚缺 ${Math.max(0, plan.cost - state.stats.treasury)}。`}</small>`);
+        + `<small class="action-rule-note">${escapeHtml(plan.purpose || "")} ${escapeHtml(plan.repetition?.reason || "本次完整收益")}${plan.advice ? ` 主议：${escapeHtml(plan.advice.description)}；剩余 ${plan.advice.remaining} 次。` : ""}${plan.affordable ? "" : ` 国库尚缺 ${Math.max(0, plan.cost - state.stats.treasury)}。`}</small>`);
     });
   }
 
@@ -1032,11 +1052,11 @@
   }
 
   function openAudienceModal() {
-    const people = DATA.characters.filter((character) => character.id !== "liu_xie");
+    const people = currentCharacters("audience");
     openModal({
       title: "召见人物",
       body: `
-        <p class="modal-note">公开召见更有制度效果；秘密召见更能增进信任，但可能提高警戒。</p>
+        <p class="modal-note">召见用途随政治身份变化：旧臣争官心、掌权集团换安全、外镇争制衡；同月国家收益共用次数，人物关系单独计次。</p>
         <label class="field-label">召见对象</label>
         <select id="modal-character-select" class="modal-select">
           ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
@@ -1066,7 +1086,7 @@
   }
 
   function openAppointmentModal() {
-    const people = DATA.characters.filter((character) => character.id !== "liu_xie" && character.id !== "cao_cao");
+    const people = currentCharacters("appointment");
     openModal({
       title: "任免封赏",
       body: `
@@ -1106,9 +1126,7 @@
   }
 
   function openSecretModal() {
-    const people = DATA.characters.filter((character) =>
-      ["empress_fu", "dong_cheng", "yang_biao", "yuan_shao", "liu_biao", "sun_ce"].includes(character.id)
-    );
+    const people = currentCharacters("secret");
     openModal({
       title: "密令联络",
       body: `
@@ -1249,9 +1267,9 @@
       body: `
         <p class="modal-note">降低曹氏警戒能换取时间，但让步太多会削弱皇权。</p>
         <div class="option-cards">
-          <label><input type="radio" name="appease-type" value="praise" checked><span><strong>公开褒奖</strong>${renderOutcomePreview({ effects: { caoAlert: -7, prestige: 1, authority: -1 } }, ["曹操关系 +6"])}</span></label>
-          <label><input type="radio" name="appease-type" value="military"><span><strong>暂授军务便宜</strong>${renderOutcomePreview({ effects: { caoAlert: -11, security: 6, authority: -6 } }, ["曹操关系 +8"])}</span></label>
-          <label><input type="radio" name="appease-type" value="banquet"><span><strong>赐宴修好</strong>${renderOutcomePreview({ effects: { caoAlert: -8, security: 3, treasury: -5, officials: 1 } }, ["曹操关系 +7"])}</span></label>
+          <label><input type="radio" name="appease-type" value="praise" checked><span><strong>公开褒奖</strong>${renderOutcomePreview({ effects: { caoAlert: -7, prestige: 1, authority: -1 } }, ["当前掌权代表关系 +6"])}</span></label>
+          <label><input type="radio" name="appease-type" value="military"><span><strong>暂授军务便宜</strong>${renderOutcomePreview({ effects: { caoAlert: -11, security: 6, authority: -6 } }, ["当前掌权代表关系 +8"])}</span></label>
+          <label><input type="radio" name="appease-type" value="banquet"><span><strong>赐宴修好</strong>${renderOutcomePreview({ effects: { caoAlert: -8, security: 3, treasury: -5, officials: 1 } }, ["当前掌权代表关系 +7"])}</span></label>
         </div>
       `,
       confirmText: "施行安抚",
@@ -1268,7 +1286,7 @@
   }
 
   function openRegionalModal() {
-    const people = DATA.characters.filter((character) => character.faction === "regional_lords");
+    const people = currentCharacters("regional");
     openModal({
       title: "结交外镇",
       body: `
@@ -1306,7 +1324,7 @@
   function executeActionPlan(actionId, fields, narrative) {
     if (!canAct()) return false;
     const plan = window.XianActionPlans.build(actionId, fields, state);
-    if (!plan) return false;
+    if (!plan) { showToast("当前人物或方案不可执行，请改选当前可用对象。", "warning"); return false; }
     if (!plan.affordable) { showToast("国库不足，无法施行此方案。", "error"); return false; }
     completeAction({ ...plan, ...narrative });
     closeModal();
@@ -1331,8 +1349,8 @@
     completeAction(result);
   }
 
-  function interpretEdict(text) {
-    if (window.XianEdictRules) return window.XianEdictRules.analyze(text, DATA.characters);
+  function interpretEdict(text, gameState = state) {
+    if (window.XianEdictRules) return window.XianEdictRules.analyze(text, undefined, gameState);
     const categories = [];
     const targets = [];
     const patterns = [
@@ -1370,9 +1388,11 @@
 
   function previewEdict(text, gameState = state) {
     text = String(text || "").trim();
-    const interpretation = interpretEdict(text);
+    const interpretation = interpretEdict(text, gameState);
     const reject = reason => ({ ok: false, reason, interpretation, actionCost: 1 });
     if (!gameState) return reject("请先开启或继续一局。");
+    const targets = window.XianCharacterAvailability?.validateTargets(text, gameState);
+    if (targets && !targets.ok) return reject(targets.reason);
     if (text.length < 4) return reject("圣旨内容过短，请写明对象和目的。");
     if (text.length > 600) return reject("本版圣旨最多 600 字，请删减后再复核。");
     if (interpretation.blocked) return reject(interpretation.warnings.join(" ") || "请写明一项可以执行的正面政令。");
@@ -1503,7 +1523,10 @@
     const operationId = `action-${state.createdAt}-${state.turn}-${state.totalActions + 1}`;
     if (pkg.repetition?.key) {
       if (state.actionRepetitions?.turn !== state.turn) state.actionRepetitions = { turn: state.turn, counts: {} };
-      state.actionRepetitions.counts[pkg.repetition.key] = Number(state.actionRepetitions.counts[pkg.repetition.key] || 0) + 1;
+      for (const key of new Set(pkg.repetition.keys || [pkg.repetition.key])) {
+        const prior = key === pkg.repetition.key ? Math.max(Number(state.actionRepetitions.counts[key] || 0), Number(pkg.repetition.ordinal || 1) - 1) : Number(state.actionRepetitions.counts[key] || 0);
+        state.actionRepetitions.counts[key] = prior + 1;
+      }
     }
     window.XianCouncilAdvice?.consumeActionModifier?.(pkg, operationId, state);
     const before = captureOutcomeState();
@@ -1618,6 +1641,14 @@
     try { return callback(); } finally { settlementStage = previous; }
   }
 
+  function settleScenario220Story(finalMonth = false) {
+    return window.XianScenario220Story?.settle(state, (pkg, title, text) => {
+      const changes = applyPackage({ ...pkg, settlementSource: `延康主线 · ${title}` });
+      addReport(title, `${text}${changes ? `｜${changes}` : ""}`, "decision");
+      addChronicle(formatReignDate(state.year, state.month), `延康后续·${title}：${text}`);
+    }, finalMonth);
+  }
+
   function finalizeSettlement() {
     if (!settlementLedger) return;
     const ledger = settlementLedger;
@@ -1654,6 +1685,10 @@
       if (checkImmediateEnding()) return;
       settlementPhase("季度御题与后续回响", () => document.dispatchEvent(new CustomEvent("xian:month-ended", { detail: { turn: state.turn, createdAt: state.createdAt } })));
       if (state.ended) return;
+      if (state.turn === 12 && settleScenario220Story(true)) {
+        saveGame(true);
+        if (checkImmediateEnding()) return;
+      }
       settlementPhase("终值核验", () => document.dispatchEvent(new CustomEvent("xian:month-settled", { detail: { turn: state.turn, createdAt: state.createdAt } })));
       if (state.ended) return;
       finalizeSettlement();
@@ -1784,6 +1819,7 @@
       };
     }
 
+    if (window.XianScenario220Story?.enabled(state)) state.story220.completedNormally = true;
     concludeGame(ending);
   }
 
@@ -1819,7 +1855,7 @@
 
   function chooseEventIllustration(event = {}) {
     const searchText = `${event.category || ""} ${event.title || ""} ${event.text || ""}`;
-    const id = /赈|灾民|流民|饥|减赋|开仓|救济|民变/.test(searchText) ? "relief"
+    const id = event.story220 ? "court" : /赈|灾民|流民|饥|减赋|开仓|救济|民变/.test(searchText) ? "relief"
       : /国库|钱粮|贡赋|赋税|粮价|仓廪|俸粮|度支|腐败/.test(searchText) ? "treasury"
       : /密诏|密令|伪诏|泄密|耳目|密谋|内应|暗中|私信/.test(searchText) ? "secret"
       : /使者|外镇|江东|河北|荆州|袁绍|刘表|孙策|贡物|外交/.test(searchText) ? "envoy"
@@ -1841,6 +1877,11 @@
       .map(([key, meta]) => `<div><span>${meta.name}</span><strong>${Math.round(state.stats[key])}</strong></div>`)
       .join("") + `<div class="scenario-result ${challenge.completed ? "complete" : "incomplete"}"><span>${escapeHtml(challenge.title)}</span><strong>${short ? `${short.completed}/${short.total} 项目标${short.endedEarly ? " · 提前终局" : ""}` : challenge.completed ? "挑战完成" : "尚未完成"}</strong></div>`;
     el["ending-stats"].innerHTML = short ? `<details><summary>终局国势 · 六项指标</summary><div class="ending-final-grid">${finalStats}</div></details>` : finalStats;
+    const afterword = document.getElementById("story220-afterword");
+    if (afterword) {
+      const html = window.XianScenario220Story?.afterwordHtml(state) || "";
+      afterword.hidden = !html; afterword.innerHTML = html;
+    }
     window.XianShortChallenges?.renderEndingReview?.(state);
     el["ending-chronicle"].innerHTML = state.chronicle
       .slice(-8)
@@ -1926,7 +1967,7 @@
   function showFaction(factionId) {
     const faction = DATA.factions.find((item) => item.id === factionId);
     if (!faction) return;
-    const members = DATA.characters.filter((character) => character.faction === factionId);
+    const members = currentCharacters().filter(character => character.faction === factionId);
     openModal({
       title: faction.name,
       body: `
@@ -2069,12 +2110,12 @@
     return Boolean(save && typeof save === "object" && save.stats && save.hidden && Array.isArray(save.chronicle));
   }
 
-  function migrateSave(save) {
+  function migrateSave(save, importedShort = null) {
     const migrated = {
       ...createInitialState(save.difficulty || "standard", save.scenarioId || "jianan_196"),
       ...save,
       version: DATA.version,
-      schemaVersion: 102,
+      schemaVersion: 103,
       rulesVersion: RULES_VERSION,
       ruleMigration: save.rulesVersion === RULES_VERSION ? save.ruleMigration : { from: save.rulesVersion || 216, to: RULES_VERSION, turn: save.turn, comparisonEligible: false },
       operationSequence: Number(save.operationSequence || 0),
@@ -2093,6 +2134,14 @@
       random: normalizeRandomState(save.random),
       monthlySettledTurn: clamp(Number(save.monthlySettledTurn ?? (Number(save.turn || 1) - 1)), 0, Number(save.turn || 1)),
     };
+    migrated.relations = window.XianCharacterAvailability?.initialRelations(migrated, migrated.relations) || migrated.relations;
+    const storyEligible = importedShort === true ? false : window.XianScenario220Story?.enabled(migrated, { ignoreRuntime: importedShort === false });
+    if (storyEligible) {
+      migrated.story220 = window.XianScenario220Story.normalize(save.story220, migrated);
+      if (migrated.story220.decisions[migrated.currentEventId]) migrated.eventResolved = true;
+      if (migrated.appliedReceipts.includes(window.XianScenario220Story.decisionReceipt(migrated, migrated.currentEventId))) migrated.eventResolved = true;
+      if (String(migrated.currentEventId).startsWith("story220_") && !window.XianScenario220Story.buildEvent(migrated.currentEventId, migrated, { ignoreRuntime: importedShort === false })) migrated.currentEventId = "old_official_petition";
+    } else { delete migrated.story220; }
     if (!migrated.currentEventId && !migrated.ended) {
       const fixed = DATA.fixedEvents.find((event) => event.fixedTurn === migrated.turn);
       migrated.currentEventId = (fixed || DATA.randomEvents[0]).id;
@@ -2119,7 +2168,9 @@
     const previous = new Map();
     let importing = false;
     try {
-      const restored = migrateSave(bundle.stores[SAVE_KEY]);
+      const shortStore = bundle.stores["xian_emperor_short_challenges_v230"], gameId = bundle.stores[SAVE_KEY].createdAt;
+      const importedShort = shortStore?.active?.gameCreatedAt === gameId || (Array.isArray(shortStore?.results) && shortStore.results.some(item => item.gameCreatedAt === gameId && !item.archivedByCoreImport));
+      const restored = migrateSave(bundle.stores[SAVE_KEY], importedShort);
       const values = new Map(PORTABLE_STORAGE_KEYS.map(key => [key, key === SAVE_KEY ? JSON.stringify(restored) :
         Object.prototype.hasOwnProperty.call(bundle.stores, key) ? JSON.stringify(bundle.stores[key]) : null]));
       PORTABLE_STORAGE_KEYS.forEach(key => previous.set(key, localStorage.getItem(key)));
@@ -2236,6 +2287,8 @@
     ];
     const shortReview = window.XianShortChallenges?.formatReviewText?.(state);
     if (shortReview) lines.push("", shortReview);
+    const afterword = window.XianScenario220Story?.afterwordText(state);
+    if (afterword) lines.push("", afterword);
     const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
     downloadBlob(blob, `${scenario.id}-chronicle.txt`);
   }
@@ -2278,8 +2331,12 @@
     }, 2600);
   }
 
+  function currentCharacters(action) {
+    return window.XianCharacterAvailability?.availableCharacters(state, { action }) || DATA.characters.filter(character => character.id !== "liu_xie");
+  }
+
   function getCharacter(id) {
-    return DATA.characters.find((character) => character.id === id);
+    return window.XianCharacterAvailability?.getCharacter(id, state) || DATA.characters.find(character => character.id === id);
   }
 
   function qualitative(value, thresholds, labels) {

@@ -222,6 +222,19 @@
       };
     });
     migrated.promises.forEach(promise => {
+      const availability = window.XianCharacterAvailability;
+      if (!promise.identity) {
+        const personal = ["hostage", "title"].includes(promise.type);
+        const priorPerson = availability?.getCharacter?.(promise.lordId);
+        const unavailablePrior = personal && priorPerson && !availability.isAvailable(promise.lordId, core);
+        promise.identity = unavailablePrior ? { scope: "legacy-person", factionId: promise.lordId, representativeId: promise.lordId, representativeName: priorPerson.name, migrated: true }
+          : promiseIdentity(promise.type, promise.lordId, core);
+      }
+      if (promise.status === "active" && ["legacy-person", "person"].includes(promise.identity.scope)
+        && availability && !availability.isAvailable(promise.identity.representativeId, core)) {
+        promise.status = "unverified";
+        promise.lastChange = `原对象${promise.identity.representativeName}当前不可受命；个人承诺保留历史，不自动转交现任代表、不补记兑现`;
+      }
       if (!["tribute", "military_aid", "ceasefire"].includes(promise.type)) return;
       if (!promise.contract) {
         if (promise.status !== "active") {
@@ -238,6 +251,17 @@
       promise.contract.receipts ||= [];
       promise.contract.initialOrderIds ||= [];
       promise.contract.initialBattleIds ||= [];
+      if (promise.type === "ceasefire" && promise.contract.version !== 2) {
+        const armies = window.XianArmySystem?.getState?.() || {};
+        promise.contract.version = 2;
+        promise.contract.initialFactIds = (armies.militaryFacts || []).map(item => item.id);
+        promise.contract.initialConquestIds = (armies.conquests || []).map(item => item.id);
+        promise.contract.observationStartTurn = core.turn;
+        promise.contract.missingHistoricalObservation = core.turn > promise.contract.startTurn || Number(core.monthlySettledTurn || 0) >= promise.contract.startTurn;
+        promise.contract.migration ||= "legacy-ceasefire-no-siege-history";
+      }
+      promise.contract.initialFactIds ||= [];
+      promise.contract.initialConquestIds ||= [];
     });
     return migrated;
   }
@@ -295,6 +319,11 @@
   function processEdictReport(report, core) {
     const text = window.XianEdictRules?.reportText(report) ?? extractEdictText(report.text || "");
     if (!text) return;
+    const targets = window.XianCharacterAvailability?.validateTargets?.(text, core);
+    if (targets && !targets.ok) {
+      state.log.unshift({ id: `unavailable-edict-${report.id || report.timestamp}`, turn: core.turn, type: "warning", text: `诏令未落实：${targets.reason}` });
+      return;
+    }
     const cityIds = detectCityTargets(text);
     const lordIds = detectLordTargets(text);
     const orders = detectOrders(text);
@@ -355,7 +384,9 @@
   }
 
   function detectLordTargets(text) {
-    return orderedMatches(window.XianEdictRules?.affirmativeText(text) ?? String(text || ""), DATA.lords);
+    const effective = window.XianEdictRules?.affirmativeText(text) ?? String(text || "");
+    if (window.XianCharacterAvailability?.diplomaticTargets) return window.XianCharacterAvailability.diplomaticTargets(effective, window.XianEmperorGame?.getState?.() || coreState);
+    return orderedMatches(effective, DATA.lords);
   }
 
   function detectOrders(text) {
@@ -477,7 +508,9 @@
       const rule = DATA.promiseRules.find(item => item.id === type);
       lordIds.forEach((lordId, lordIndex) => {
         if (type === "ceasefire" && lordIndex > 0) return;
-        const duplicate = state.promises.some(item => item.status === "active" && item.type === type && item.lordId === lordId && item.createdTurn === core.turn);
+        const contract = buildContract(type, lordId, lordIds, cityIds, text, core);
+        const duplicate = state.promises.some(item => item.status === "active" && item.type === type && item.lordId === lordId && item.createdTurn === core.turn
+          && (type !== "ceasefire" || JSON.stringify([...(item.contract?.parties || [])].sort()) === JSON.stringify([...contract.parties].sort())));
         if (duplicate) return;
         const strategy = state.strategies[lordId];
         const immediate = type === "title" && !/(许诺|将授|拟授|日后)/.test(text);
@@ -494,8 +527,9 @@
           progress: immediate ? 100 : ["tribute", "military_aid", "ceasefire"].includes(type) ? 0 : clamp(Math.round(execution * 0.35 + (strategy?.trust || 40) * 0.2), 12, 62),
           status: immediate ? "fulfilled" : "active",
           text: shortText(text, 90),
+          identity: promiseIdentity(type, lordId, core),
           lastChange: immediate ? "诏书颁下即已履行" : "等待履约",
-          contract: buildContract(type, lordId, lordIds, cityIds, text, core),
+          contract,
         });
         if (immediate && strategy) strategy.trust = clamp(strategy.trust + 4, 0, 100);
       });
@@ -598,14 +632,25 @@
     if (!["tribute", "military_aid", "ceasefire"].includes(type)) return null;
     const army = window.XianArmySystem?.getState?.() || {};
     const quantity = clamp(Number(text.match(/(?:贡赋|进贡|朝贡|输贡|纳贡)[^\d]{0,6}(\d+)/)?.[1] || 6), 1, 30);
-    return { version: 1, responsible: lordId, beneficiary: "court", quantity: type === "tribute" ? quantity : null,
+    return { version: type === "ceasefire" ? 2 : 1, responsible: lordId, beneficiary: "court", quantity: type === "tribute" ? quantity : null,
       payerCityId: DATA.lords.find(item => item.id === lordId)?.seatCity || null,
       delivered: 0, targetCityId: cityIds.at(-1) || "xudu", armyId: null,
-      parties: [...new Set(parties.length > 1 ? parties : [lordId, "court"])],
+      parties: [...new Set(parties.length > 1 ? (type === "ceasefire" ? parties.slice(0, 2) : parties) : [lordId, "court"])],
       startTurn: Number(core.turn), deadlineTurn: Number(core.turn) + (type === "ceasefire" ? 2 : 3),
-      condition: type === "tribute" ? "实际到账钱粮" : type === "military_aid" ? "承接指定任务并抵达目标" : "约定双方在期限内无敌对命令或交战",
+      condition: type === "tribute" ? "实际到账钱粮" : type === "military_aid" ? "承接指定任务并抵达目标" : "约定双方在期限内无敌对军令、野战、围城推进或军事占领",
       receipts: [], lastDeliveryTurn: Number(core.turn) - 1,
-      initialOrderIds: (army.orders || []).map(item => item.id), initialBattleIds: (army.battleReports || []).map(item => item.id) };
+      initialOrderIds: (army.orders || []).map(item => item.id), initialBattleIds: (army.battleReports || []).map(item => item.id),
+      initialFactIds: (army.militaryFacts || []).map(item => item.id), initialConquestIds: (army.conquests || []).map(item => item.id) };
+  }
+
+  function promiseIdentity(type, factionId, core) {
+    const representative = window.XianCharacterAvailability?.representative?.(factionId, core);
+    return { scope: ["hostage", "title"].includes(type) ? (representative?.institution ? "institution" : "person") : "faction",
+      factionId, representativeId: representative?.id || factionId, representativeName: representative?.name || lordDef(factionId)?.name || factionId };
+  }
+
+  function promiseName(promise) {
+    return ["legacy-person", "person"].includes(promise.identity?.scope) ? `${promise.identity.representativeName}${promise.identity.scope === "legacy-person" ? "（历史对象）" : ""}` : strategyName(promise.lordId);
   }
 
   function deliverTribute(promise, turn, core) {
@@ -674,17 +719,38 @@
         else { promise.progress = army ? 50 : 0; promise.lastChange = army ? `军团 ${army.id} 尚在途中：${army.lastChange}` : "尚无军团接受约定任务"; }
       }
       if (promise.type === "ceasefire") {
-        const parties = contract.parties;
+        const parties = contract.parties || [];
+        const observationStart = Math.max(contract.startTurn, Number(contract.observationStartTurn || contract.startTurn));
+        const bilateral = item => item.turn >= observationStart && item.turn <= contract.deadlineTurn
+          && parties.includes(item.attackerOwner) && parties.includes(item.defenderOwner) && item.attackerOwner !== item.defenderOwner;
+        const fact = (armies.militaryFacts || []).find(item => !contract.initialFactIds.includes(item.id) && bilateral(item));
         const battle = (armies.battleReports || []).find(item => !contract.initialBattleIds.includes(item.id) && item.turn >= contract.startTurn && item.turn <= contract.deadlineTurn && parties.includes(item.attackerOwner) && parties.includes(item.defenderOwner) && item.attackerOwner !== item.defenderOwner);
         const order = (armies.orders || []).find(item => !contract.initialOrderIds.includes(item.id) && item.turn >= contract.startTurn && item.turn <= contract.deadlineTurn && item.task === "attack" && parties.includes(item.owner) && parties.includes(item.targetOwner) && item.owner !== item.targetOwner);
-        if (battle || order) {
-          const source = battle || order;
-          contract.receipts.push({ id: `breach:${source.id}`, turn: source.turn, source: source.id, kind: battle ? "battle" : "hostile-order" });
-          settlePromise(promise, false, `停战违约：${battle ? "战报" : "敌对军令"} ${source.id}`);
-        } else if (Number(coreState.monthlySettledTurn || 0) >= promise.deadlineTurn || coreState.turn > promise.deadlineTurn) {
-          contract.receipts.push({ id: `observed:${promise.id}`, turn: promise.deadlineTurn, condition: "no-hostile-orders-or-battles" });
-          promise.progress = 100; settlePromise(promise, true, "约定月份已结束，未发生双方敌对命令或交战");
-        } else { promise.progress = Math.round(Math.max(0, coreState.turn - promise.createdTurn) / Math.max(1, promise.deadlineTurn - promise.createdTurn + 1) * 100); promise.lastChange = "按实际军令与战报观察停战"; }
+        const conquest = (armies.conquests || []).find(item => !contract.initialConquestIds.includes(item.id)
+          && bilateral({ ...item, attackerOwner: item.newOwner, defenderOwner: item.previousOwner }));
+        if (fact || battle || order || conquest) {
+          const source = fact || battle || order || conquest;
+          const kind = fact?.kind || (battle ? "battle" : order ? "hostile-order" : "occupation");
+          const sourceId = fact?.source || source.id;
+          const entry = { id: `breach:${source.id}`, turn: source.turn, source: sourceId, kind,
+            attackerOwner: source.attackerOwner || source.owner || source.newOwner,
+            defenderOwner: source.defenderOwner || source.targetOwner || source.previousOwner };
+          if (!contract.receipts.some(item => item.id === entry.id)) contract.receipts.push(entry);
+          settlePromise(promise, false, `停战违约：${{ battle: "战报", "hostile-order": "敌对军令", "siege-start": "建立包围", "siege-progress": "围城推进", occupation: "军事占领" }[kind] || "敌对事实"} ${sourceId}`);
+        } else if ((Number(coreState.monthlySettledTurn || 0) >= promise.deadlineTurn || coreState.turn > promise.deadlineTurn)
+          && Number(armies.lastProcessedTurn || 0) > promise.deadlineTurn) {
+          if (contract.missingHistoricalObservation || Number(armies.militaryFactsStartTurn || contract.startTurn) > contract.startTurn) {
+            promise.status = "unverified";
+            promise.lastChange = "观察期已结束；旧档缺少完整围城与占领历史，保留未知，不补记履约或失信";
+          } else {
+            contract.receipts.push({ id: `observed:${promise.id}`, turn: promise.deadlineTurn, condition: "no-bilateral-hostile-facts-after-final-army-phase" });
+            promise.progress = 100; settlePromise(promise, true, "约定最后一月军团结算已完成，未发生双方敌对命令、交战、围城或军事占领");
+          }
+        } else {
+          promise.progress = Math.round(Math.max(0, coreState.turn - promise.createdTurn) / Math.max(1, promise.deadlineTurn - promise.createdTurn + 1) * 100);
+          const response = (armies.ceasefireResponses || []).findLast(item => item.turn === promise.createdTurn && parties.every(id => item.parties.includes(id)));
+          promise.lastChange = response?.rejected?.length ? `停战尚未被全部承接：${response.rejected.map(item => `${item.armyId} ${item.reason}`).join("；")}` : "按军令、野战、围城与占领事实观察；须等待最后一月军团结算";
+        }
       }
     }
     saveState(); renderAll();
@@ -704,7 +770,7 @@
       id: `promise-result-${promise.id}`,
       turn: state.lastProcessedTurn,
       type: fulfilled ? "diplomacy" : "warning",
-      text: `${strategyName(promise.lordId)}${fulfilled ? "履行" : "违背"}${promise.label}：${reason}。`,
+      text: `${promiseName(promise)}${fulfilled ? "履行" : "违背"}${promise.label}：${reason}。`,
     });
   }
 
@@ -761,7 +827,7 @@
   function cityDef(id) { return DATA.cities.find(city => city.id === id); }
   function routeDef(id) { return DATA.routes.find(route => route.id === id); }
   function lordDef(id) { return DATA.lords.find(lord => lord.id === id); }
-  function strategyName(id) { return id === "court" ? "汉廷" : lordDef(id)?.name || "外镇"; }
+  function strategyName(id) { return window.XianCharacterAvailability?.faction?.(id, coreState)?.name || (id === "court" ? "汉廷" : lordDef(id)?.name || "外镇"); }
   function clamp(value, min, max) { return Math.min(max, Math.max(min, Number(value) || 0)); }
   function shortText(text, limit = 58) { const normalized = String(text || "").replace(/\s+/g, " ").trim(); return normalized.length > limit ? `${normalized.slice(0, limit)}……` : normalized; }
   function trimCollections() { state.promises = state.promises.slice(0, MAX_PROMISES); state.log = state.log.slice(0, MAX_LOG); }
@@ -874,22 +940,24 @@
   function renderPromises() {
     const order = { active: 0, broken: 1, fulfilled: 2 };
     const promises = [...state.promises].sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3) || b.createdTurn - a.createdTurn);
-    return `<section><div class="strategy-section-head"><div><span class="section-kicker">外交承诺</span><h3>盟约与履约</h3></div><small>贡赋按实收、援军按军令抵达、停战按行为凭据结算</small></div><div class="promise-list">${promises.length ? promises.map(promise => `<article class="promise-card ${promise.status}"><div class="promise-card-head"><div><span>${escapeHtml(promise.label)}</span><strong>${escapeHtml(strategyName(promise.lordId))}</strong></div><b>${promiseStatus(promise.status)}</b></div><p>${escapeHtml(promise.text)}</p>${renderContract(promise)}<div class="promise-progress"><i><b style="width:${clamp(promise.progress, 0, 100)}%"></b></i><em>${Math.round(promise.progress)}%</em></div><small>第 ${promise.createdTurn} 月立约 · 第 ${promise.deadlineTurn} 月期限 · ${escapeHtml(promise.lastChange)}</small></article>`).join("") : '<p class="empty-state">在圣旨中写明奉表、出兵、结盟、停战、互市、质子或官爵，即可建立外交承诺。</p>'}</div></section>`;
+    return `<section><div class="strategy-section-head"><div><span class="section-kicker">外交承诺</span><h3>盟约与履约</h3></div><small>贡赋按实收、援军按军令抵达、停战按行为凭据结算</small></div><div class="promise-list">${promises.length ? promises.map(promise => `<article class="promise-card ${promise.status}"><div class="promise-card-head"><div><span>${escapeHtml(promise.label)}</span><strong>${escapeHtml(promiseName(promise))}</strong></div><b>${promiseStatus(promise.status)}</b></div><p>${escapeHtml(promise.text)}</p>${renderContract(promise)}<div class="promise-progress"><i><b style="width:${clamp(promise.progress, 0, 100)}%"></b></i><em>${Math.round(promise.progress)}%</em></div><small>第 ${promise.createdTurn} 月立约 · 第 ${promise.deadlineTurn} 月期限 · ${escapeHtml(promise.lastChange)}</small></article>`).join("") : '<p class="empty-state">在圣旨中写明奉表、出兵、结盟、停战、互市、质子或官爵，即可建立外交承诺。</p>'}</div></section>`;
   }
 
   function renderContract(promise) {
     const contract = promise.contract;
+    if (promise.identity?.scope === "legacy-person") return "<p>此项以原人物为对象的承诺仅作历史保留，当前代表不继承个人承诺；缺少重新约定时不推定兑现。</p>";
     if (!contract) return `<p>${promise.evidenceStatus ? "旧档保留原结论：缺少实物或军务凭据，不补发钱粮，不补记抵达。" : "此类承诺按信任、准备度与期限推演，仅影响信任与地方忠诚；不代表实物交付。"}</p>`;
     const detail = promise.type === "tribute"
       ? `${controllerName(contract.responsible)} → ${controllerName(contract.beneficiary)}：约定钱粮 ${contract.quantity}，实收 ${contract.delivered}；来源 ${cityDef(contract.payerCityId)?.name || "责任方治所"}，每月最多 3，实收等额扣除当地粮秣。`
       : promise.type === "military_aid"
         ? `${controllerName(contract.responsible)} → ${cityDef(contract.targetCityId)?.name || contract.targetCityId}：${contract.armyId ? `军团 ${contract.armyId}，军令 ${contract.orderId || "待核"}` : "尚未承接"}；须在第 ${promise.deadlineTurn} 月结束前实际抵达，沿途承担军粮与减员。`
-        : `${contract.parties.map(controllerName).join(" ↔ ")}：第 ${contract.startTurn}—${contract.deadlineTurn} 月停止相互进攻；敌对军令或双方战报构成违约。`;
+        : `${contract.parties.map(controllerName).join(" ↔ ")}：第 ${contract.startTurn}—${contract.deadlineTurn} 月停止相互进攻；敌对军令、双方野战、围城推进及军事占领构成违约；旧军令不豁免签约后的敌对行动。`;
     const receipts = (contract.receipts || []).map(receipt => {
       const line = receipt.resource === "treasury" ? `国库 ${receipt.before} → ${receipt.after}（实收 ${receipt.amount}；来源粮秣 −${receipt.sourceSupplySpent ?? receipt.amount}）`
         : receipt.kind === "arrival" ? `军团 ${receipt.armyId} 已抵达 ${cityDef(receipt.cityId)?.name || receipt.cityId}`
           : receipt.kind === "accepted" ? `军团 ${receipt.armyId} 已承接任务`
-            : receipt.kind === "battle" ? "双方战报违约" : receipt.kind === "hostile-order" ? "敌对军令违约" : "约定期限观察完成";
+            : receipt.kind === "battle" ? "双方战报违约" : receipt.kind === "hostile-order" ? "敌对军令违约"
+              : receipt.kind === "siege-start" ? "建立包围违约" : receipt.kind === "siege-progress" ? "围城推进违约" : receipt.kind === "occupation" ? "军事占领违约" : "约定期限观察完成";
       return `<li>第 ${receipt.turn} 月：${escapeHtml(line)}<small>凭据 ${escapeHtml(receipt.source || receipt.id)}</small></li>`;
     }).join("");
     return `<p>${escapeHtml(detail)}</p>${contract.migration ? "<p>旧档迁移：仅核验载入后的事实，不追认缺失的历史成果。</p>" : ""}<details><summary>实际履约回执（${contract.receipts.length}）</summary>${receipts ? `<ul>${receipts}</ul>` : "<p>暂无实际履约凭据。</p>"}</details>`;
@@ -904,7 +972,7 @@
     return `<div class="strategy-metric ${inverse ? "inverse" : ""}"><span>${label}</span><i><b style="width:${clamp(value, 0, 100)}%"></b></i><em>${Math.round(value)}</em></div>`;
   }
 
-  function promiseStatus(status) { return { active: "履行中", fulfilled: "已履行", broken: "已失信", partial: "部分履行", expired: "已超期" }[status] || status; }
+  function promiseStatus(status) { return { active: "履行中", fulfilled: "已履行", broken: "已失信", partial: "部分履行", expired: "已超期", unverified: "历史待核" }[status] || status; }
   function logIcon(type) { return { attack: "兵", support: "援", defend: "守", supply: "粮", ceasefire: "和", trade: "市", advance: "军", diplomacy: "盟", warning: "警", system: "档" }[type] || "诏"; }
   function cityRisk(city) { return (100 - city.defense) * 0.4 + (100 - city.supply) * 0.35 + city.pressure * 0.25; }
   function hottestRoute() { return Object.entries(state?.routes || {}).sort((a, b) => b[1].pressure - a[1].pressure)[0] || null; }
@@ -919,6 +987,7 @@
   }
 
   function controllerName(id) {
+    if (window.XianCharacterAvailability?.faction) return window.XianCharacterAvailability.faction(id, coreState).name;
     if (id === "court") return "汉廷";
     if (id === "fragmented") return "地方残部";
     if (id === "shi_family") return "士氏";
@@ -968,8 +1037,24 @@
     return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
   }
 
+  function previewHostilities(text, core = window.XianEmperorGame?.getState?.() || coreState) {
+    if (!state || !isValidCore(core) || choosePrimaryOrder(detectOrders(text)) !== "attack") return [];
+    const owners = detectLordTargets(text), targetCityId = detectCityTargets(text).at(-1);
+    const targetOwner = state.cities[targetCityId]?.controller;
+    const fieldOwners = Object.values(window.XianArmySystem?.getState?.()?.armies || {}).filter(army => army.cityId === targetCityId
+      && army.troops >= 500 && !["destroyed", "routing", "marching"].includes(army.status)).map(army => army.owner);
+    return state.promises.filter(promise => promise.type === "ceasefire" && promise.status === "active"
+      && core.turn <= promise.deadlineTurn
+      && (owners.length ? owners : ["court"]).some(owner => promise.contract?.parties?.includes(owner)
+        && [targetOwner, ...fieldOwners].some(opponent => opponent !== owner && promise.contract.parties.includes(opponent))))
+      .map(promise => ({ promiseId: promise.id, targetOwner, targetCityId,
+        message: promise.contract.parties.includes(targetOwner) ? `主动违约：若此攻击军令被承接，将违背 ${promise.contract.parties.map(controllerName).join("与")} 的停战约定；旧军令也不能豁免签约后继续围城或占领。`
+          : `停战风险：目标城外存在约定对方的野战军，实际交战将违背 ${promise.contract.parties.map(controllerName).join("与")} 的停战约定。` }));
+  }
+
   window.XianStrategyNetwork = Object.freeze({
     reconcilePromises,
+    previewHostilities,
     previewContracts: text => {
       const core = window.XianEmperorGame?.getState?.() || coreState;
       if (!isValidCore(core)) return [];

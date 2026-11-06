@@ -15,3 +15,14 @@
 | [SHORT_REVIEW.md](SHORT_REVIEW.md) | 短局复盘数据、历史记录与验证方式 |
 
 累计更新记录位于 [CHANGELOG.md](../CHANGELOG.md)，独立版本说明位于 [patch-notes](../patch-notes/README.md)。
+
+## v2.25 当前维护入口
+
+- [规则与迁移](RULES_V225.md)
+- [停战、围城与军事凭据](CEASEFIRE_V225.md)
+- [召见取舍](AUDIENCE_V225.md)
+- [当前人物与势力身份](CHARACTERS_V225.md)
+- [延康四幕](SCENARIO_220_STORY.md)
+- [最终验证](VALIDATION_V225.md)
+- [平衡样本与失败记录](BALANCE_V225.md)
+- [交接](HANDOFF_V225.md)

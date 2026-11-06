@@ -35,6 +35,7 @@
   }
 
   function recordDecision(detail) {
+    if (detail.storyManaged) return;
     const core = window.XianEmperorGame?.getState?.() || readCore();
     if (!core || detail.createdAt !== core.createdAt) return;
     const relations = Object.entries(detail.relations || {}).filter(([, value]) => Number(value));

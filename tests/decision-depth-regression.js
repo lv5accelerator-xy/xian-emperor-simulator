@@ -11,8 +11,9 @@ function prepare() {
 {
   const run = prepare(); assert.equal(run.act("audience", audience), true);
   const before = run.api.getState(), preview = run.window.XianActionPlans.build("audience", audience, before);
-  assert.equal(preview.effects.authority, 1, "second public audience must halve favorable authority before execution");
-  assert.equal(preview.effects.caoAlert, -1, "favorable alert reductions round toward zero");
+  assert.equal(preview.effects.authority, -1, "political concessions remain intact on a repeat audience");
+  assert.equal(preview.effects.security, 1, "second public audience halves favorable national security");
+  assert.equal(preview.effects.caoAlert, -2, "favorable alert reductions round toward zero");
   assert.equal(preview.repetition.ordinal, 2);
   const rng = plain(before.random); run.window.XianActionPlans.list(before); assert.deepEqual(plain(run.api.getState().random), rng);
   assert.equal(run.act("audience", audience), true);
@@ -29,7 +30,9 @@ function prepare() {
   const run = prepare(); run.act("audience", audience);
   const core = run.api.getState();
   assert.equal(run.window.XianActionPlans.build("audience", { ...audience, "audience-mode": "private" }, core).repetition.ordinal, 2, "same target shares count across methods");
-  assert.equal(run.window.XianActionPlans.build("audience", { ...audience, "modal-character-select": "cao_cao" }, core).repetition.ordinal, 1, "different target starts full strength");
+  const rotated = run.window.XianActionPlans.build("audience", { ...audience, "modal-character-select": "cao_cao" }, core);
+  assert.equal(rotated.repetition.ordinal, 2, "different target shares the national audience count");
+  assert.equal(rotated.repetition.personalOrdinal, 1, "different target keeps a separate relationship count");
   run.act("revenue", { "revenue-method": "audit" });
   assert.equal(run.window.XianActionPlans.build("revenue", { "revenue-method": "tribute" }, run.api.getState()).repetition.ordinal, 2, "untargeted methods share action category");
 }

@@ -87,13 +87,14 @@
     const recordedPreview = costPreview?.outcome?.execution?.value;
     const execution = Number.isFinite(recordedPreview) ? { low: clamp(recordedPreview - 6, 28, 94), mid: recordedPreview, high: clamp(recordedPreview + 6, 28, 94) } : estimateExecution(effectiveText);
     const warnings = [...(interpretation?.warnings || [])];
+    warnings.push(...(API.previewHostilities?.(effectiveText, window.XianEmperorGame?.getState?.() || safeParse(localStorage.getItem(CORE_KEY))) || []).map(item => item.message));
     if (costPreview?.reason) warnings.push(costPreview.reason);
     if (interpretation?.targets.length > 1) warnings.push("人物关系与外部制衡共用一份行动收益，不按名字数量倍增。" );
     const armies = Object.values(window.XianArmySystem?.getState?.()?.armies || {});
     lordIds.forEach(id => {
       const army = armies.find(item => item.owner === id);
       const access = army && window.XianArmySystem?.getCommandAccess?.(army);
-      if (access && !access.allowed && ["attack", "support", "advance", "defend", "supply"].includes(primaryOrder)) warnings.push(access.message);
+      if (access && !access.allowed && ["attack", "support", "advance", "defend", "supply", "ceasefire"].includes(primaryOrder)) warnings.push(access.message);
     });
 
     if (!lordIds.length && ["attack", "support", "advance", "defend", "supply"].includes(primaryOrder)) {
@@ -236,7 +237,11 @@
 
   function cityDef(id) { return DATA.cities.find(city => city.id === id); }
   function routeDef(id) { return DATA.routes.find(route => route.id === id); }
-  function lordDef(id) { return DATA.lords.find(lord => lord.id === id); }
+  function lordDef(id) {
+    const definition = DATA.lords.find(lord => lord.id === id);
+    const current = window.XianCharacterAvailability?.faction(id, window.XianEmperorGame?.getState?.() || safeParse(localStorage.getItem(CORE_KEY)));
+    return definition ? { ...definition, ...(current ? { name: current.name } : {}) } : null;
+  }
   function safeParse(raw) { try { return raw ? JSON.parse(raw) : null; } catch (_) { return null; } }
   function clamp(value, min, max) { return Math.min(max, Math.max(min, Number(value) || 0)); }
   function escapeHtml(value) { return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char])); }

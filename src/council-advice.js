@@ -9,6 +9,10 @@
     dong_cheng: { actions: ["secret", "regional"], hidden: { loyalNetwork: 2 }, description: "密联、外镇：忠汉网络额外 +2" },
     empress_fu: { actions: ["audience", "relief", "appease"], effects: { security: 2 }, hidden: { leakRisk: -1 }, description: "召见、赈济、安抚：安全额外 +2、泄密风险 -1" },
     liu_biao: { actions: ["regional", "relief"], hidden: { externalBalance: 2 }, effects: { prestige: 1 }, description: "外镇、赈济：制衡额外 +2、威望 +1" },
+    cao_pi: { actions: ["appease", "revenue"], effects: { security: 2 }, discount: 1, description: "魏府协调：安抚、筹措安全额外 +2；有费用时减少用度 1" },
+    court_secretariat: { actions: ["ritual", "appointment", "secret"], effects: { officials: 1 }, hidden: { loyalNetwork: 1 }, description: "使署承办：朝仪、任官、密联百官额外 +1、忠汉网络 +1" },
+    palace_office: { actions: ["audience", "relief", "appease"], effects: { security: 2 }, hidden: { leakRisk: -1 }, description: "宫中使署：召见、赈济、安抚安全额外 +2、泄密风险 -1" },
+    jingzhou_envoy: { actions: ["regional", "relief"], hidden: { externalBalance: 2 }, effects: { prestige: 1 }, description: "荆州使署：外镇、赈济制衡额外 +2、威望 +1" },
   });
   const MAX_USES = 2;
   const STORAGE_KEY = "xian_emperor_council_advice_v2110";
@@ -19,6 +23,10 @@
     dong_cheng: { name: "董承", title: "车骑将军", stance: "进取", keywords: ["密令", "军", "宿卫", "外镇"], package: { effects: { authority: 2, caoAlert: 2 }, hidden: { loyalNetwork: 2 }, relations: { dong_cheng: 3 } } },
     empress_fu: { name: "伏皇后", title: "皇后", stance: "持重", keywords: ["宫禁", "召见", "赈济", "安抚"], package: { effects: { security: 2 }, hidden: { leakRisk: -1 }, relations: { empress_fu: 3 } } },
     liu_biao: { name: "刘表", title: "荆州牧", stance: "外援", keywords: ["外镇", "贡赋", "减赋", "遣使"], package: { effects: { prestige: 2, caoAlert: 1 }, hidden: { externalBalance: 2 }, relations: { liu_biao: 3 } } },
+    cao_pi: { name: "曹丕", title: "魏王", stance: "权宜", keywords: ["安抚", "借调", "宿卫"], package: { effects: { security: 2, authority: -1, caoAlert: -2 }, relations: { cao_pi: 3 } } },
+    court_secretariat: { name: "尚书台使署", title: "机构角色", stance: "承办", keywords: ["成法", "任官", "密联"], package: { effects: { officials: 1 }, hidden: { loyalNetwork: 1 }, relations: { court_secretariat: 3 } } },
+    palace_office: { name: "宫中使署", title: "机构角色", stance: "持重", keywords: ["宫禁", "召见", "安抚"], package: { effects: { security: 2 }, hidden: { leakRisk: -1 }, relations: { palace_office: 3 } } },
+    jingzhou_envoy: { name: "荆州使署", title: "机构角色", stance: "外援", keywords: ["外镇", "贡赋", "遣使"], package: { effects: { prestige: 2, caoAlert: 1 }, hidden: { externalBalance: 2 }, relations: { jingzhou_envoy: 3 } } },
   };
   const ADVISER_SETS = {
     restore_treasury: ["yang_biao", "xun_yu", "cao_cao"],
@@ -54,6 +62,12 @@
     const agenda = agendaState();
     if (!core || core.ended) return render();
     if (state.gameCreatedAt !== core.createdAt) { state = blankState(); state.gameCreatedAt = core.createdAt; }
+    if (state.chosen && window.XianCharacterAvailability && !window.XianCharacterAvailability.isAvailable(state.chosen.id, core)) {
+      // An old personal adviser remains in history; no successor inherits their seasonal allowance.
+      state.history.unshift({ cycle: state.cycle, agendaId: state.agendaId, adviserId: state.chosen.id, suspended: true, reason: "当前人物不可用" });
+      state.chosen = null;
+      saveState();
+    }
     if (agenda?.active && (state.cycle !== agenda.cycle || state.agendaId !== agenda.active.id)) {
       state.cycle = agenda.cycle;
       state.agendaId = agenda.active.id;
@@ -66,7 +80,12 @@
   }
 
   function buildAdvice(core = coreState(), agendaId = state.agendaId) {
-    const ids = ADVISER_SETS[agendaId] || ADVISER_SETS.steady_court;
+    const originalIds = ADVISER_SETS[agendaId] || ADVISER_SETS.steady_court;
+    const availability = window.XianCharacterAvailability;
+    const replacements = { xun_yu: "court_secretariat", cao_cao: "cao_pi", dong_cheng: "court_secretariat", empress_fu: "palace_office", liu_biao: "jingzhou_envoy" };
+    const ids = [...new Set([...originalIds.map(id => !availability || availability.isAvailable(id, core) ? id : replacements[id]),
+      "court_secretariat", "palace_office", "yang_biao", "cao_pi", "jingzhou_envoy"])]
+      .filter(id => SPEAKERS[id] && (!availability || availability.isAvailable(id, core))).slice(0, 3);
     const proposals = PROPOSALS[agendaId] || PROPOSALS.steady_court;
     const memories = window.XianCharacterMemory?.getState?.()?.memories || [];
     return ids.map((id, index) => {
@@ -76,7 +95,7 @@
       const cost = Math.max(0, -Number(speaker.package.effects?.treasury || 0));
       const shortfall = core?.stats ? Math.max(0, cost - Number(core.stats.treasury || 0)) : 0;
       return {
-        id, ...speaker, proposal: proposals[index], relation, remembered,
+        id, ...speaker, proposal: id === originalIds[index] ? proposals[index] : `${speaker.name}主张以${speaker.stance}之策承办本季御题；本议只取得列明的有限成果。`, relation, remembered,
         modifier: MODIFIERS[id], cost, shortfall, affordable: !shortfall,
         immediateSummary: describePackage(speaker.package),
         trust: relation >= 70 ? "愿以身任事" : relation >= 48 ? "愿意进言" : "仍有保留",
@@ -114,6 +133,7 @@
   function getActionModifier(plan, core = coreState()) {
     const agenda = agendaState(), rule = MODIFIERS[state.chosen?.id];
     if (!core || core.ended || state.gameCreatedAt !== core.createdAt || !agenda?.active || agenda.cycle !== state.cycle || !rule
+      || (window.XianCharacterAvailability && !window.XianCharacterAvailability.isAvailable(state.chosen?.id, core))
       || Number(state.chosen.alignedActions || 0) >= MAX_USES || !rule.actions.includes(plan.actionId)) return null;
     const effects = { ...(rule.effects || {}) };
     if (rule.discount && Number(plan.effects?.treasury) < 0) effects.treasury = Math.min(rule.discount, -plan.effects.treasury);

@@ -14,7 +14,9 @@
   const negation = /不得|不可|不许|不准|不要|不再|不予|勿|毋|禁止|严禁|无需|不必|停止|暂停|暂缓|取消|拒绝|不(?:练兵|出兵|任命|加封|赈济|进贡|奉表|结盟|驰援)/;
   const punitive = /罢免|黜|问罪|讨伐|征讨|斥责|削爵|追责/;
 
-  function analyze(text, characters = window.GAME_DATA?.characters || []) {
+  function analyze(text, characters = window.GAME_DATA?.characters || [], core = window.XianEmperorGame?.getState?.()) {
+    const availability = window.XianCharacterAvailability;
+    if (availability && core) characters = availability.availableCharacters(core);
     const clauses = String(text || "").split(/[，,；;。.!！?？\n]+/).map(item => item.trim()).filter(Boolean);
     // 否定句不转成正面命令。复合句不能确定否定范围时，要求玩家拆句。
     const ignoredClauses = clauses.filter(item => negation.test(item));
@@ -30,6 +32,8 @@
     const orders = orderRules.filter(rule => new RegExp(rule.pattern).test(effectiveText)).map(rule => rule.id);
     const substantiveOrders = orders.filter(id => id !== "advance" || !orders.some(other => ["attack", "support", "defend"].includes(other)));
     const warnings = [];
+    const currentTargets = availability && core ? availability.validateTargets(effectiveText, core) : { ok: true };
+    if (!currentTargets.ok) warnings.push(currentTargets.reason);
     if (ignoredClauses.length) warnings.push(`已排除 ${ignoredClauses.length} 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。`);
     if (categories.length > 2) warnings.push("一份圣旨最多办理两类政务，请拆成多次行动。" );
     if (substantiveOrders.length > 1) warnings.push("一份圣旨只指定一种军略行动，请将进攻、补给或停战分开下达。" );
@@ -37,7 +41,7 @@
     const mixedTargets = dispositions.includes("positive") && dispositions.includes("punitive");
     if (mixedTargets) warnings.push("褒奖与问罪对象请分开拟旨，避免承办对象混淆。" );
     if (targets.length > 2) warnings.push("一份圣旨最多明确处分两名人物，请将其他对象分开办理。" );
-    const blocked = categories.length > 2 || substantiveOrders.length > 1 || mixedTargets || targets.length > 2 || !affirmative.length;
+    const blocked = !currentTargets.ok || categories.length > 2 || substantiveOrders.length > 1 || mixedTargets || targets.length > 2 || !affirmative.length;
     return { categories: categories.length ? categories : ["generic"], targets, targetDisposition,
       effectiveText, ignoredClauses, warnings, blocked, labels: (categories.length ? categories : ["generic"]).map(id => labels[id]) };
   }

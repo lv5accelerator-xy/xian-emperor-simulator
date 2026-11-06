@@ -3,34 +3,56 @@
   "use strict";
   const clamp = value => Math.max(0, Math.min(100, value));
   const RULES = Object.freeze({ repeatMultiplier: .5, repeatRounding: "toward-zero", repeatFromOrdinal: 2 });
+  // National effects share one audience budget; relationships remain personal.
+  // Costs and adverse effects do not diminish. The role is political, not a person's name.
+  const AUDIENCE_ROLES = Object.freeze({
+    han_loyalists: {
+      purpose: "争取旧臣：以警戒代价换皇权、官心；密谈可建立忠汉联系。",
+      public: { effects: { authority: 3, officials: 3, caoAlert: 2 }, relations: 4 },
+      private: { effects: { authority: 1, security: -1, caoAlert: 3 }, hidden: { loyalNetwork: 4, leakRisk: 3 }, relations: 7 },
+    },
+    cao_group: {
+      purpose: "修好掌权集团：承认部分专断，以皇权让步换宫禁安全和较低警戒。",
+      public: { effects: { security: 3, caoAlert: -5, authority: -1, officials: 1 }, relations: 4 },
+      private: { effects: { security: 2, caoAlert: -4, authority: -1 }, hidden: { leakRisk: 2 }, relations: 7 },
+    },
+    regional_lords: {
+      purpose: "外镇交涉：以使节钱粮和警戒代价，争取名分与后续合作的制衡基础。",
+      public: { effects: { prestige: 3, treasury: -1, caoAlert: 3 }, hidden: { externalBalance: 3 }, relations: 4 },
+      private: { effects: { prestige: 1, treasury: -2, security: -1, caoAlert: 4 }, hidden: { externalBalance: 5, leakRisk: 3 }, relations: 7 },
+    },
+    imperial: {
+      purpose: "内廷相商：维护宫禁与官心；私下联络仍有泄密和警戒代价。",
+      public: { effects: { officials: 2, security: 2, caoAlert: 1 }, relations: 4 },
+      private: { effects: { security: 2, caoAlert: 2 }, hidden: { loyalNetwork: 2, leakRisk: 2 }, relations: 7 },
+    },
+  });
   const repeatKey = (actionId, targetId) => `${actionId}:${targetId || "none"}`;
   const beneficial = (key, value) => ["caoAlert", "leakRisk"].includes(key) ? value < 0 : value > 0;
   const actionTags = { audience: ["court", "relationship"], appointment: ["court", "office"], secret: ["secret", "network"],
     revenue: ["finance"], relief: ["people", "relief"], ritual: ["court", "ritual"], appease: ["palace", "cao"], regional: ["regional", "diplomacy"] };
-  const people = () => window.GAME_DATA.characters.filter(person => person.id !== "liu_xie");
+  const people = (state, actionId) => window.XianCharacterAvailability?.availableCharacters?.(state, { action: actionId })
+    || window.GAME_DATA.characters.filter(person => person.id !== "liu_xie");
   const fieldNames = { audience: "audience-mode", appointment: "modal-appointment-type", secret: "modal-secret-type",
     revenue: "revenue-method", relief: "relief-level", ritual: "ritual-type", appease: "appease-type", regional: "regional-type" };
   const variants = { audience: ["public", "private"], appointment: ["praise", "office", "title"], secret: ["intelligence", "support", "escape"],
     revenue: ["audit", "tribute", "borrow"], relief: ["small", "medium", "large"], ritual: ["court", "temple", "lecture"],
     appease: ["praise", "military", "banquet"], regional: ["edict", "envoy", "tribute"] };
-  function targets(actionId) {
+  function targets(actionId, state) {
     if (!["audience", "appointment", "secret", "regional"].includes(actionId)) return [null];
-    return people().filter(person => actionId === "appointment" ? person.id !== "cao_cao"
+    if (window.XianCharacterAvailability) return people(state, actionId);
+    return people(state, actionId).filter(person => actionId === "appointment" ? person.id !== "cao_cao"
       : actionId === "secret" ? ["empress_fu", "dong_cheng", "yang_biao", "yuan_shao", "liu_biao", "sun_ce"].includes(person.id)
       : actionId === "regional" ? person.faction === "regional_lords" : true);
   }
   function build(actionId, fields, state) {
-    const type = fields[fieldNames[actionId]], person = targets(actionId).find(item => item?.id === fields["modal-character-select"]);
-    if (!variants[actionId]?.includes(type) || (targets(actionId)[0] && !person)) return null;
+    const type = fields[fieldNames[actionId]], person = targets(actionId, state).find(item => item?.id === fields["modal-character-select"]);
+    if (!variants[actionId]?.includes(type) || (["audience", "appointment", "secret", "regional"].includes(actionId) && !person)) return null;
     let label, effects = {}, hidden = {}, relations = {};
     if (actionId === "audience") {
       label = `${type === "public" ? "公开召见" : "私下召见"}${person.name}`;
-      effects = type === "public" ? { authority: 2, officials: 2 } : { security: -1, caoAlert: 2 };
-      if (type === "private") hidden.leakRisk = 2;
-      if (person.faction === "cao_group") { effects.caoAlert = (effects.caoAlert || 0) - 3; effects.security = (effects.security || 0) + 2; }
-      else if (person.faction === "regional_lords") { effects.prestige = 2; effects.caoAlert = (effects.caoAlert || 0) + 2; }
-      else if (person.faction === "han_loyalists" && type === "private") hidden.loyalNetwork = 3;
-      relations[person.id] = type === "public" ? 4 : 7;
+      const role = AUDIENCE_ROLES[person.faction] || AUDIENCE_ROLES.han_loyalists, rule = role[type];
+      effects = { ...rule.effects }; hidden = { ...(rule.hidden || {}) }; relations[person.id] = rule.relations;
     } else if (actionId === "appointment") {
       const map = { praise: ["下诏褒奖", { authority: 2, prestige: 2, treasury: -1, caoAlert: 1 }, 5],
         office: ["加授官职", { authority: 4, officials: 2, treasury: -3, caoAlert: 4 }, 9], title: ["赐爵增秩", { prestige: 4, authority: 3, treasury: -5, caoAlert: 6 }, 13] };
@@ -61,7 +83,11 @@
     } else if (actionId === "appease") {
       const item = { praise: ["公开褒奖司空", { caoAlert: -7, prestige: 1, authority: -1 }, 6],
         military: ["暂授军务便宜", { caoAlert: -11, security: 6, authority: -6 }, 8], banquet: ["赐宴修好", { caoAlert: -8, security: 3, treasury: -5, officials: 1 }, 7] }[type];
-      [label, effects] = item; relations = { cao_cao: item[2], dong_cheng: -2 };
+      [label, effects] = item;
+      const ruler = window.XianCharacterAvailability?.representative?.("cao_cao", state);
+      const rulerId = ruler?.id || "cao_cao";
+      relations = { [rulerId]: item[2] };
+      if (!window.XianCharacterAvailability || window.XianCharacterAvailability.isAvailable("dong_cheng", state)) relations.dong_cheng = -2;
     } else if (actionId === "regional") {
       const item = { edict: ["颁诏慰劳", { prestige: 3, authority: 1, caoAlert: 3, treasury: -1 }, { externalBalance: 4 }, 6],
         envoy: ["派遣密使", { security: -2, caoAlert: 7, treasury: -3 }, { externalBalance: 8, leakRisk: 5 }, 9],
@@ -69,17 +95,27 @@
       label = `${item[0]}·${person.name}`; effects = item[1]; hidden = item[2]; relations[person.id] = item[3];
     }
     const targetId = person?.id || null;
-    const key = repeatKey(actionId, targetId);
-    const prior = state.actionRepetitions && state.actionRepetitions.turn === state.turn ? Number(state.actionRepetitions.counts?.[key] || 0) : 0;
+    const counts = state.actionRepetitions && state.actionRepetitions.turn === state.turn ? state.actionRepetitions.counts || {} : {};
+    const personalKey = repeatKey(actionId, targetId), key = actionId === "audience" ? "audience:state" : personalKey;
+    // Explicit old per-person counts are usable evidence; absent history remains zero.
+    const legacyAudienceCount = Object.entries(counts).filter(([name]) => name.startsWith("audience:") && name !== "audience:state")
+      .reduce((sum, [, value]) => sum + Math.max(0, Number(value) || 0), 0);
+    const prior = Number(counts[key] ?? (actionId === "audience" ? legacyAudienceCount : 0));
     const ordinal = prior + 1, multiplier = ordinal >= RULES.repeatFromOrdinal ? RULES.repeatMultiplier : 1;
+    const personalOrdinal = Number(counts[personalKey] || 0) + 1;
+    const personalMultiplier = personalOrdinal >= RULES.repeatFromOrdinal ? RULES.repeatMultiplier : 1;
+    const repetition = actionId === "audience" ? {
+      key, keys: [key, personalKey], ordinal, multiplier, personalKey, personalOrdinal, personalMultiplier,
+      reason: `本月召见第 ${ordinal} 次，国家有利变化 ${multiplier * 100}%；与${person.name}第 ${personalOrdinal} 次，人物关系有利变化 ${personalMultiplier * 100}%。换人、换方式共用国家次数；费用、行动点与不利影响照常，小数向零取整。`,
+    } : { key, keys: [key], ordinal, multiplier, reason: `本月同类同对象第 ${ordinal} 次；${multiplier < 1 ? "有利变化按 50% 计算，小数向零取整；费用、行动与不利影响照常" : "本次完整收益"}。切换方式共享次数。` };
     const plan = { actionId, targetId, type, tags: [...actionTags[actionId], `${actionId}:${type}`], fields: { ...fields }, label,
       effects: { ...effects }, hidden: { ...hidden }, relations: { ...relations },
-      repetition: { key, ordinal, multiplier, reason: `本月同类同对象第 ${ordinal} 次；${multiplier < 1 ? "有利变化按 50% 计算，小数向零取整；费用、行动与不利影响照常" : "本次完整收益"}。切换方式共享次数。` } };
+      repetition, ...(actionId === "audience" ? { purpose: (AUDIENCE_ROLES[person.faction] || AUDIENCE_ROLES.han_loyalists).purpose } : {}) };
     const advice = window.XianCouncilAdvice?.getActionModifier?.(plan, state) || null;
     for (const group of ["effects", "hidden", "relations"]) {
       for (const [name, value] of Object.entries(advice?.[group] || {})) plan[group][name] = Number(plan[group][name] || 0) + value;
       for (const [name, value] of Object.entries(plan[group])) {
-        if (beneficial(name, value)) plan[group][name] = Math.trunc(value * multiplier);
+        if (beneficial(name, value)) plan[group][name] = Math.trunc(value * (actionId === "audience" && group === "relations" ? personalMultiplier : multiplier));
       }
     }
     const cost = Math.max(0, -Number(plan.effects.treasury || 0));
@@ -93,8 +129,8 @@
     return { ...plan, cost, affordable: state.stats.treasury >= cost, advice };
   }
   function list(state) {
-    return Object.keys(variants).flatMap(actionId => targets(actionId).flatMap(person => variants[actionId].map(type =>
-      build(actionId, { [fieldNames[actionId]]: type, ...(person ? { "modal-character-select": person.id } : {}) }, state))));
+    return Object.keys(variants).flatMap(actionId => targets(actionId, state).flatMap(person => variants[actionId].map(type =>
+      build(actionId, { [fieldNames[actionId]]: type, ...(person ? { "modal-character-select": person.id } : {}) }, state)))).filter(Boolean);
   }
   function project(state, plan) {
     const next = { ...state, stats: { ...state.stats }, hidden: { ...state.hidden }, relations: { ...state.relations } };
@@ -104,5 +140,5 @@
     next.actionPoints = Math.max(0, next.actionPoints - 1);
     return next;
   }
-  window.XianActionPlans = Object.freeze({ build, list, project, repeatKey, rules: RULES });
+  window.XianActionPlans = Object.freeze({ build, list, project, repeatKey, rules: RULES, audienceRoles: AUDIENCE_ROLES });
 })();

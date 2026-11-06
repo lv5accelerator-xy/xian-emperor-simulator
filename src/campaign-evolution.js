@@ -276,6 +276,12 @@
   function processAssignments(turn) {
     state.assignments.forEach(item => {
       if (item.status !== "active" || turn <= item.startTurn) return;
+      if (window.XianCharacterAvailability && !window.XianCharacterAvailability.isAvailable(item.characterId, core)) {
+        item.status = "unavailable";
+        item.endTurn = turn;
+        state.log.unshift({ turn, text: `${item.characterName}已非当前可用对象，停止未完成差遣；此前进展留档。` });
+        return;
+      }
       if (item.roleId === "governor") window.XianStrategyNetwork?.applyCampaignEffects?.({ cities: { [item.targetId]: { defense: 1, courtLoyalty: 1, reason: `${item.characterName}巡抚州郡` } }, reason: "人物差遣" });
       if (item.roleId === "envoy") window.XianStrategyNetwork?.applyCampaignEffects?.({ strategies: { [item.targetId]: { trust: 2 } }, reason: `${item.characterName}持节出使` });
       if (item.roleId === "supervisor") window.XianArmySystem?.applyCampaignAssignment?.(item.targetId, { morale: 2, training: 1, supply: 1, fatigue: -1 }, `${item.characterName}监军劳师`);
@@ -323,9 +329,10 @@
     const characterId = document.getElementById("assignment-character")?.value;
     const roleId = document.getElementById("assignment-role")?.value;
     const targetId = document.getElementById("assignment-target")?.value;
-    const character = (window.GAME_DATA?.characters || []).find(item => item.id === characterId);
+    const character = window.XianCharacterAvailability?.getCharacter(characterId, core) || (window.GAME_DATA?.characters || []).find(item => item.id === characterId);
     const role = DATA.assignments.find(item => item.id === roleId);
     if (!character || !role || !targetId) return notify("请完整选择人物、差遣和目标。", "warning");
+    if (window.XianCharacterAvailability && !window.XianCharacterAvailability.isAvailable(characterId, core)) return notify("当前剧本中此人不可受命。", "warning");
     if (active.some(item => item.characterId === characterId)) return notify("该人物已有差遣在身。", "warning");
     const targetName = targetLabel(role.targetType, targetId);
     const accepted = window.XianEmperorGame?.performExternalAction?.({
@@ -425,7 +432,7 @@
   }
 
   function renderAssignments() {
-    const characters = (window.GAME_DATA?.characters || []).filter(item => item.id !== "liu_xie");
+    const characters = window.XianCharacterAvailability?.availableCharacters(core) || (window.GAME_DATA?.characters || []).filter(item => item.id !== "liu_xie");
     const active = state.assignments.filter(item => item.status === "active");
     return `<section class="campaign-section"><div class="campaign-section-head"><div><span class="section-kicker">人物与地图联动</span><h3>派一人，办一件事</h3></div><strong>${active.length} / ${MAX_ASSIGNMENTS}</strong></div><div class="assignment-form"><label>人物<select id="assignment-character">${characters.map(item => `<option value="${esc(item.id)}">${esc(item.name)} · ${esc(item.title)}</option>`).join("")}</select></label><label>差遣<select id="assignment-role">${DATA.assignments.map(item => `<option value="${item.id}">${item.name}</option>`).join("")}</select></label><label>目标<select id="assignment-target"></select></label><button data-assignment-create type="button">下达差遣 · 1 行动</button></div><p class="assignment-note">巡抚影响城池，出使影响诸侯，监军影响军团；每项持续三个月。</p><div class="assignment-list">${active.length ? active.map(item => `<article><div><small>${esc(item.roleName)}</small><strong>${esc(item.characterName)} → ${esc(item.targetName)}</strong><span>进度 ${item.progressTurns} / ${Math.max(1, item.endTurn - item.startTurn)} 月</span></div><button data-assignment-cancel="${esc(item.id)}" type="button">召回</button></article>`).join("") : `<div class="campaign-empty">暂无进行中的差遣。新玩家可以先从“巡抚州郡”开始。</div>`}</div></section>`;
   }
