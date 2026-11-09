@@ -83,7 +83,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.26.0";
+const expectedVersion = process.env.EXPECTED_VERSION || "2.27.0";
 const releaseResources = ["lord-intentions.js","strategy-network.css","character-availability.js","scenario-220-story.js","scenario-220-story.css","character-memory.js","decree-helper.js","consequence-echoes.js","action-plans.js","army-system.js","campaign-evolution.js","causal-court.js","command-center.js","council-advice.js","court-politics.js","decree-confirmation.js","decree-world.js","dynasty-saga.js","edict-rules.js","final-verdict.js","game.js","grand-map.js","historian.js","imperial-paths.js","imperial-progress.js","monthly-report.js","quarterly-agenda.js","regional-echoes.js","same-challenge.js","save-backups.js","short-challenges.js","short-score.js","strategy-network.js","ui-refresh-v280.js","world-system.js","reading-settings.js","short-challenges.css","monthly-safety.css","monthly-report.css","reading-settings.css","data.js","monthly-safety.js","monthly-flow.js","short-review.js"];
 for (const resource of releaseResources) assert.ok(read("index.html").includes(`src/${resource}?v=${expectedVersion}`), `changed resource ${resource} needs a fresh cache version`);
 const escapedVersion = expectedVersion.replaceAll(".", "\\.");
@@ -107,30 +107,30 @@ assert.ok(read("index.html").indexOf("src/save-backups.js") > read("index.html")
 assert.ok(read("index.html").indexOf("src/edict-rules.js") < read("index.html").indexOf("src/game.js"), "shared decree rules must load before the core");
 assert.match(read("index.html"), /imperial-progress\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.5\.1/);
-assert.match(read("index.html"), /imperial-progress\.js\?v=2\.26\.0/);
+assert.match(read("index.html"), /imperial-progress\.js\?v=2\.27\.0/);
 assert.match(read("index.html"), /grand-map\.css\?v=2\.6\.1/);
 assert.match(read("index.html"), /historical-geography-data\.js\?v=2\.6\.1/);
-assert.match(read("index.html"), /grand-map\.js\?v=2\.26\.0/);
+assert.match(read("index.html"), /grand-map\.js\?v=2\.27\.0/);
 assert.match(read("index.html"), /campaign-evolution\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /campaign-evolution-data\.js\?v=1\.5\.1/);
-assert.match(read("index.html"), /campaign-evolution\.js\?v=2\.26\.0/);
+assert.match(read("index.html"), /campaign-evolution\.js\?v=2\.27\.0/);
 assert.match(read("index.html"), /src\/ui\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /src\/ui\.js\?v=2\.6\.1/);
 assert.match(read("index.html"), /src\/visual-refresh\.css\?v=2\.22\.0/);
 assert.match(read("index.html"), /src\/ui-refresh-v280\.css\?v=2\.8\.0/);
-assert.match(read("index.html"), /src\/ui-refresh-v280\.js\?v=2\.26\.0/);
+assert.match(read("index.html"), /src\/ui-refresh-v280\.js\?v=2\.27\.0/);
 assert.match(read("index.html"), /src\/causal-court\.css\?v=2\.9\.0/);
-assert.match(read("index.html"), /src\/causal-court\.js\?v=2\.26\.0/);
+assert.match(read("index.html"), /src\/causal-court\.js\?v=2\.27\.0/);
 assert.match(read("index.html"), /id="causal-court-panel"/);
 assert.match(read("index.html"), /src\/quarterly-agenda\.css\?v=2\.10\.0/);
-assert.match(read("index.html"), /src\/quarterly-agenda\.js\?v=2\.26\.0/);
+assert.match(read("index.html"), /src\/quarterly-agenda\.js\?v=2\.27\.0/);
 assert.match(read("index.html"), /id="quarterly-agenda-panel"/);
 assert.match(read("index.html"), /src\/council-advice\.css\?v=2\.11\.0/);
-assert.match(read("index.html"), /src\/council-advice\.js\?v=2\.26\.0/);
+assert.match(read("index.html"), /src\/council-advice\.js\?v=2\.27\.0/);
 assert.match(read("index.html"), /src\/regional-echoes\.css\?v=2\.12\.0/);
-assert.match(read("index.html"), /src\/regional-echoes\.js\?v=2\.26\.0/);
+assert.match(read("index.html"), /src\/regional-echoes\.js\?v=2\.27\.0/);
 assert.match(read("index.html"), /src\/imperial-paths\.css\?v=2\.13\.0/);
-assert.match(read("index.html"), /src\/imperial-paths\.js\?v=2\.26\.0/);
+assert.match(read("index.html"), /src\/imperial-paths\.js\?v=2\.27\.0/);
 assert.match(read("src/ui-refresh-v280.css"), /@media \(max-width: 820px\)[\s\S]+\.mobile-imperial-nav/);
 assert.match(read("src/ui-refresh-v280.css"), /\.topbar-v110 \.utility-nav-upgraded\s*{\s*display:\s*none/);
 assert.match(read("src/ui-refresh-v280.js"), /data-mobile-destination="month"[\s\S]+data-mobile-destination="actions"[\s\S]+data-mobile-destination="map"[\s\S]+data-mobile-destination="archive"/);
@@ -152,16 +152,16 @@ for (const illustration of [
   assert.ok(fs.statSync(path.join(root, "assets", "images", "illustrations", illustration)).size > 40000, `${illustration} should contain a real WebP illustration`);
 }
 for (const resource of [
-  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.26.0",
-  "character-memory.css?v=1.7.0", "character-memory.js?v=2.26.0",
+  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.27.0",
+  "character-memory.css?v=1.7.0", "character-memory.js?v=2.27.0",
   "world-marks.css?v=1.8.0", "world-marks.js?v=2.14.0",
-  "historian.css?v=1.9.0", "historian.js?v=2.26.0",
-  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.26.0",
-  "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.26.0",
-  "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.26.0",
-  "short-challenges.css?v=2.26.0", "short-challenges.js?v=2.26.0", "short-review.js?v=2.26.0",
+  "historian.css?v=1.9.0", "historian.js?v=2.27.0",
+  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.27.0",
+  "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.27.0",
+  "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.27.0",
+  "short-challenges.css?v=2.27.0", "short-challenges.js?v=2.27.0", "short-review.js?v=2.27.0",
   "weekly-challenge.css?v=2.4.0", "weekly-challenge.js?v=2.15.0",
-  "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.26.0",
+  "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.27.0",
 ]) assert.ok(read("index.html").includes(resource), `${resource} should be referenced`);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
 assert.ok(read("index.html").indexOf("src/short-score.js") < read("index.html").indexOf("src/short-review.js"), "score explanation must load before review rendering");

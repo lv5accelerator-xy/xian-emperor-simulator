@@ -124,7 +124,7 @@ const army = harness();
 const armyCore = coreFixture();
 army.window.XianEmperorGame = {
   getState: () => JSON.parse(JSON.stringify(armyCore)),
-  performExternalAction(pkg) { armyCore.stats.treasury += pkg.effects.treasury || 0; armyCore.actionPoints--; return true; },
+  performExternalAction(pkg) { armyCore.appliedReceipts ||= []; if(pkg.receiptId) armyCore.appliedReceipts.push(pkg.receiptId); armyCore.stats.treasury += pkg.effects.treasury || 0; armyCore.actionPoints--; return true; },
 };
 army.window.XianStrategyNetwork = { findRoutePath: () => ["test-route"] };
 army.load("data", "strategy-network-data", "army-data", "army-system");
@@ -137,7 +137,7 @@ assert.equal(armyApi.getCommandAccess(courtArmy).allowed, true);
 assert.equal(armyApi.getCommandAccess(outerArmy).allowed, false, "an unrelated outer army cannot be directly moved");
 assert.equal(armyApi.issueMapOrder(outerArmy.id, "xudu", "support").ok, false);
 assert.equal(armyCore.actionPoints, 2, "rejected command must consume no action");
-army.localStorage.setItem("xian_emperor_strategy_network_v040", JSON.stringify({ strategies: { liu_biao: { trust: 65 } }, routes: {} }));
+army.localStorage.setItem("xian_emperor_strategy_network_v040", JSON.stringify({ strategies: { liu_biao: { trust: 65 } }, routes: {}, cities: { [courtArmy.cityId]: { controller: "cao_cao" } } }));
 assert.equal(armyApi.getCommandAccess(outerArmy).allowed, true, "sufficient authority, trust and relation permit cooperation");
 armyCore.stats.treasury = 2;
 assert.equal(armyApi.issueMapOrder(courtArmy.id, courtArmy.cityId, "supply").ok, false, "insufficient treasury cannot issue a funded order");
