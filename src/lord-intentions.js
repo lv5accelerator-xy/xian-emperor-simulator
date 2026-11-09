@@ -105,7 +105,7 @@
       }
       // A late observed breach may attach to a fact already displayed.
       for (const consequence of chain.consequences.filter(c => c.intentId === intent.id)) {
-        consequence.promiseIds = (strategy.promises || []).filter(p => p.contract?.receipts?.some(r => r.id === `breach:${consequence.factId}`)).map(p => p.id);
+        consequence.promiseIds = [...new Set([...(consequence.promiseIds || []), ...(strategy.promises || []).filter(p => p.contract?.receipts?.some(r => r.id === `breach:${consequence.factId}`)).map(p => p.id)])];
       }
     }
     for (const intent of chain.intents) if (["proposed", "requested"].includes(intent.status) && core.turn > intent.dueTurn) { intent.status = "expired"; intent.responseReason = "本月未获军团回执，不追认出兵"; }
