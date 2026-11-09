@@ -4,38 +4,77 @@
   const militaryTasks = ["attack", "support", "advance", "defend", "supply"];
   const hash = text => { let n = 2166136261; for (const c of String(text)) n = Math.imul(n ^ c.charCodeAt(0), 16777619); return n >>> 0; };
   const allied = (a, b) => a === b || [a, b].every(x => ["court", "cao_cao"].includes(x));
-  function ledger(value, core) {
-    return { schemaVersion: 1, entryTurn: core.turn, generatedTurns: [], intents: [], consequences: [], ...value };
+  function ledger(value, core, existingFacts = []) {
+    const current = value || {}, result = { entryTurn: core.turn, ...current, schemaVersion: 2 };
+    for (const field of ["generatedTurns", "intents", "consequences", "incidents", "reactions", "promiseOutcomes"]) result[field] = Array.isArray(current[field]) ? current[field] : [];
+    result.ignoreReactionFactIds = current.schemaVersion === 2 && Array.isArray(current.ignoreReactionFactIds) ? current.ignoreReactionFactIds : existingFacts.map(f => f.id);
+    result.reactionStartTurn = current.reactionStartTurn ?? core.turn;
+    return result;
   }
-  function propose(core, strategy, armies, world, key) {
+  function pathBetween(from, to) {
+    const queue = [{ city: from, path: [] }], seen = new Set([from]);
+    while (queue.length) { const item = queue.shift(); if (item.city === to) return item.path;
+      for (const route of window.XIAN_STRATEGY_DATA.routes) { const next = route.from === item.city ? route.to : route.to === item.city ? route.from : null;
+        if (next && !seen.has(next)) { seen.add(next); queue.push({ city: next, path: [...item.path, route.id] }); }
+      }
+    }
+    return [];
+  }
+  function activeOrder(army, orders = []) {
+    if (!army?.currentOrderId) return false;
+    return ["marching", "routing", "engaged", "besieging"].includes(army.status) || orders.find(o => o.id === army.currentOrderId)?.status !== "arrived";
+  }
+  function compareIntents(a, b) { return Number(b.priority || 0) - Number(a.priority || 0) || a.id.localeCompare(b.id); }
+  function conflictWarnings(intent, strategy, armies) {
+    const candidates = (strategy.commandChain?.intents || []).filter(p => p.id !== intent.id && p.turn === intent.turn && p.status === "proposed");
+    for (const unit of Object.values(armies.armies || {})) if (unit.id !== intent.armyId && unit.troops >= 500 && ["marching", "engaged", "besieging"].includes(unit.status)) candidates.push({ armyId: unit.id, owner: unit.owner,
+      ownerName: window.XianCharacterAvailability?.faction?.(unit.owner)?.name || unit.ownerName, originCityId: unit.cityId, targetCityId: unit.targetCityId, task: unit.task, routeIds: unit.routeIds.slice(unit.routeIndex) });
+    const warnings = [];
+    for (const other of candidates) {
+      if (other.armyId === intent.armyId) { warnings.push("同军团另有请求：已有付费军令优先，未接令军议按固定优先序复核"); continue; }
+      if (allied(other.owner, intent.owner) || ![other.task, intent.task].includes("attack")) continue;
+      if (other.targetCityId === intent.targetCityId) warnings.push(`${other.ownerName}也有军团或军议指向同城，可能争夺目标`);
+      if (intent.routeIds?.length && other.routeIds?.[0] === intent.routeIds[0] && other.originCityId !== intent.originCityId) warnings.push(`与${other.ownerName}对向行军，实际出兵后可能在军路遭遇`);
+    }
+    return [...new Set(warnings)];
+  }
+  function proposeBatch(core, strategy, armies, world, key) {
     const data = window.XIAN_STRATEGY_DATA;
     const candidates = data.lords.map(lord => {
       const army = Object.values(armies.armies || {}).filter(a => a.owner === lord.id && a.status !== "destroyed" && a.troops >= 500)
-        .sort((a, b) => a.id.localeCompare(b.id))[0];
+        .sort((a, b) => Number(activeOrder(a, armies.orders)) - Number(activeOrder(b, armies.orders)) || a.id.localeCompare(b.id))[0];
       const personality = world?.lords?.[lord.id] || {};
+      const threats = (strategy.commandChain?.incidents || []).filter(f => f.defenderOwner === lord.id && f.turn >= core.turn - 2 && strategy.cities[f.cityId]?.controller === lord.id);
+      const aid = (strategy.commandChain?.reactions || []).filter(r => r.actor === lord.id && r.turn >= core.turn - 2 && strategy.cities[r.cityId]?.controller === r.protectedOwner);
       return { lord, army, expansion: Number(personality.expansion ?? lord.expansion ?? 50), caution: Number(personality.caution ?? lord.caution ?? 50),
-        rank: hash(`${key}:${core.turn}:${lord.id}`) };
+        threats, aid, rank: hash(`${key}:${core.turn}:${lord.id}`) + (threats.length || aid.length ? 4294967296 : 0) };
     }).filter(x => x.army).sort((a, b) => b.rank - a.rank || a.lord.id.localeCompare(b.lord.id));
-    const chosen = candidates[0];
-    if (!chosen) return null;
+    return candidates.slice(0, 3).map(chosen => {
     const { lord, army, expansion, caution } = chosen;
     const targets = data.routes.filter(r => r.from === army.cityId || r.to === army.cityId).map(r => ({ route: r.id, city: r.from === army.cityId ? r.to : r.from }))
       .filter(x => strategy.cities[x.city] && !allied(lord.id, strategy.cities[x.city].controller))
       .sort((a, b) => hash(`${key}:${core.turn}:${a.city}`) - hash(`${key}:${core.turn}:${b.city}`));
     const attack = targets.length && expansion >= caution && Number(strategy.strategies[lord.id]?.readiness || 0) >= 30;
-    const target = attack ? targets[0].city : army.cityId;
+    const reaction = chosen.threats.at(-1) || chosen.aid.at(-1);
+    const target = reaction?.cityId || (attack ? targets[0].city : army.cityId);
+    const task = reaction ? (chosen.threats.length ? "defend" : "support") : attack ? "attack" : "defend";
     const name = window.XianCharacterAvailability?.faction?.(lord.id, core)?.name || lord.name;
     return { id: `lord-intent:${core.createdAt}:${core.turn}:${lord.id}`, source: "autonomous", owner: lord.id, ownerName: name,
       armyId: army.id, armyName: window.XIAN_ARMY_DATA?.armies?.find(x => x.id === army.id)?.name || name + "军团",
       turn: core.turn, dueTurn: core.turn, originCityId: army.cityId, targetCityId: target,
       targetName: data.cities.find(c => c.id === target)?.name || target, targetOwner: strategy.cities[target]?.controller,
-      task: attack ? "attack" : "defend", routeIds: attack ? [targets[0].route] : [], status: "proposed",
-      reason: attack ? `扩张意愿 ${expansion}、谨慎 ${caution}；拟沿相邻军路进攻` : `扩张意愿 ${expansion}、谨慎 ${caution}；拟就地守备整顿` };
+      task, routeIds: pathBetween(army.cityId, target), status: "proposed", priority: chosen.rank,
+      reactionIds: reaction ? [reaction.id] : [],
+      reason: reaction ? `${chosen.threats.length ? "本镇目标遭到实际敌对行动，拟增防" : "已有援军目的地遭到实际敌对行动，拟护援"}；依据第${reaction.turn}月军务凭据`
+        : attack ? `扩张意愿 ${expansion}、谨慎 ${caution}；拟沿相邻军路进攻` : `扩张意愿 ${expansion}、谨慎 ${caution}；拟就地守备整顿` };
+    });
   }
+  function propose(...args) { return proposeBatch(...args)[0] || null; }
   function ceasefires(intent, strategy, turn, armies = {}) {
     if (intent.task !== "attack") return [];
     const opponents = [strategy.cities[intent.targetCityId]?.controller, ...Object.values(armies.armies || {})
-      .filter(a => a.cityId === intent.targetCityId && a.troops >= 500 && !["marching", "routing", "destroyed"].includes(a.status)).map(a => a.owner)];
+      .filter(a => a.troops >= 500 && a.status !== "destroyed" && a.status !== "routing" && (a.cityId === intent.targetCityId
+        || (a.status === "marching" && a.routeIds[a.routeIndex] === intent.routeIds?.[0] && a.cityId !== intent.originCityId))).map(a => a.owner)];
     return (strategy.promises || []).filter(p => p.type === "ceasefire" && p.status === "active" && turn <= p.deadlineTurn
       && p.contract?.parties?.includes(intent.owner) && opponents.some(owner => owner !== intent.owner && p.contract.parties.includes(owner)));
   }
@@ -63,7 +102,7 @@
   function reconcile(chain, armyState, strategy, core) {
     for (const response of armyState.commandResponses || []) {
       let intent = chain.intents.find(x => x.id === response.intentId);
-      if (!intent) { intent = { ...response.request, id: response.intentId, source: "edict", status: "requested" }; chain.intents.push(intent); }
+      if (!intent) { intent = { ...response.request, id: response.intentId, source: response.request?.source || "edict", status: "requested" }; chain.intents.push(intent); }
       // A refused restraint does not decide whether the commander will march.
       if (response.kind === "restrain" && response.status === "refused") { intent.restraintResponse = response.id; continue; }
       if (intent.source === "autonomous" && response.authority === "court" && response.status === "refused") {
@@ -80,7 +119,7 @@
       const army = armyState.armies?.[response.armyId];
       // Persist progress before the display-only order list is clipped.
       if (order) intent.orderSnapshot = { ...order };
-      const facts = (armyState.militaryFacts || []).filter(f => f.sourceOrderId === response.orderId);
+      const facts = (armyState.militaryFacts || []).filter(f => f.sourceOrderId === response.orderId || f.opposingOrderId === response.orderId);
       intent.factIds = facts.map(f => f.id);
       const capture = facts.find(f => f.kind === "occupation");
       intent.status = capture ? "captured" : ["failed", "superseded"].includes(order?.status) ? order.status
@@ -91,7 +130,7 @@
       for (const fact of facts) {
         const id = `diplomacy:${intent.id}:${fact.id}`;
         if (chain.consequences.some(c => c.id === id)) continue;
-        const endorsed = response.authority === "court";
+        const endorsed = response.authority === "court" && fact.attackerOwner === intent.owner;
         const priorPenalty = chain.consequences.some(c => c.intentId === intent.id && c.defenderOwner === fact.defenderOwner && (c.penaltyIssued || c.trustDelta < 0));
         // Existing ceasefire settlements retain their own once-only penalty.
         const contracts = (strategy.promises || []).filter(p => p.type === "ceasefire" && p.contract?.receipts?.some(r => r.source === fact.source));
@@ -101,14 +140,54 @@
         if (penaltyIssued) victim.trust = after;
         chain.consequences.push({ id, intentId: intent.id, factId: fact.id, kind: fact.kind, turn: fact.turn,
           attackerOwner: fact.attackerOwner, defenderOwner: fact.defenderOwner, attackerName: fact.attackerName, defenderName: fact.defenderName,
-          responsibility: endorsed ? "court" : "lord", penaltyIssued, requestedTrustDelta: penaltyIssued ? -3 : 0, trustDelta: delta, promiseIds: contracts.map(p => p.id) });
+          responsibility: fact.attackerOwner !== intent.owner ? "defence" : endorsed ? "court" : "lord", penaltyIssued, requestedTrustDelta: penaltyIssued ? -3 : 0, trustDelta: delta, promiseIds: contracts.map(p => p.id) });
       }
       // A late observed breach may attach to a fact already displayed.
       for (const consequence of chain.consequences.filter(c => c.intentId === intent.id)) {
         consequence.promiseIds = [...new Set([...(consequence.promiseIds || []), ...(strategy.promises || []).filter(p => p.contract?.receipts?.some(r => r.id === `breach:${consequence.factId}`)).map(p => p.id)])];
       }
     }
+    reconcileIncidents(chain, armyState, strategy, core);
+    for (const promise of strategy.promises || []) if (promise.settlement && !chain.promiseOutcomes.some(o => o.id === promise.settlement.id)) {
+      const orderId = promise.contract?.orderId;
+      const facts = (armyState.militaryFacts || []).filter(f => (promise.contract?.receipts || []).some(r => r.sourceFactId === f.id || r.id === `breach:${f.id}`));
+      chain.promiseOutcomes.push({ ...promise.settlement, status: promise.status, promiseId: promise.id, label: promise.label, actor: promise.lordId, actorName: promise.identity?.representativeName || promise.lordId,
+        sourceOrderId: orderId || null, sourceFactIds: facts.map(f => f.id),
+        conflictIds: (armyState.commandConflicts || []).filter(c => (orderId && c.previousOrderId === orderId) || c.factIds?.some(id => facts.some(f => f.id === id))).map(c => c.id) });
+    }
     for (const intent of chain.intents) if (["proposed", "requested"].includes(intent.status) && core.turn > intent.dueTurn) { intent.status = "expired"; intent.responseReason = "本月未获军团回执，不追认出兵"; }
   }
-  window.XianLordIntentions = Object.freeze({ militaryTasks, hash, ledger, propose, assess, ceasefires, reconcile });
+  function reconcileIncidents(chain, armyState, strategy, core) {
+    for (const fact of [...(armyState.militaryFacts || [])].sort((a, b) => a.turn - b.turn || a.id.localeCompare(b.id))) {
+      let incident = chain.incidents.find(i => i.id === fact.id);
+      if (!incident) {
+        const response = (armyState.commandResponses || []).find(r => r.orderId === fact.sourceOrderId);
+        const order = (armyState.orders || []).find(o => o.id === fact.sourceOrderId);
+        incident = { ...fact, authority: fact.authority || response?.authority || order?.authority || (order?.source === "grand-map" ? "court" : "lord"),
+          intentIds: chain.intents.filter(i => i.orderId && [fact.sourceOrderId, fact.opposingOrderId].includes(i.orderId)).map(i => i.id).sort(), promiseIds: [] };
+        chain.incidents.push(incident);
+      }
+      const linked = (strategy.promises || []).filter(p => p.contract?.receipts?.some(r => r.id === `breach:${fact.id}` || r.sourceFactId === fact.id)).map(p => p.id);
+      incident.promiseIds = [...new Set([...(incident.promiseIds || []), ...linked])];
+      incident.intentIds = [...new Set([...(incident.intentIds || []), ...chain.intents.filter(i => i.orderId && [fact.sourceOrderId, fact.opposingOrderId].includes(i.orderId)).map(i => i.id)])].sort();
+      if (chain.ignoreReactionFactIds.includes(fact.id)) continue;
+      // Witnesses were frozen before casualties, retreat, or contract settlement.
+      // Reconstructing them from the latest state would erase real observations.
+      for (const witness of fact.aidWitnesses || []) {
+        const { actor, protectedOwner, sourcePromiseId, supportingOrderId } = witness;
+        if (!actor || !protectedOwner || !sourcePromiseId || !supportingOrderId || !witness.acceptedReceiptId) continue;
+        const id = `aid-alarm:${actor}:${protectedOwner}:${fact.sourceOrderId || fact.id}`;
+        const existing = chain.reactions.find(r => r.id === id);
+        if (existing) { existing.sourcePromiseIds = [...new Set([...(existing.sourcePromiseIds || [existing.sourcePromiseId]), sourcePromiseId])]; existing.supportingOrderIds = [...new Set([...(existing.supportingOrderIds || [existing.supportingOrderId]), supportingOrderId])]; continue; }
+        const trust = strategy.strategies[actor], before = Number(trust?.trust || 0), requested = incident.authority === "court" && trust ? -2 : 0;
+        if (trust && requested) trust.trust = Math.max(0, before + requested);
+        chain.reactions.push({ id, kind: witness.kind, turn: fact.turn, actor, actorName: witness.actorName || actor,
+          protectedOwner, protectedName: witness.protectedName, cityId: witness.cityId, routeId: fact.routeId || null, sourceFactId: fact.id, sourceOrderId: fact.sourceOrderId,
+          sourcePromiseId, sourcePromiseIds: [sourcePromiseId], supportingOrderId, supportingOrderIds: [supportingOrderId], attackerOwner: fact.attackerOwner, attackerName: fact.attackerName,
+          requestedTrustDelta: requested, trustDelta: trust ? trust.trust - before : 0,
+          text: `${witness.kind === "aid-intercepted" ? "已承接援军在军路遭到实际截击" : `${witness.protectedName || fact.defenderName}的受援目的地遭到实际敌对行动`}；援方警惕并在后续军议优先复核护援，当前军令不自动撤换，已结束约定不追认为履约` });
+      }
+    }
+  }
+  window.XianLordIntentions = Object.freeze({ militaryTasks, hash, ledger, propose, proposeBatch, assess, ceasefires, reconcile, activeOrder, compareIntents, conflictWarnings });
 })();

@@ -10,6 +10,7 @@ function check(name, test) { test(); groups++; console.log(`PASS: ${name}`); }
 function continueRun(run) { const next = ready(run.stores()); next.node("continue-game-btn").click(); next.flush(); return next; }
 function snapshots(run) { return plain({ stats: run.api.getState().stats, hidden: run.api.getState().hidden, random: run.api.getState().random, story220: run.api.getState().story220 }); }
 function legal(core) { for (const group of [core.stats, core.hidden, core.relations]) for (const value of Object.values(group)) assert.ok(Number.isFinite(value) && value >= 0 && value <= 100); }
+const investment = result => result.trace.reduce((sum, x) => sum + x.decisionCost, 0) + result.actionTrace.reduce((sum, x) => sum + x.cost, 0);
 
 check("original first-month edict remains untouched; previews do not resolve nodes or draw RNG", () => {
   const r = ready(); r.api.startNewGame("standard", "yankang_220", { randomSeed: 224 }); r.flush();
@@ -36,7 +37,6 @@ check("three distinct real twelve-month routes, four scheduled nodes and normal 
   }
   assert.ok(routes.preserve.core.stats.authority < routes.resist.core.stats.authority);
   assert.ok(routes.resist.core.stats.security < routes.negotiate.core.stats.security);
-  const investment = result => result.trace.reduce((sum, x) => sum + x.decisionCost, 0) + result.actionTrace.reduce((sum, x) => sum + x.cost, 0);
   assert.ok(investment(routes.negotiate) > investment(routes.preserve), "negotiation must actually invest more money; later revenue and autonomous warfare may change the final treasury ranking");
 });
 
@@ -251,17 +251,18 @@ check("deterministic paired policy samples retain costs, risk and non-universal 
   const seeds = [224, 1, 42, 196220, 2026240, 0xffffffff];
   const report = [];
   for (const route of ["resist", "preserve", "negotiate"]) {
-    const runs = seeds.map(seed => play(route, seed, { allowFallback: true }).core);
+    const plays = seeds.map(seed => play(route, seed, { allowFallback: true })), runs = plays.map(result => result.core);
     for (const core of runs) { assert.ok(core.ended); legal(core); }
     const mean = key => Math.round(runs.reduce((sum, core) => sum + core.stats[key], 0) / runs.length * 10) / 10;
     const entry = { policy: route, seeds, samples: runs.length, twelveMonths: runs.filter(core => core.turn === 12 && core.story220.completedNormally).length,
       stances: Object.fromEntries([...new Set(runs.map(core => core.story220.stance))].map(stance => [stance, runs.filter(core => core.story220.stance === stance).length])),
       authority: mean("authority"), security: mean("security"), treasury: mean("treasury"),
+      investment: plays.reduce((sum, result) => sum + investment(result), 0) / plays.length,
       brokenPromises: runs.reduce((sum, core) => sum + core.story220.promises.filter(item => item.status === "broken").length, 0) };
     report.push(entry); console.log(JSON.stringify(entry));
   }
   assert.ok(report[0].authority > report[1].authority && report[0].security < report[1].security, "resistance needs a measurable safety tradeoff");
-  assert.ok(report[1].treasury > report[2].treasury, "negotiation invests resources beyond passive preservation");
+  assert.ok(report[2].investment > report[1].investment, "negotiation must pay more actual costs; final treasury also includes autonomous military effects and revenue");
   assert.ok(report[0].stances.resist && report[2].stances.negotiate, "supported political routes must remain achievable");
 });
 console.log(`Scenario 220 story regression passed: ${groups} groups; 3 complete routes plus compatibility, interruption and import controls.`);

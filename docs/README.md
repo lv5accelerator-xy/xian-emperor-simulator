@@ -2,6 +2,10 @@
 
 | 文档 | 用途 |
 | --- | --- |
+| [RULES_V227.md](RULES_V227.md) | 三镇并议、军令冲突、军路交战、外交连锁与兼容 |
+| [VALIDATION_V227.md](VALIDATION_V227.md) | 基线、回归、完整存档与浏览器验证 |
+| [BALANCE_V227.md](BALANCE_V227.md) | 五剧本固定种子、同预算三策略对照 |
+| [HANDOFF_V227.md](HANDOFF_V227.md) | 本轮审查与后续维护入口 |
 | [READING_COMFORT.md](READING_COMFORT.md) | 三档字号、月报摘要、手机流程与设备验证 |
 | [TYPOGRAPHY.md](TYPOGRAPHY.md) | 古风与清晰主题、字体来源、授权与字符子集维护 |
 | [GAME_DESIGN.md](GAME_DESIGN.md) | 产品定位、历史剧本、数值与系统设计 |
@@ -16,7 +20,7 @@
 
 累计更新记录位于 [CHANGELOG.md](../CHANGELOG.md)，独立版本说明位于 [patch-notes](../patch-notes/README.md)。
 
-## v2.25 当前维护入口
+## v2.25 维护入口
 
 - [规则与迁移](RULES_V225.md)
 - [停战、围城与军事凭据](CEASEFIRE_V225.md)

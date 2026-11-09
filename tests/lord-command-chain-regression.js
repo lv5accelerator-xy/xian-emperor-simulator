@@ -19,7 +19,7 @@ function month(h){if(!h.api.getState().eventResolved)h.decide(0);h.api.endTurn()
 function intervene(h,kind="coordinate",ack=false){return h.window.XianStrategyNetwork.interveneLordIntent(intent(h).id,kind,ack);}
 function tests(){
   rejectedAttack();
-  const generated=ready(),generatedChain=chain(generated);assert.equal(generatedChain.intents.length,1);
+  const generated=ready(),generatedChain=chain(generated);assert.equal(generatedChain.intents.length,3);
   const before=plain(generated.api.captureFullSave());for(let i=0;i<4;i++)generated.api.commit("read-again");assert.deepEqual(chain(generated),generatedChain,"commits cannot reroll proposals");assert.deepEqual(plain(generated.api.getState().random),before.stores[CORE].random);
   const accepted=fixture(),id=intent(accepted).id,raw=accepted.stores(),rng=plain(accepted.api.getState().random);
   const preview=accepted.window.XianStrategyNetwork.previewLordIntervention(id,"coordinate");assert.equal(preview.accepted,true);assert.equal(preview.treasuryCost,1);assert.deepEqual(accepted.stores(),raw,"preview must be read-only");assert.deepEqual(plain(accepted.api.getState().random),rng);

@@ -104,8 +104,12 @@ check("the final treaty month is checked after its military phase, before fulfil
 check("defend, retreat and mismatched saved tasks lift siege without damage or invented history", () => {
   for (const mode of ["defend", "retreat", "idle", "moved", "target", "source", "destroyed"]) {
     const h = fixture(), before = h.army().sieges.luoyang;
-    if (mode === "defend") decree(h, "令袁绍守备洛阳");
-    else if (mode === "retreat") assert.equal(h.window.XianArmySystem.issueMapOrder("yuan_main", "ye", "retreat").ok, true);
+    if (mode === "defend") {
+      decree(h, "令袁绍守备洛阳");
+      assert.equal(h.army().sieges.luoyang.status, "active", "an unacknowledged request cannot erase a live siege");
+      decree(h, "令袁绍改令守备洛阳");
+    }
+    else if (mode === "retreat") assert.equal(h.window.XianArmySystem.issueMapOrder("yuan_main", "ye", "retreat", { replaceExisting: true, expectedOrderId: h.army().armies.yuan_main.currentOrderId || "none" }).ok, true);
     else {
       const a = h.army();
       Object.assign(a.armies.yuan_main, { idle: { task: "idle", status: "recovering" }, moved: { cityId: "ye" }, target: { targetCityId: "ye" }, source: { currentOrderId: "replacement" }, destroyed: { troops: 0, status: "destroyed" } }[mode]);

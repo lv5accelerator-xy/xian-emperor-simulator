@@ -83,6 +83,7 @@
 
     state = migrateState(loaded, core);
     strategyDirty = false;
+    applyPendingMapCommands(core);
     processNewReports(core);
     processElapsedTurns(core);
     state.updatedAt = new Date().toISOString();
@@ -153,6 +154,9 @@
       militaryFactsVersion: 1,
       commandResponses: [],
       commandResponsesVersion: 1,
+      commandConflicts: [],
+      pendingMapCommands: [],
+      orderArchiveVersion: 1,
       militaryFactsStartTurn: core.turn,
       ceasefireResponses: [],
       promiseAttempts: {},
@@ -183,6 +187,9 @@
       militaryFactsVersion: 1,
       commandResponses: Array.isArray(current.commandResponses) ? current.commandResponses : [],
       commandResponsesVersion: 1,
+      commandConflicts: Array.isArray(current.commandConflicts) ? current.commandConflicts : [],
+      pendingMapCommands: Array.isArray(current.pendingMapCommands) ? current.pendingMapCommands : [],
+      orderArchiveVersion: 1,
       militaryFactsStartTurn: Number.isInteger(current.militaryFactsStartTurn) ? current.militaryFactsStartTurn : core.turn,
       ceasefireResponses: Array.isArray(current.ceasefireResponses) ? current.ceasefireResponses : [],
       promiseAttempts: { ...(current.promiseAttempts || {}) },
@@ -198,6 +205,11 @@
       lastProcessedTurn: Number.isFinite(current.lastProcessedTurn) ? current.lastProcessedTurn : core.turn,
     };
 
+    const strategyEvidence = readStrategyState();
+    const snapshots = strategyEvidence?.gameCreatedAt === core.createdAt ? (strategyEvidence.commandChain?.intents || []).map(i => i.orderSnapshot).filter(Boolean) : [];
+    const known = new Map([...(migrated.commandResponses || []).map(r => r.order).filter(Boolean), ...snapshots, ...migrated.orders].map(o => [o.id, o]));
+    const present = new Set(migrated.orders.map(o => o.id));
+    migrated.orders.push(...[...known.values()].filter(o => !present.has(o.id)).sort((a,b)=>b.turn-a.turn||a.id.localeCompare(b.id)));
     DATA.armies.forEach(def => {
       migrated.armies[def.id] = {
         id: def.id,
@@ -268,12 +280,12 @@
     if (!["attack", "support", "advance", "defend", "supply"].includes(primaryOrder)) return;
     const owners = lordIds.length ? lordIds : inferCourtOwner(text);
     owners.forEach(owner => assignArmyOrder(owner, cityIds, primaryOrder, execution, text, core.turn, report.timestamp,
-      { requestId: `edict-request:${report.id || report.timestamp}:${owner}` }));
+      { requestId: `edict-request:${report.id || report.timestamp}:${owner}`, replaceExisting: /改令|改派|撤换|撤回|另令/.test(text) }));
     trimCollections();
   }
 
   function assignArmyOrder(owner, cityIds, task, execution, text, turn, timestamp, options = {}) {
-    const army = options.intent ? state.armies[options.intent.armyId] : selectArmy(owner, cityIds[0]);
+    const army = options.intent ? state.armies[options.intent.armyId] : selectArmy(owner, cityIds[0], options.replaceExisting);
     const destination = cityIds.length ? cityIds[cityIds.length - 1] : army?.cityId;
     const responseId = options.requestId ? `response:${options.requestId}` : null;
     const existing = responseId && state.commandResponses.find(r => r.id === responseId);
@@ -299,6 +311,12 @@
       respond("refused", access.message);
       return;
     }
+    const priorOrder = activeArmyOrder(army);
+    if (priorOrder && (!options.replaceExisting || options.intent)) {
+      recordCommandConflict("army-busy", options.requestId || `${turn}:${army.id}:${task}:${destination}`, { armyId: army.id, owner, previousOrderId: priorOrder.id, decision: "refused", turn, reason: "旧军令仍在执行，未明确同意撤换" });
+      respond("refused", "军团已有任务；自主军议不能覆盖，诏令须明确写明改令或改派");
+      return;
+    }
     if (options.intent) {
       const reason = window.XianLordIntentions.assess(options.intent, army, readStrategyState(), turn, state.orders);
       const treaty = window.XianLordIntentions.ceasefires(options.intent, readStrategyState(), turn, state);
@@ -312,6 +330,7 @@
       return;
     }
 
+    if (priorOrder) supersedeArmyOrder(army, turn, options.requestId || `${turn}:${army.id}:${task}:${destination}`);
     liftArmySieges(army.id, turn, "军团接受新军令，旧围城解除");
     army.originCityId = army.cityId;
     army.targetCityId = destination;
@@ -346,6 +365,7 @@
       status: routeIds.length ? "executing" : "arrived",
       arrivedTurn: routeIds.length ? null : turn,
       ...(options.intent ? { sourceIntentId: options.intent.id, authority: options.autonomous ? "lord" : "court" } : {}),
+      dispatchPriority: options.intent?.priority || 0,
     };
     army.currentOrderId = order.id;
     state.orders.unshift(order);
@@ -439,6 +459,8 @@
 
     return {
       ok: true,
+      requiresReplacement: Boolean(activeArmyOrder(army) && task !== "retreat"),
+      expectedOrderId: army.currentOrderId || "none",
       commandMode: access.mode,
       commandAccess: access.message,
       actionCost,
@@ -465,22 +487,64 @@
     };
   }
 
-  function issueMapOrder(armyId, targetCityId, task) {
+  function issueMapOrder(armyId, targetCityId, task, options = {}) {
+    const expected = state?.armies?.[armyId]?.currentOrderId || "none";
+    if (options.expectedOrderId !== undefined && options.expectedOrderId !== expected) return { ok: false, message: "军令已变更，请重新预览。" };
     const preview = previewMapOrder(armyId, targetCityId, task);
     if (!preview.ok) return preview;
+    const prior = activeArmyOrder(state.armies[armyId]);
+    if (prior && task !== "retreat" && !options.replaceExisting) {
+      recordCommandConflict("army-busy", `map:${coreState.turn}:${armyId}:${task}:${targetCityId}:${prior.id}`, { turn: coreState.turn, armyId, previousOrderId: prior.id, decision: "refused", reason: "尚未确认撤换旧军令" });
+      saveState();
+      return { ...preview, ok: false, requiresReplacement: true, message: "该军团仍在执行旧令，须明确确认撤换；本次未消耗行动。" };
+    }
     const game = window.XianEmperorGame;
     if (!game?.performExternalAction) return { ok: false, message: "核心行动接口尚未就绪。" };
+    const core = game.getState?.() || coreState;
+    const id = `map-request:${core.createdAt}:${core.turn}:${Number(core.operationSequence || 0) + 1}:${armyId}`;
+    const command = { id, receiptId: id, gameCreatedAt: core.createdAt, turn: core.turn, armyId, targetCityId, task, preview, expectedOrderId: expected };
+    state.pendingMapCommands.push(command); saveState();
     const treasuryCost = -preview.treasuryCost;
     const actionAccepted = game.performExternalAction({
+      receiptId: id,
       title: `舆图军令·${preview.taskLabel}`,
       text: `${preview.armyName}奉命自${preview.originName}${preview.eta ? `沿${preview.routeNames.join("、")}` : "就地"}${preview.eta ? `前往${preview.targetName}` : `守备${preview.targetName}`}，预计${preview.eta}个月完成部署。`,
       chronicle: `天子在九州舆图上向${preview.armyName}下达${preview.taskLabel}军令，目标为${preview.targetName}。`,
       effects: treasuryCost ? { treasury: treasuryCost } : {},
     });
-    if (!actionAccepted) return { ok: false, message: "请先裁决本月奏报，并确认仍有行动次数。" };
+    if (!actionAccepted) { state.pendingMapCommands = state.pendingMapCommands.filter(c => c.id !== id); saveState(); return { ok: false, message: "请先裁决本月奏报，并确认仍有行动次数。" }; }
+    applyPendingMapCommands(game.getState?.() || safeParse(localStorage.getItem(CORE_KEY)) || coreState);
+    saveState(); renderAll(); game.commit?.("map-order");
+    const response = state.commandResponses.find(r => r.id === `response:${id}`);
+    return { ...preview, ok: response?.status === "accepted", message: response?.status === "accepted" && preview.ceasefireBreaches.length
+      ? "军令已承接；本次主动违背停战，后果按原约凭据结算。" : response?.reason || "军令尚无处理回执。" };
+  }
+
+  function applyPendingMapCommands(core) {
+    for (const command of [...state.pendingMapCommands]) {
+      state.pendingMapCommands = state.pendingMapCommands.filter(c => c.id !== command.id);
+      if (!core.appliedReceipts?.includes(command.receiptId) || state.commandResponses.some(r => r.id === `response:${command.id}`)) continue;
+      const army = state.armies[command.armyId], preview = command.preview;
+      const request = { id: command.id, source: "map", turn: core.turn, dueTurn: core.turn, owner: army?.owner, ownerName: ownerName(army?.owner), armyId: command.armyId, armyName: preview.armyName,
+        task: command.task, originCityId: preview.originCityId, targetCityId: command.targetCityId, targetName: preview.targetName, targetOwner: preview.targetOwner, reason: "御前舆图军令" };
+      if (core.ended || (command.gameCreatedAt && command.gameCreatedAt !== core.createdAt) || (command.turn && command.turn !== core.turn)
+        || !army || army.status === "destroyed" || (army.currentOrderId || "none") !== command.expectedOrderId || army.cityId !== preview.originCityId
+        || readStrategyState()?.cities?.[command.targetCityId]?.controller !== preview.targetOwner) {
+        state.commandResponses.push({ id: `response:${command.id}`, intentId: command.id, authority: "court", kind: "dispatch", turn: core.turn, status: "refused", request, reason: "已付费交涉恢复时军籍或目标状态不再匹配，未伪造军令" });
+        continue;
+      }
+      const order = applyMapCommand(command, core);
+      state.commandResponses.push({ id: `response:${command.id}`, intentId: command.id, authority: "court", kind: "dispatch", turn: core.turn, status: "accepted", request,
+        armyId: army.id, orderId: order.id, order: { ...order }, reason: "舆图军令已正式承接" });
+    }
+  }
+
+  function applyMapCommand(command, core) {
+    const { armyId, targetCityId, task, preview } = command;
 
     const army = state.armies[armyId];
-    const turn = Number(window.XianEmperorGame.getState()?.turn || coreState.turn || 1);
+    const turn = Number(core.turn);
+    if (activeArmyOrder(army)) supersedeArmyOrder(army, turn, command.id);
     liftArmySieges(army.id, turn, "军团接受舆图改派，旧围城解除");
     army.originCityId = army.cityId;
     army.targetCityId = targetCityId;
@@ -494,7 +558,8 @@
     army.fatigue = clamp(army.fatigue + (task === "retreat" ? 5 : 3), 0, 100);
     army.status = preview.eta ? (task === "retreat" ? "routing" : "marching") : task === "defend" ? "defending" : task === "supply" ? "supplying" : "recovering";
     army.lastChange = `舆图军令：${preview.taskLabel}至${preview.targetName}`;
-    const orderId = `map-order-${turn}-${++state.orderSequence}-${army.id}`;
+    state.orderSequence += 1;
+    const orderId = `map-order-${command.id}`;
     army.currentOrderId = orderId;
     state.orders.unshift({
       id: orderId,
@@ -510,17 +575,15 @@
       text: `御前舆图直令：${preview.armyName}${preview.taskLabel}至${preview.targetName}`,
       status: preview.eta ? "executing" : "arrived",
       source: "grand-map",
+      sourceRequestId: command.id, authority: "court",
       arrivedTurn: preview.eta ? null : turn,
     });
     recordHostility("hostile-order", orderId, turn, army.owner, preview.targetOwner, { armyId: army.id, cityId: targetCityId, sourceOrderId: orderId }, task === "attack");
     preview.routeIds.forEach(routeId => adjustStrategyRoute(routeId, { pressure: task === "attack" ? 3 : task === "retreat" ? -1 : 1, supply: task === "supply" ? 2 : -1 }, `${preview.armyName}奉舆图军令进入军路`));
     addLog(turn, task, `${preview.armyName}奉舆图军令${preview.taskLabel}，目标${preview.targetName}。`);
     trimCollections();
-    saveState();
-    renderAll();
     document.dispatchEvent(new CustomEvent("xian:map-order", { detail: preview }));
-    game.commit?.("map-order");
-    return { ...preview, ok: true, message: `军令已进入大司马府军籍。${preview.ceasefireBreaches.length ? "此举主动违背停战，已按敌对军令核验。" : ""}` };
+    return state.orders.find(o => o.id === orderId);
   }
 
   function applyCampaignAssignment(armyId, effects = {}, reason = "人物督军") {
@@ -584,20 +647,69 @@
     });
   }
 
+  function snapshotAidWitnesses(turn, attackerOwner, defenderOwner, details) {
+    const strategy = readStrategyState(), witnesses = [];
+    for (const pact of strategy?.promises || []) {
+      const c = pact.contract, actor = pact.lordId, unit = state.armies[c?.armyId];
+      const accepted = c?.receipts?.find(r => r.kind === "accepted" && r.source === c.orderId);
+      if (pact.type !== "military_aid" || !["active", "fulfilled"].includes(pact.status) || !c?.protectedOwner || !accepted
+        || pact.createdTurn > turn || !unit || unit.owner !== actor || unit.status === "destroyed" || unit.troops < 500 || unit.currentOrderId !== c.orderId
+        || [attackerOwner, "court"].includes(actor) || c.protectedOwner === attackerOwner) continue;
+      if (pact.status === "fulfilled" && unit.cityId !== c.targetCityId) continue;
+      const intercepted = details.routeId && details.opposingOrderId === c.orderId;
+      const threatened = details.cityId === c.targetCityId && [c.protectedOwner, actor].includes(defenderOwner)
+        && strategy.cities[c.targetCityId]?.controller === c.protectedOwner;
+      if (!intercepted && !threatened) continue;
+      witnesses.push({ actor, actorName: ownerName(actor), protectedOwner: c.protectedOwner, protectedName: c.protectedName || ownerName(c.protectedOwner),
+        cityId: c.targetCityId, sourcePromiseId: pact.id, supportingOrderId: c.orderId, supportingArmyId: unit.id, acceptedReceiptId: accepted.id,
+        kind: intercepted ? "aid-intercepted" : "aid-alarm" });
+    }
+    return witnesses;
+  }
+
   function recordHostility(kind, source, turn, attackerOwner, defenderOwner, details = {}, enabled = true) {
     if (!enabled || !Number.isInteger(turn) || !attackerOwner || !defenderOwner || attackerOwner === defenderOwner) return;
     const id = `military:${kind}:${source}`;
     if (state.militaryFacts.some(item => item.id === id)) return;
-    state.militaryFacts.push({ id, kind, source, turn, attackerOwner, defenderOwner,
-      attackerName: ownerName(attackerOwner), defenderName: ownerName(defenderOwner), ...details });
+    const order = state.orders.find(o => o.id === details.sourceOrderId);
+    state.militaryFacts.push({ id, kind, source, turn, attackerOwner, defenderOwner, authority: order?.authority || (order ? "court" : undefined),
+      attackerName: ownerName(attackerOwner), defenderName: ownerName(defenderOwner),
+      aidWitnesses: details.aidWitnesses || snapshotAidWitnesses(turn, attackerOwner, defenderOwner, details), ...details });
   }
 
-  function selectArmy(owner, preferredCityId) {
+  function activeArmyOrder(army) {
+    if (!army) return null;
+    const order = state.orders.find(o => o.id === army.currentOrderId);
+    const active = ["marching", "routing", "engaged", "besieging"].includes(army.status) || (army.currentOrderId && order?.status !== "arrived");
+    return active ? order || { id: army.currentOrderId || `legacy-task:${army.id}:${army.orderedTurn}`, legacyTask: true, task: army.task } : null;
+  }
+
+  function recordCommandConflict(kind, key, details) {
+    const id = `command-conflict:${kind}:${key}`;
+    const existing = state.commandConflicts.find(c => c.id === id);
+    if (existing) return existing;
+    const unitIds = details.armyIds || (details.armyId ? [details.armyId] : []);
+    const entry = { id, kind, ...details, armyNames: unitIds.map(unitId => state.armies[unitId] ? armyName(state.armies[unitId]) : "旧军团"),
+      cityName: details.cityId ? cityName(details.cityId) : null, routeName: STRATEGY_DATA.routes.find(r => r.id === details.routeId)?.name || null };
+    state.commandConflicts.push(entry);
+    return entry;
+  }
+
+  function supersedeArmyOrder(army, turn, requestId) {
+    const old = activeArmyOrder(army);
+    if (!old) return;
+    if (!old.legacyTask) { old.status = "superseded"; old.stoppedTurn = turn; }
+    recordCommandConflict("replacement", requestId, { turn, armyId: army.id, previousOrderId: old.id, decision: "replaced", reason: "朝廷明确撤换旧军令，旧任务不再继续" });
+  }
+
+  function selectArmy(owner, preferredCityId, allowBusy = false) {
     const candidates = Object.values(state.armies).filter(army => army.owner === owner && army.status !== "destroyed" && army.troops >= 500);
     if (!candidates.length) return null;
-    const preferred = candidates.filter(army => army.cityId === preferredCityId && !["marching", "routing"].includes(army.status));
-    const pool = preferred.length ? preferred : candidates;
-    return pool.sort((a, b) => armyReadiness(b) - armyReadiness(a))[0];
+    const free = candidates.filter(army => !activeArmyOrder(army));
+    const available = !allowBusy && free.length ? free : candidates;
+    const preferred = available.filter(army => army.cityId === preferredCityId && !["marching", "routing"].includes(army.status));
+    const pool = preferred.length ? preferred : available;
+    return pool.sort((a, b) => armyReadiness(b) - armyReadiness(a) || a.id.localeCompare(b.id))[0];
   }
 
   function processElapsedTurns(core) {
@@ -616,26 +728,79 @@
     // Plans are generated at the previous synchronous commit. Never backfill
     // missing plans while replaying old months during save migration.
     const chain = readStrategyState()?.commandChain;
-    for (const intent of chain?.intents || []) if (intent.source === "autonomous" && intent.turn === turn && intent.status === "proposed") {
+    for (const intent of [...(chain?.intents || [])].sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0) || a.id.localeCompare(b.id))) if (intent.source === "autonomous" && intent.turn === turn && intent.status === "proposed") {
       const coreReceipt = intent.intervention?.receiptId && core.appliedReceipts?.includes(intent.intervention.receiptId);
       if (coreReceipt && intent.intervention.kind === "coordinate") resolveLordIntent(intent.id, "coordinate");
       const restrained = state.commandResponses.some(r => r.intentId === intent.id && r.status === "restrained");
       if (!restrained) resolveLordIntent(intent.id, "autonomous");
     }
-    Object.values(state.armies).forEach(army => {
+    recordTargetCompetitions(turn);
+    // Charge actual departures first. A starving or blocked unit remains at its
+    // city and cannot fight an imaginary encounter halfway along the road.
+    const routes = readStrategyState()?.routes || {}, departures = new Map();
+    Object.values(state.armies).sort((a, b) => a.id.localeCompare(b.id)).forEach(army => {
       if (army.status === "destroyed") return;
-      if (["marching", "routing"].includes(army.status)) advanceArmy(army, turn, rng);
+      if (["marching", "routing"].includes(army.status)) {
+        const departure = prepareArmyMarch(army, turn, rng, routes);
+        if (departure) departures.set(army.id, departure);
+      }
       else recoverArmy(army);
     });
+    const roadFought = resolveRoadMeetings(turn, core, rng, departures);
+    for (const [id, departure] of departures) if (!roadFought.has(id)) completeArmyMarch(state.armies[id], departure, turn);
 
     processSieges(turn, core, rng);
     resolveCityBattles(turn, core, rng);
     updateOrderStatuses(turn);
+    reconcileCommandConflicts(turn);
     state.log = state.log.slice(0, MAX_LOG);
     state.battleReports = state.battleReports.slice(0, MAX_REPORTS);
   }
 
-  function advanceArmy(army, turn, rng) {
+  function recordTargetCompetitions(turn) {
+    const units = Object.values(state.armies).filter(a => a.troops >= 500 && a.status !== "destroyed" && a.currentOrderId && ["marching", "engaged", "besieging"].includes(a.status)).sort((a,b)=>a.id.localeCompare(b.id));
+    for (let i=0;i<units.length;i++) for (const b of units.slice(i+1)) {
+      const a=units[i];
+      if (a.targetCityId !== b.targetCityId || !areHostile(a.owner,b.owner) || ![a.task,b.task].includes("attack")) continue;
+      const orders=[a.currentOrderId,b.currentOrderId].sort();
+      recordCommandConflict("target-competition",orders.join(":"),{turn,armyIds:[a.id,b.id],orderIds:orders,cityId:a.targetCityId,decision:"contested",reason:"多方军令指向同城；胜负须等待实际交战与占领"});
+    }
+  }
+
+  function reconcileCommandConflicts(turn) {
+    for (const conflict of state.commandConflicts) {
+      if (conflict.kind !== "target-competition" || conflict.decision === "occupied") continue;
+      const facts = state.militaryFacts.filter(f => f.turn >= conflict.turn && f.cityId === conflict.cityId && [f.sourceOrderId, f.opposingOrderId].some(id => conflict.orderIds.includes(id)) && ["battle", "occupation"].includes(f.kind));
+      conflict.factIds = [...new Set([...(conflict.factIds || []), ...facts.map(f => f.id)])];
+      const capture = facts.find(f => f.kind === "occupation");
+      if (capture) { conflict.decision = "occupied"; conflict.victorOwner = capture.attackerOwner; conflict.victorName = capture.attackerName; conflict.resolvedTurn = capture.turn; }
+      else if (facts.length) conflict.decision = "fighting";
+      else if (conflict.orderIds.every(id => state.orders.some(o => o.id === id && ["failed", "superseded"].includes(o.status)))) { conflict.decision = "closed"; conflict.resolvedTurn = turn; }
+    }
+  }
+
+  function resolveRoadMeetings(turn, core, rng, departures) {
+    const fought=new Set(),units=Object.values(state.armies).filter(a=>a.status==="marching"&&a.troops>=500&&departures.has(a.id)).sort((a,b)=>a.id.localeCompare(b.id));
+    for(let i=0;i<units.length;i++)for(const b of units.slice(i+1)){
+      const a=units[i],routeId=a.routeIds[a.routeIndex],route=STRATEGY_DATA.routes.find(r=>r.id===routeId);
+      if(fought.has(a.id)||fought.has(b.id)||!route||b.routeIds[b.routeIndex]!==routeId||a.cityId===b.cityId||!areHostile(a.owner,b.owner)||![a.task,b.task].includes("attack"))continue;
+      if(![a.cityId,b.cityId].every(c=>[route.from,route.to].includes(c)))continue;
+      const orderIds=[a.currentOrderId,b.currentOrderId].filter(Boolean).sort(),key=`${turn}:${routeId}:${[a.id,b.id].sort().join(":")}`;
+      const conflict=recordCommandConflict("road-meeting",key,{turn,routeId,armyIds:[a.id,b.id],orderIds,decision:"engaged",factIds:[],reason:"敌对军团在同一军路对向遭遇，本月先交战，不穿越或损坏远端城墙"});
+      const old=state.militaryFacts.find(f=>f.kind==="battle"&&f.turn===turn&&f.routeId===routeId&&[a.id,b.id].includes(f.armyId)&&[a.id,b.id].includes(f.defenderArmyId));
+      if(!old){
+        const attackers=[a,b].filter(u=>u.task==="attack").sort((x,y)=>Number(state.orders.find(o=>o.id===y.currentOrderId)?.dispatchPriority||0)-Number(state.orders.find(o=>o.id===x.currentOrderId)?.dispatchPriority||0)||x.id.localeCompare(y.id));
+        const attacker=attackers[0],defender=attacker===a?b:a;
+        resolveBattle(attacker,defender,null,turn,core,rng,{routeId});
+      }
+      const fact=state.militaryFacts.find(f=>f.kind==="battle"&&f.turn===turn&&f.routeId===routeId&&[a.id,b.id].includes(f.armyId)&&[a.id,b.id].includes(f.defenderArmyId));
+      if(fact&&!conflict.factIds.includes(fact.id))conflict.factIds.push(fact.id);
+      fought.add(a.id);fought.add(b.id);
+    }
+    return fought;
+  }
+
+  function prepareArmyMarch(army, turn, rng, routes) {
     if (!army.routeIds.length || army.routeIndex >= army.routeIds.length) {
       arriveArmy(army, turn);
       return;
@@ -643,7 +808,7 @@
 
     const routeId = army.routeIds[army.routeIndex];
     const routeDef = STRATEGY_DATA.routes.find(route => route.id === routeId);
-    const routeState = readStrategyState()?.routes?.[routeId];
+    const routeState = routes[routeId];
     if (!routeDef) {
       army.status = "recovering";
       army.lastChange = "军路资料缺失，停止行军";
@@ -685,6 +850,7 @@
       army.troops = Math.max(0, army.troops - lost);
       if (lost) addLog(turn, "warning", `${armyName(army)}通过${routeDef.name}时受袭与掉队，损失${lost}人。`);
     }
+    if (checkDestroyed(army, turn)) return;
 
     const nextCity = nextCityForRoute(army.cityId, routeDef);
     if (!nextCity) {
@@ -693,7 +859,10 @@
       addLog(turn, "warning", `${armyName(army)}行军序列异常，停在${cityName(army.cityId)}。`);
       return;
     }
+    return { routeId, routeDef, nextCity };
+  }
 
+  function completeArmyMarch(army, { routeId, routeDef, nextCity }, turn) {
     army.cityId = nextCity;
     army.routeIndex += 1;
     army.currentRouteId = army.routeIds[army.routeIndex] || null;
@@ -707,6 +876,8 @@
 
   function arriveArmy(army, turn) {
     army.arrivedTurn = turn;
+    const order = state.orders.find(o => o.id === army.currentOrderId);
+    if (order) { order.arrivedTurn ??= turn; order.status = "arrived"; }
     army.cityId = army.targetCityId || army.cityId;
     army.currentRouteId = null;
     army.eta = 0;
@@ -741,7 +912,7 @@
 
   function resolveCityBattles(turn, core, rng) {
     const byCity = new Map();
-    Object.values(state.armies)
+    Object.values(state.armies).sort((a, b) => a.id.localeCompare(b.id))
       .filter(army => army.status !== "destroyed" && army.troops >= 500)
       .forEach(army => {
         if (!byCity.has(army.cityId)) byCity.set(army.cityId, []);
@@ -759,7 +930,7 @@
       // retreated, dissolved, or lost the city to a third party while we marched.
       armies.filter(army => army.task === "attack" && army.targetCityId === cityId && army.status !== "destroyed" && army.status !== "routing")
         .sort((a, b) => armyReadiness(b) - armyReadiness(a)).forEach(attacker => {
-          const enemy = armies.some(other => other.id !== attacker.id && other.troops >= 500 && !["destroyed", "routing", "marching"].includes(other.status) && areHostile(attacker.owner, other.owner));
+          const enemy = armies.some(other => other.id !== attacker.id && other.troops >= 500 && !["destroyed", "routing"].includes(other.status) && areHostile(attacker.owner, other.owner));
           if (enemy) return;
           const city = readStrategyState()?.cities?.[cityId];
           if (!city) return;
@@ -777,10 +948,10 @@
 
   function findHostilePair(armies, cityId) {
     const attackers = armies.filter(army => army.task === "attack" && army.targetCityId === cityId && !["marching", "routing"].includes(army.status));
-    for (const attacker of attackers.sort((a, b) => armyReadiness(b) - armyReadiness(a))) {
+    for (const attacker of attackers.sort((a, b) => armyReadiness(b) - armyReadiness(a) || a.id.localeCompare(b.id))) {
       const defender = armies
-        .filter(army => !["marching", "routing"].includes(army.status) && army.owner !== attacker.owner && areHostile(attacker.owner, army.owner))
-        .sort((a, b) => armyReadiness(b) - armyReadiness(a))[0];
+        .filter(army => army.status !== "routing" && army.owner !== attacker.owner && areHostile(attacker.owner, army.owner))
+        .sort((a, b) => armyReadiness(b) - armyReadiness(a) || a.id.localeCompare(b.id))[0];
       if (defender) return [attacker, defender];
     }
     return null;
@@ -792,13 +963,15 @@
     return true;
   }
 
-  function resolveBattle(attacker, defender, cityId, turn, core, rng) {
+  function resolveBattle(attacker, defender, cityId, turn, core, rng, context = {}) {
+    const road = Boolean(context.routeId), sourceOrderId = attacker.currentOrderId || null, opposingOrderId = defender.currentOrderId || null;
+    const aidWitnesses = snapshotAidWitnesses(turn, attacker.owner, defender.owner, { cityId, routeId: context.routeId, opposingOrderId });
     const strategy = readStrategyState();
-    const cityDefense = Number(strategy?.cities?.[cityId]?.defense ?? 55);
+    const cityDefense = road ? 0 : Number(strategy?.cities?.[cityId]?.defense ?? 55);
     const attackRoll = 0.9 + rng() * 0.2;
     const defendRoll = 0.9 + rng() * 0.2;
     const attackPower = calculateCombatPower(attacker, commanderDef(attacker.commander), 0, false, attackRoll);
-    const defendPower = calculateCombatPower(defender, commanderDef(defender.commander), cityDefense, true, defendRoll);
+    const defendPower = calculateCombatPower(defender, commanderDef(defender.commander), cityDefense, !road, defendRoll);
     const total = Math.max(1, attackPower + defendPower);
     const attackerLossRate = clamp(0.1 + defendPower / total * 0.34 + rng() * 0.05, 0.09, 0.43);
     const defenderLossRate = clamp(0.1 + attackPower / total * 0.35 + rng() * 0.05, 0.09, 0.44);
@@ -819,33 +992,35 @@
       result = ratio >= 1.55 ? "进攻方大胜" : "进攻方小胜";
       victor = attacker.owner;
       attacker.morale = clamp(attacker.morale + 5, 0, 100);
-      attacker.status = "engaged";
+      attacker.status = road ? "marching" : "engaged";
       defender.morale = clamp(defender.morale - 12, 0, 100);
-      orderRetreat(defender, cityId, turn);
+      if (road) haltRoadOrder(defender, turn); else orderRetreat(defender, cityId, turn);
     } else if (ratio <= 0.85) {
       result = ratio <= 0.62 ? "守军大胜" : "守军击退进攻";
       victor = defender.owner;
       defender.morale = clamp(defender.morale + 5, 0, 100);
-      defender.status = "defending";
+      defender.status = road ? "marching" : "defending";
       attacker.morale = clamp(attacker.morale - 12, 0, 100);
-      orderRetreat(attacker, cityId, turn);
+      if (road) haltRoadOrder(attacker, turn); else orderRetreat(attacker, cityId, turn);
     } else {
       result = "双方相持";
       victor = null;
       attacker.morale = clamp(attacker.morale - 5, 0, 100);
       defender.morale = clamp(defender.morale - 4, 0, 100);
-      attacker.status = "recovering";
-      defender.status = "recovering";
+      attacker.status = road ? "marching" : "recovering";
+      defender.status = road ? "marching" : "recovering";
     }
 
     checkDestroyed(attacker, turn);
     checkDestroyed(defender, turn);
     const report = {
-      id: `battle-${turn}-${cityId}-${attacker.id}-${defender.id}`,
+      id: `battle-${turn}-${context.routeId || cityId}-${attacker.id}-${defender.id}`,
       turn,
       date: formatTurnDate(core, turn),
       cityId,
-      title: `${cityName(cityId)}之战`,
+      ...(road ? { routeId: context.routeId } : {}),
+      sourceOrderId, opposingOrderId,
+      title: `${road ? STRATEGY_DATA.routes.find(r => r.id === context.routeId)?.name || "军路" : cityName(cityId)}${road ? "遭遇战" : "之战"}`,
       attackerId: attacker.id,
       defenderId: defender.id,
       attackerOwner: attacker.owner,
@@ -861,16 +1036,28 @@
       result,
       victor,
       cityControlChanged: false,
-      note: victor === attacker.owner ? "进攻军已经兵临城下，将进入围城结算。" : victor === defender.owner ? "守军维持城池控制，败军沿原路撤退。" : "双方暂时脱离接触，等待下月整补。",
+      note: road ? "本月在军路交战，双方不跨越此路；败军停止本次军令，胜军下月再行。未产生城防损失或占领。" : victor === attacker.owner ? "进攻军已经兵临城下，将进入围城结算。" : victor === defender.owner ? "守军维持城池控制，败军沿原路撤退。" : "双方暂时脱离接触，等待下月整补。",
     };
     state.battleReports.unshift(report);
-    recordHostility("battle", report.id, turn, report.attackerOwner, report.defenderOwner, { cityId, armyId: attacker.id, sourceOrderId: attacker.currentOrderId || null });
+    recordHostility("battle", report.id, turn, report.attackerOwner, report.defenderOwner, { cityId, ...(road ? { routeId: context.routeId } : {}), armyId: attacker.id, defenderArmyId: defender.id, sourceOrderId, opposingOrderId, aidWitnesses });
+    for (const id of [sourceOrderId, opposingOrderId]) {
+      const failed = state.orders.find(o => o.id === id && o.status === "failed" && o.failedTurn === turn);
+      if (failed) failed.failureFactId = `military:battle:${report.id}`;
+    }
     addLog(turn, "battle", `${report.title}：${result}；${report.attackerName}损失${attackerLosses}，${report.defenderName}损失${defenderLosses}。`);
-    adjustStrategyCity(cityId, { defense: -Math.round((attackerLosses + defenderLosses) / 2200), supply: -5, pressure: 14 }, report.title);
-    const battleRoute = attacker.routeIds[Math.max(0, attacker.routeIndex - 1)] || defender.routeIds[Math.max(0, defender.routeIndex - 1)];
+    if (!road) adjustStrategyCity(cityId, { defense: -Math.round((attackerLosses + defenderLosses) / 2200), supply: -5, pressure: 14 }, report.title);
+    const battleRoute = context.routeId || attacker.routeIds[Math.max(0, attacker.routeIndex - 1)] || defender.routeIds[Math.max(0, defender.routeIndex - 1)];
     if (battleRoute) adjustStrategyRoute(battleRoute, { supply: -4, pressure: 10 }, report.title);
-    if (victor === attacker.owner && attacker.status !== "destroyed") beginSiege(attacker, defender, cityId, turn, report);
+    if (!road && victor === attacker.owner && attacker.status !== "destroyed") beginSiege(attacker, defender, cityId, turn, report);
     document.dispatchEvent(new CustomEvent("xian:battle-report", { detail: report }));
+  }
+
+  function haltRoadOrder(army, turn) {
+    const order = state.orders.find(o => o.id === army.currentOrderId);
+    if (order) { order.status = "failed"; order.failedTurn = turn; order.reason = "军路遭遇战被击退"; }
+    army.currentOrderId = null; army.routeIds = []; army.routeIndex = 0; army.currentRouteId = null;
+    army.status = "recovering"; army.task = "idle"; army.eta = 0;
+    army.lastChange = `军路遭遇战被击退，仍停在${cityName(army.cityId)}整顿，旧军令失败`;
   }
 
   function beginSiege(attacker, defender, cityId, turn, report) {
@@ -883,6 +1070,12 @@
     }
     const existing = state.sieges[cityId];
     if (existing?.status === "active") {
+      const primary = state.armies[existing.attackerArmyId];
+      if (primary && primary.id !== attacker.id && primary.owner === attacker.owner && validSiegeArmy(existing, primary)) {
+        attacker.status = "engaged"; attacker.lastChange = `协助${armyName(primary)}在${cityName(cityId)}城外列阵，主攻军令未撤换`;
+        recordCommandConflict("siege-command", `${existing.id}:${attacker.currentOrderId || attacker.id}`, { turn, cityId, armyIds: [primary.id, attacker.id], orderIds: [primary.currentOrderId, attacker.currentOrderId].filter(Boolean), decision: "support", reason: "本方援军协战，主攻军令保持；不重复推进城防" });
+        return existing;
+      }
       if (existing.attackerArmyId !== attacker.id) liftArmySieges(existing.attackerArmyId, turn, "新军接替阵地，旧任务解除");
       if (existing.status !== "active") return beginSiege(attacker, defender, cityId, turn, report);
       existing.attackerArmyId = attacker.id;
@@ -1231,6 +1424,9 @@
 
   function orderRetreat(army, cityId, turn) {
     if (army.status === "destroyed") return;
+    const previousOrderId = army.currentOrderId, previous = state.orders.find(o => o.id === previousOrderId);
+    if (previous) { previous.status = "failed"; previous.failedTurn = turn; previous.reason = "实际交战失利，原军令停止并撤退"; }
+    army.currentOrderId = null;
     liftArmySieges(army.id, turn, "军团奉命撤离，城围解除");
     const destination = army.originCityId && army.originCityId !== cityId
       ? army.originCityId
@@ -1238,7 +1434,7 @@
         ? ownerSeatCity(army.owner)
         : adjacentRetreatCity(cityId);
     const routeIds = destination ? STRATEGY_API.findRoutePath(cityId, destination) : [];
-    if (!destination || !routeIds.length) {
+    if (!destination || !routeIds.length || army.troops < 500) {
       army.status = "recovering";
       army.task = "idle";
       army.lastChange = `败退后困于${cityName(cityId)}`;
@@ -1252,6 +1448,10 @@
     army.task = "retreat";
     army.status = "routing";
     army.eta = routeIds.length;
+    const id = `retreat-order:${turn}:${army.id}:${previousOrderId || cityId}`;
+    army.currentOrderId = id;
+    if (!state.orders.some(o => o.id === id)) state.orders.push({ id, turn, owner: army.owner, armyId: army.id, task: "retreat", authority: "lord", source: "battle-retreat", sourcePreviousOrderId: previousOrderId || null,
+      originCityId: cityId, targetCityId: destination, routeIds: [...routeIds], status: "executing", arrivedTurn: null });
     army.lastChange = `战败后向${cityName(destination)}撤退`;
     addLog(turn, "retreat", `${armyName(army)}脱离战场，向${cityName(destination)}撤退。`);
   }
@@ -1264,6 +1464,8 @@
 
   function checkDestroyed(army, turn) {
     if (army.troops >= 500) return false;
+    const order = state.orders.find(o => o.id === army.currentOrderId);
+    if (order) { order.status = "failed"; order.failedTurn = turn; order.reason = "军团建制溃散"; }
     liftArmySieges(army.id, turn, "围城军建制溃散，城围解除");
     army.troops = Math.max(0, army.troops);
     army.status = "destroyed";
@@ -1297,7 +1499,7 @@
       if (["arrived", "failed", "superseded"].includes(order.status)) return;
       const currentOrderId = army?.currentOrderId || state.orders.find(item => item.armyId === order.armyId)?.id;
       if (currentOrderId !== order.id) { order.status = "superseded"; return; }
-      if (!army || army.status === "destroyed") order.status = "failed";
+      if (!army || army.status === "destroyed") { order.status = "failed"; order.failedTurn = turn; }
       else if (["marching", "routing"].includes(army.status)) order.status = "executing";
       else if (army.cityId === order.targetCityId) { order.status = "arrived"; order.arrivedTurn = turn; }
     });
@@ -1420,7 +1622,6 @@
   }
 
   function trimCollections() {
-    state.orders = state.orders.slice(0, MAX_ORDERS);
     state.battleReports = state.battleReports.slice(0, MAX_REPORTS);
     state.log = state.log.slice(0, MAX_LOG);
   }
@@ -1536,7 +1737,7 @@
   }
 
   function renderMovements() {
-    const orders = [...state.orders].sort((a, b) => b.turn - a.turn);
+    const orders = [...state.orders].sort((a, b) => b.turn - a.turn).slice(0, MAX_ORDERS);
     const active = Object.values(state.armies).filter(army => ["marching", "routing", "engaged"].includes(army.status));
     return `<section><div class="army-section-head"><div><span class="section-kicker">行军态势</span><h3>当前行动</h3></div><small>每月通过一段主要军路；缺粮或高军压会造成停滞与减员</small></div><div class="movement-list">${active.length ? active.map(army => `<article class="movement-card"><div><strong>${escapeHtml(armyName(army))}</strong><b>${escapeHtml(statusLabel(army.status))}</b></div><p>${escapeHtml(cityName(army.cityId))} → ${escapeHtml(cityName(army.targetCityId))}</p><div class="movement-route">${army.routeIds.length ? army.routeIds.map((id, index) => `<span class="${index < army.routeIndex ? "passed" : index === army.routeIndex ? "current" : ""}">${escapeHtml(routeName(id))}</span>`).join("") : "<span>已抵达目标区域</span>"}</div><small>预计还需 ${army.eta} 个月 · 粮秣 ${Math.round(army.supply)} · 士气 ${Math.round(army.morale)}</small></article>`).join("") : '<p class="empty-state">当前没有跨城行军的军团。</p>'}</div><div class="army-section-head order-history-head"><div><span class="section-kicker">诏令军务</span><h3>命令记录</h3></div></div><div class="army-order-list">${orders.length ? orders.map(order => `<article><div><strong>${escapeHtml(armyName(state.armies[order.armyId] || { id: order.armyId }))}</strong><b>${orderStatusLabel(order.status)}</b></div><p>${escapeHtml(cityName(order.originCityId))} → ${escapeHtml(cityName(order.targetCityId))} · ${escapeHtml(taskLabel(order.task))}</p><small>第 ${order.turn} 月 · 执行度 ${order.execution}% · ${escapeHtml(order.text)}</small></article>`).join("") : '<p class="empty-state">尚无军团命令。圣旨写明诸侯、城池和进攻或驰援等动作后，会在此建立军务记录。</p>'}</div></section>`;
   }
@@ -1573,7 +1774,7 @@
     return `<div class="army-metric ${inverse ? "inverse" : ""}"><span>${label}</span><i><b style="width:${clamp(value, 0, 100)}%"></b></i><em>${Math.round(value)}</em></div>`;
   }
 
-  function orderStatusLabel(status) { return { executing: "执行中", arrived: "已抵达", failed: "失败" }[status] || status; }
+  function orderStatusLabel(status) { return { executing: "执行中", arrived: "已抵达", failed: "失败", superseded: "已撤换" }[status] || status; }
   function siegeStanceLabel(id) { return { assault: "强攻", blockade: "围困", persuade: "劝降" }[id] || id; }
   function captiveStatusLabel(id) { return { awaiting: "候旨", detained: "留置", recruited: "归降", released: "获释" }[id] || id; }
   function logIcon(type) { return { attack: "攻", support: "援", advance: "调", defend: "守", supply: "粮", ceasefire: "和", retreat: "退", battle: "战", siege: "围", capture: "城", warning: "警", system: "籍" }[type] || "军"; }
@@ -1605,8 +1806,9 @@
     const access = getCommandAccess(army, core, strategy);
     const risk = kind === "coordinate" ? window.XianLordIntentions.ceasefires(intent, strategy, core.turn, state) : [];
     const refusal = !access.allowed ? access.message : kind === "coordinate" ? window.XianLordIntentions.assess(intent, army, strategy, core.turn, state.orders) : null;
+    const overlapWarnings = window.XianLordIntentions.conflictWarnings(intent, strategy, state);
     return { ok: true, accepted: !refusal, reason: refusal || (kind === "restrain" ? "该镇愿接受暂缓军议" : "该军团具备接令条件"),
-      risk: risk.length > 0, needsAcknowledgement: risk.length > 0 && !acknowledgeBreach, armyName: army ? armyName(army) : intent.armyName };
+      overlapWarnings, risk: risk.length > 0, needsAcknowledgement: risk.length > 0 && !acknowledgeBreach, armyName: army ? armyName(army) : intent.armyName };
   }
 
   function resolveLordIntent(intentId, kind) {

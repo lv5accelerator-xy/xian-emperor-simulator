@@ -1,6 +1,10 @@
 /* 天子蒙尘：献帝模拟器 v0.4.0 军略网络 */
 .strategy-brief-content .lord-intent-brief{grid-column:1/-1;text-align:left}
 .lord-command-chain{margin-bottom:1.4rem}
+.council-ledger{border:1px solid rgba(190,148,72,.35);border-radius:10px;padding:.7rem;margin:.8rem 0;overflow-wrap:anywhere}
+.council-ledger>summary{cursor:pointer;min-height:44px;display:flex;align-items:center}
+.council-ledger article{padding:.75rem 0;border-bottom:1px solid rgba(190,148,72,.2)}
+.council-ledger h4{margin:1rem 0 .5rem}.council-ledger small{line-height:1.6}
 .lord-command-chain p,.lord-command-card small{line-height:1.65;overflow-wrap:anywhere}
 .lord-command-card{border:1px solid rgba(190,148,72,.4);border-radius:10px;padding:1rem;margin:.75rem 0;background:#1e2420;color:#e6d9bd}
 .game-shell.focus-view .strategy-network-brief:has(.lord-intent-brief){display:block!important}
