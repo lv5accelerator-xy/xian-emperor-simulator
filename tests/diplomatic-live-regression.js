@@ -2,7 +2,7 @@
 const assert = require("node:assert/strict");
 const { harness, plain } = require("./helpers/game-harness");
 function start() {
-  const h = harness(); h.api.startNewGame(); h.loadEngine();
+  const h = harness(); h.api.startNewGame("standard", "jianan_196", { randomSeed: 226001 }); h.loadEngine();
   const core = h.api.getState();
   h.replaceCore({ eventResolved: true, stats: { ...core.stats, authority: 75, prestige: 70, treasury: 40 }, relations: { ...core.relations, yuan_shao: 90 } });
   return h;
@@ -41,10 +41,22 @@ assert.ok(continued.api.getState().reports.some(item => item.title === "贡赋�
 // Core cap means only one unit was actually delivered; do not debit three locally.
 const capped = start(); capped.edict("请袁绍在邺城奉表贡赋6");
 const supply = capped.window.XianStrategyNetwork.getState().cities.ye.supply;
+const armySystem = capped.window.XianArmySystem, supplyBeforeArmy = [];
+capped.window.XianArmySystem = { ...armySystem, syncFromCore: raw => {
+  const strategy = capped.window.XianStrategyNetwork.getState();
+  if (strategy.promises[0]?.contract?.delivered === 1) supplyBeforeArmy.push(strategy.cities.ye.supply);
+  return armySystem.syncFromCore(raw);
+} };
 capped.replaceCore({ stats: { ...capped.api.getState().stats, treasury: 99 }, monthlySettledTurn: 1 });
+capped.window.XianArmySystem = armySystem;
 const capPromise = capped.window.XianStrategyNetwork.getState().promises[0];
 assert.equal(capPromise.contract.delivered, 1); assert.equal(capPromise.contract.receipts[0].amount, 1);
-assert.equal(capped.window.XianStrategyNetwork.getState().cities.ye.supply, supply - 1);
+assert.equal(capPromise.contract.receipts[0].sourceSupplySpent, 1);
+assert.equal(supplyBeforeArmy[0], supply - 1, "tribute must debit exactly the actual one-unit receipt before the army phase");
+const sameMonthBattle = armySystem.getState().militaryFacts.filter(fact => fact.kind === "battle" && fact.cityId === "ye" && fact.turn === 1);
+assert.equal(sameMonthBattle.length, 1, "fixed seed retains the real same-month attack instead of disabling military interference");
+assert.equal(sameMonthBattle[0].attackerOwner, "gongsun_zan"); assert.equal(sameMonthBattle[0].defenderOwner, "yuan_shao");
+assert.equal(capped.window.XianStrategyNetwork.getState().cities.ye.supply, supply - 1 - 5, "battle consumes its own five units after the one-unit tribute transfer");
 assert.equal(capped.api.getState().stats.treasury, 100);
 
 // A complete save can be captured between the core month marker and module
