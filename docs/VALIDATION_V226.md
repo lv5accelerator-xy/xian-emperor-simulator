@@ -33,3 +33,7 @@ Microsoft Edge无头模式，1366×900与390×900，两端均已通过：默认�
 ## 复现
 
 统一入口为`node scripts/check.cjs`。专项入口为两份`lord-command-*-regression.js`。玩法采样用`node scripts/lord-command-balance.cjs`，可设`LORD_BASELINE_ROOT`、`LORD_BALANCE_OUTPUT`、`LORD_SCENARIO`；固定种子与完整结果见[玩法对照](BALANCE_V226.md)。浏览器入口为`node scripts/browser-lord-command.cjs`，设置`PLAYWRIGHT_MODULE`与`LORD_BROWSER_OUTPUT`；提供`LORD_BROWSER_URL`可复核已发布站点。
+
+## 合并后的回归边界修正
+
+PR #10通过远端完整回归后，主分支出现一次`diplomatic-live-regression.js`失败：未固定开局的贡赋上限用例，在同月公孙瓒真实进攻邺城时把最终城粮82与仅扣贡赋后的87比较。已用种子226001稳定复现，未改军事或资源规则。修正后在军团阶段之前核验贡赋只扣1，再核验真实战斗及其另扣5，国库实收仍只加1；没有禁用诸侯军议或删除城粮断言。检查入口同时在失败时输出子回归的具体诊断，避免只记录文件名。最终CI与后续交付记录保留这次失败及修正链。
