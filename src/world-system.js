@@ -738,7 +738,7 @@
   function renderWorldLogEntry(entry) {
     const lord = DATA.lords.find((item) => item.id === entry.lordId);
     const region = DATA.regions.find((item) => item.id === entry.regionId);
-    return `<article class="world-log-entry ${entry.type}"><span class="world-log-icon">${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><div><div><strong>${escapeHtml(entry.lordName || lord?.name || (entry.lordId === "court" ? "汉廷" : "天下"))}</strong><time>${escapeHtml(entry.date)}</time></div><p>${escapeHtml(entry.text)}</p><small>${escapeHtml(region?.name || "全国")} · ${entry.mode === "historical-anchor" ? "历史锚点" : "本局推演"}</small></div></article>`;
+    return `<article class="world-log-entry ${entry.type}"><span class="world-log-icon">${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><div><div><strong>${escapeHtml(entry.lordName || lord?.name || (entry.lordId === "court" ? "汉廷" : "天下"))}</strong><time>${escapeHtml(entry.date)}</time></div><p>${escapeHtml(entry.text)}</p><small>${escapeHtml(region?.name || "全国")} · ${entry.mode === "historical-anchor" ? "历史锚点" : entry.type === "military" ? "动向推演；出兵与战果须查诸侯军议及军团回执" : "本局推演"}</small></div></article>`;
   }
 
   function renderLordCard(lord) {

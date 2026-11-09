@@ -36,7 +36,8 @@ check("three distinct real twelve-month routes, four scheduled nodes and normal 
   }
   assert.ok(routes.preserve.core.stats.authority < routes.resist.core.stats.authority);
   assert.ok(routes.resist.core.stats.security < routes.negotiate.core.stats.security);
-  assert.ok(routes.preserve.core.stats.treasury > routes.negotiate.core.stats.treasury);
+  const investment = result => result.trace.reduce((sum, x) => sum + x.decisionCost, 0) + result.actionTrace.reduce((sum, x) => sum + x.cost, 0);
+  assert.ok(investment(routes.negotiate) > investment(routes.preserve), "negotiation must actually invest more money; later revenue and autonomous warfare may change the final treasury ranking");
 });
 
 check("earlier choices alter actual delayed support, proponents and available seal routes", () => {
