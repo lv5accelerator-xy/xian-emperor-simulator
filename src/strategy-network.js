@@ -163,6 +163,7 @@
       routes,
       strategies,
       promises: [],
+      commandChain: window.XianLordIntentions?.ledger(null, core),
       log: [{ id: `opening-${Date.now()}`, turn: core.turn, type: "system", text: "尚书台建立城池、驿道、军路与诸侯承诺档案。" }],
       updatedAt: new Date().toISOString(),
     };
@@ -177,6 +178,7 @@
       routes: { ...(current.routes || {}) },
       strategies: { ...(current.strategies || {}) },
       promises: Array.isArray(current.promises) ? current.promises : [],
+      commandChain: window.XianLordIntentions?.ledger(current.commandChain, core),
       log: Array.isArray(current.log) ? current.log : [],
       lastReportTimestamp: Number(current.lastReportTimestamp) || 0,
       v041LastCorrectedTimestamp: Number(current.v041LastCorrectedTimestamp) || 0,
@@ -452,6 +454,7 @@
   }
 
   function applyEdictToCities(cityIds, order, execution, text) {
+    if (["attack", "support", "defend", "supply", "advance"].includes(order)) return;
     const scale = Math.max(1, Math.round(execution / 22));
     cityIds.forEach(id => {
       const city = state.cities[id];
@@ -471,6 +474,7 @@
   }
 
   function applyEdictToRoutes(routeIds, order, execution, text) {
+    if (["attack", "support", "defend", "supply", "advance"].includes(order)) return;
     const scale = Math.max(1, Math.round(execution / 25));
     routeIds.forEach(id => {
       const route = state.routes[id];
@@ -569,6 +573,7 @@
   }
 
   function executeStrategyPulse(strategy, turn) {
+    if (["attack", "support", "defend", "supply", "advance"].includes(strategy.order)) return;
     const strength = strategy.readiness >= 70 ? 2 : strategy.readiness >= 45 ? 1 : 0;
     if (!strength) return;
     strategy.routeIds.forEach(routeId => {
@@ -688,11 +693,13 @@
   }
 
   function reconcilePromises() {
-    if (!state || !coreState || coreState.ended) return;
+    if (!state || !coreState) return;
     // The army phase writes city ownership and routes to this store. Reconcile
     // those writes before persisting contract receipts, so captures are retained.
     const latest = loadState();
     if (latest?.gameCreatedAt === coreState.createdAt) state = migrateState(latest, coreState);
+    if (coreState.ended) { reconcileLordCommands(); saveState(); renderAll(); return; }
+    resolvePendingLordCommands();
     let armies = window.XianArmySystem?.getState?.() || {};
     for (const promise of state.promises) {
       if (promise.status !== "active" || !promise.contract) continue;
@@ -753,7 +760,59 @@
         }
       }
     }
+    reconcileLordCommands();
     saveState(); renderAll();
+  }
+
+  function resolvePendingLordCommands() {
+    const core = window.XianEmperorGame?.getState?.();
+    if (!state.commandChain || !core || core.createdAt !== state.gameCreatedAt || core.ended || window.__xianFullSaveImporting) return;
+    for (const intent of state.commandChain.intents) {
+      const intervention = intent.intervention;
+      if (intent.status !== "proposed" || !intervention) continue;
+      if (!core.appliedReceipts.includes(intervention.receiptId)) { delete intent.intervention; continue; }
+      window.XianArmySystem?.resolveLordIntent?.(intent.id, intervention.kind);
+    }
+    const updated = loadState();
+    if (updated?.gameCreatedAt === state.gameCreatedAt) { state.cities = updated.cities; state.routes = updated.routes; }
+  }
+
+  function reconcileLordCommands() {
+    const model = window.XianLordIntentions, core = window.XianEmperorGame?.getState?.(), armies = window.XianArmySystem?.getState?.();
+    if (!model || !core || !armies || armies.gameCreatedAt !== state.gameCreatedAt || core.createdAt !== state.gameCreatedAt || window.__xianFullSaveImporting) return;
+    const chain = state.commandChain = model.ledger(state.commandChain, core);
+    model.reconcile(chain, armies, state, core);
+    const short = window.XianShortChallenges?.getActiveStatus?.(core);
+    if (core.ended || short || Number(core.monthlySettledTurn || 0) >= core.turn || chain.generatedTurns.includes(core.turn)) return;
+    chain.generatedTurns.push(core.turn);
+    const intent = model.propose(core, state, armies, window.XianWorldSystem?.getState?.(), window.XianEmperorGame.getRandomKey("lord-intent", core.createdAt, core));
+    if (intent) chain.intents.push(intent);
+  }
+
+  function previewLordIntervention(intentId, kind, acknowledgeBreach = false) {
+    const core = window.XianEmperorGame?.getState?.(), intent = state?.commandChain?.intents.find(i => i.id === intentId);
+    if (!["coordinate", "restrain"].includes(kind) || !core || intent?.intervention) return { ok: false, message: "本次军议已干预或不存在。" };
+    const result = window.XianArmySystem?.previewLordIntent?.(intentId, kind, acknowledgeBreach);
+    if (!result?.ok) return result || { ok: false, message: "尚未载入军籍。" };
+    const treasuryCost = kind === "coordinate" && result.accepted ? (intent.task === "attack" ? 1 : intent.task === "supply" ? 3 : 0) : 0;
+    if (!core.eventResolved || core.ended || core.actionPoints < 1 || Number(core.monthlySettledTurn || 0) >= core.turn) return { ok: false, message: "先裁决本月奏报，并保留1次御前行动。" };
+    if (core.stats.treasury < treasuryCost) return { ok: false, message: `国库不足，需 ${treasuryCost}。` };
+    return { ...result, intentId, kind, actionCost: 1, treasuryCost, acknowledgeBreach, message: `${result.reason}；消耗1次御前行动、国库${treasuryCost}。${result.accepted ? "" : "交涉失败也消耗此次行动。"}` };
+  }
+
+  function interveneLordIntent(intentId, kind, acknowledgeBreach = false) {
+    const preview = previewLordIntervention(intentId, kind, acknowledgeBreach);
+    if (!preview.ok) return false;
+    if (preview.needsAcknowledgement) { window.XianEmperorGame.notify("请先勾选承担主动违背停战的后果，再确认交涉。", "warning"); return false; }
+    const intent = state.commandChain.intents.find(i => i.id === intentId);
+    const receiptId = `lord-intervention:${intentId}`;
+    intent.intervention = { receiptId, kind, acknowledgeBreach: acknowledgeBreach === true, turn: coreState.turn };
+    saveState();
+    const applied = window.XianEmperorGame.performExternalAction({ receiptId, actionId: "lord-command", causal: false,
+      title: `军议·${kind === "coordinate" ? "协调" : "劝止"}`, text: `${intent.ownerName}拟${orderLabel(intent.task)}${intent.targetName}；${preview.message}`,
+      chronicle: `天子${kind === "coordinate" ? "协调" : "劝止"}${intent.ownerName}军议。`, effects: { treasury: -preview.treasuryCost } });
+    if (!applied && !window.XianEmperorGame.getState().appliedReceipts.includes(receiptId)) { delete intent.intervention; saveState(); }
+    return applied === true;
   }
 
   function settlePromise(promise, fulfilled, reason) {
@@ -902,6 +961,8 @@
     const broken = state.promises.filter(item => item.status === "broken");
     const vulnerable = Object.entries(state.cities).sort((a, b) => cityRisk(b[1]) - cityRisk(a[1]))[0];
     content.innerHTML = `<button type="button" data-brief-tab="routes"><span>最紧张战线</span><strong>${escapeHtml(routeDef(front?.[0])?.name || "暂无")}</strong><small>${front ? `${front[1].status} · 军压 ${Math.round(front[1].pressure)}` : "等待诏令"}</small></button><button type="button" data-brief-tab="cities"><span>最脆弱城池</span><strong>${escapeHtml(cityDef(vulnerable?.[0])?.name || "暂无")}</strong><small>${vulnerable ? `守备 ${Math.round(vulnerable[1].defense)} · 粮秣 ${Math.round(vulnerable[1].supply)}` : "等待推演"}</small></button><button type="button" data-brief-tab="promises"><span>外交承诺</span><strong>${active.length} 项履行中</strong><small>${broken.length ? `${broken.length} 项已经失信` : "尚无失信记录"}</small></button>`;
+    const current = state.commandChain?.intents.filter(i => i.turn === coreState?.turn).at(-1);
+    if (current) content.innerHTML += `<button type="button" class="lord-intent-brief" data-brief-tab="strategies"><span>本月诸侯军议 · ${escapeHtml(chainStatus(current.status))}</span><strong>${escapeHtml(current.ownerName)}拟${escapeHtml(orderLabel(current.task))}${escapeHtml(current.targetName)}</strong><small>${escapeHtml(current.responseReason || "协调或劝止需1次行动；不干预则月末由主将决定，仍须满足军务条件。")}</small></button>`;
     content.querySelectorAll("[data-brief-tab]").forEach(button => button.addEventListener("click", () => { activeTab = button.dataset.briefTab; openOverlay(); }));
   }
 
@@ -914,6 +975,7 @@
     if (!state) { content.innerHTML = '<p class="empty-state">请先开启或读取一局游戏。</p>'; return; }
     const renderers = { cities: renderCities, routes: renderRoutes, promises: renderPromises, strategies: renderStrategies };
     content.innerHTML = renderSummary() + (renderers[activeTab] || renderCities)();
+    content.querySelectorAll("[data-lord-action]").forEach(button => button.addEventListener("click", () => openLordIntervention(button.dataset.intentId, button.dataset.lordAction)));
   }
 
   function renderSummary() {
@@ -965,7 +1027,30 @@
 
   function renderStrategies() {
     const entries = Object.values(state.strategies).sort((a, b) => b.readiness - a.readiness);
-    return `<section><div class="strategy-section-head"><div><span class="section-kicker">诸侯战略</span><h3>当前方略</h3></div><small>诏令目标 · 战备 · 对朝廷信任</small></div><div class="lord-strategy-grid">${entries.map(strategy => `<article class="lord-strategy-card"><div><strong>${escapeHtml(strategyName(strategy.lordId))}</strong><b>${escapeHtml(orderLabel(strategy.order))}</b></div><h4>${escapeHtml(strategy.objective)}</h4>${metric("战备", strategy.readiness)}${metric("信任", strategy.trust)}<p>${escapeHtml(strategy.lastChange)}</p></article>`).join("")}</div><section class="strategy-log"><div class="strategy-section-head"><div><span class="section-kicker">军国记录</span><h3>最近变化</h3></div></div>${state.log.slice(0, 12).map(item => `<article><span>${escapeHtml(logIcon(item.type))}</span><div><strong>第 ${item.turn} 月</strong><p>${escapeHtml(item.text)}</p></div></article>`).join("")}</section></section>`;
+    return renderCommandChain() + `<section><div class="strategy-section-head"><div><span class="section-kicker">诸侯战略</span><h3>当前方略</h3></div><small>诏令目标与准备度；实际行动以军令回执为准</small></div><div class="lord-strategy-grid">${entries.map(strategy => `<article class="lord-strategy-card"><div><strong>${escapeHtml(strategyName(strategy.lordId))}</strong><b>${escapeHtml(orderLabel(strategy.order))}</b></div><h4>${escapeHtml(strategy.objective)}</h4>${metric("战备", strategy.readiness)}${metric("信任", strategy.trust)}<p>${escapeHtml(strategy.lastChange)}</p></article>`).join("")}</div><section class="strategy-log"><div class="strategy-section-head"><div><span class="section-kicker">军国记录</span><h3>最近变化</h3></div></div>${state.log.slice(0, 12).map(item => `<article><span>${escapeHtml(logIcon(item.type))}</span><div><strong>第 ${item.turn} 月</strong><p>${escapeHtml(item.text)}</p></div></article>`).join("")}</section></section>`;
+  }
+
+  function chainStatus(status) { return { proposed: "待接令", requested: "待回执", accepted: "已接令", restrained: "已劝止", refused: "拒令", marching: "行军中", arrived: "已抵达", besieging: "围城中", captured: "已占领", failed: "军令失败", superseded: "已换令", expired: "逾期无回执" }[status] || status; }
+
+  function renderCommandChain() {
+    const chain = state.commandChain;
+    if (!chain) return "";
+    const intents = [...chain.intents].reverse().sort((a, b) => b.turn - a.turn).slice(0, 12);
+    return `<section class="lord-command-chain"><div class="strategy-section-head"><div><span class="section-kicker">诸侯军议</span><h3>意图 → 接令 → 军务 → 外交</h3></div><small>共 ${chain.intents.length} 条，显示最近12条</small></div><p>常规局每月一项军议。不干预时主将在月末自行决断；军议与天下传闻均不等于出兵。协调或劝止消耗1次行动，拒令也消耗交涉行动。</p>${intents.length ? intents.map(intent => {
+      const consequences = chain.consequences.filter(c => c.intentId === intent.id);
+      const controls = intent.source === "autonomous" && intent.status === "proposed" && !intent.intervention && intent.turn === coreState.turn;
+      const coordinate = controls && previewLordIntervention(intent.id, "coordinate"), restrain = controls && previewLordIntervention(intent.id, "restrain");
+      return `<article class="lord-command-card" data-lord-intent="${escapeHtml(intent.id)}"><div><strong>第 ${intent.turn} 月 · ${escapeHtml(intent.ownerName)}</strong><b>${escapeHtml(chainStatus(intent.status))}</b></div><h4>${escapeHtml(intent.armyName || intent.ownerName)}：${escapeHtml(orderLabel(intent.task))}${escapeHtml(intent.targetName || "本镇驻地")}</h4><p>${escapeHtml(intent.reason || "朝廷军令请求")}</p><p>${escapeHtml(intent.responseReason || "尚无接令回执")}${intent.restraintResponse ? "；曾拒绝朝廷劝止" : ""}</p>${intent.orderId ? `<p>军务：${escapeHtml(intent.lastProgress || "已建立真实军令，等待军团结算")}</p>` : ""}${controls ? `<div class="lord-command-actions"><button type="button" data-lord-action="coordinate" data-intent-id="${escapeHtml(intent.id)}" ${coordinate.ok ? "" : "disabled"}>协调出兵 · 1行动 / ${coordinate.treasuryCost || 0}国库</button><button type="button" data-lord-action="restrain" data-intent-id="${escapeHtml(intent.id)}" ${restrain.ok ? "" : "disabled"}>劝止军议 · 1行动</button></div><small>${escapeHtml(coordinate.message)}</small>` : ""}<details><summary>军务与外交凭据（${intent.factIds?.length || 0}）</summary>${consequences.length ? consequences.map(c => `<p>第 ${c.turn} 月 · ${escapeHtml(c.attackerName)} → ${escapeHtml(c.defenderName)}：${escapeHtml({ "hostile-order": "敌对军令", battle: "野战", "siege-start": "建立包围", "siege-progress": "围城推进", occupation: "军事占领" }[c.kind] || c.kind)}；${c.responsibility === "court" ? "朝廷协调" : "诸侯自主"}${c.trustDelta ? `，对方对朝廷信任 ${c.trustDelta}` : ""}${c.promiseIds.length ? "；相关停战已按原约结算" : ""}。</p>`).join("") : "<p>尚无敌对军事事实；拒令与拟议本身不造成战果或违约。守备抵达以军令回执核验。</p>"}</details></article>`;
+    }).join("") : '<p class="empty-state">本局尚无可核验军议。旧档不补造历史军令，短局与周挑战沿用原定事件流程。</p>'}</section>`;
+  }
+
+  function openLordIntervention(intentId, kind) {
+    const preview = previewLordIntervention(intentId, kind);
+    if (!preview.ok) return;
+    window.XianEmperorGame.openUtilityModal({ title: kind === "coordinate" ? "协调诸侯军议" : "劝止诸侯军议", confirmText: "确认交涉", body: `<p>${escapeHtml(preview.message)}</p><p>接令后仍须真实行军与作战，不保证抵达或取胜。</p>${preview.risk ? '<label class="lord-breach-consent"><input id="lord-breach-consent" type="checkbox">我愿承担主动破坏现有停战的后果；仅在军团实际接令后记违约。</label>' : ""}`,
+      onConfirm: () => {
+        if (interveneLordIntent(intentId, kind, preview.risk && document.getElementById("lord-breach-consent")?.checked === true)) window.XianEmperorGame.closeUtilityModal();
+      } });
   }
 
   function metric(label, value, inverse = false) {
@@ -1053,6 +1138,8 @@
   }
 
   window.XianStrategyNetwork = Object.freeze({
+    previewLordIntervention,
+    interveneLordIntent,
     reconcilePromises,
     previewHostilities,
     previewContracts: text => {

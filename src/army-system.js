@@ -151,6 +151,8 @@
       siegeSequence: 0,
       militaryFacts: [],
       militaryFactsVersion: 1,
+      commandResponses: [],
+      commandResponsesVersion: 1,
       militaryFactsStartTurn: core.turn,
       ceasefireResponses: [],
       promiseAttempts: {},
@@ -179,6 +181,8 @@
       // Missing history remains missing: migration never reconstructs damage.
       militaryFacts: Array.isArray(current.militaryFacts) ? current.militaryFacts : [],
       militaryFactsVersion: 1,
+      commandResponses: Array.isArray(current.commandResponses) ? current.commandResponses : [],
+      commandResponsesVersion: 1,
       militaryFactsStartTurn: Number.isInteger(current.militaryFactsStartTurn) ? current.militaryFactsStartTurn : core.turn,
       ceasefireResponses: Array.isArray(current.ceasefireResponses) ? current.ceasefireResponses : [],
       promiseAttempts: { ...(current.promiseAttempts || {}) },
@@ -263,28 +267,48 @@
 
     if (!["attack", "support", "advance", "defend", "supply"].includes(primaryOrder)) return;
     const owners = lordIds.length ? lordIds : inferCourtOwner(text);
-    owners.forEach(owner => assignArmyOrder(owner, cityIds, primaryOrder, execution, text, core.turn, report.timestamp));
+    owners.forEach(owner => assignArmyOrder(owner, cityIds, primaryOrder, execution, text, core.turn, report.timestamp,
+      { requestId: `edict-request:${report.id || report.timestamp}:${owner}` }));
     trimCollections();
   }
 
-  function assignArmyOrder(owner, cityIds, task, execution, text, turn, timestamp) {
-    const army = selectArmy(owner, cityIds[0]);
+  function assignArmyOrder(owner, cityIds, task, execution, text, turn, timestamp, options = {}) {
+    const army = options.intent ? state.armies[options.intent.armyId] : selectArmy(owner, cityIds[0]);
+    const destination = cityIds.length ? cityIds[cityIds.length - 1] : army?.cityId;
+    const responseId = options.requestId ? `response:${options.requestId}` : null;
+    const existing = responseId && state.commandResponses.find(r => r.id === responseId);
+    if (existing) return state.orders.find(o => o.id === existing.orderId);
+    const request = options.intent || { id: options.requestId, owner, ownerName: ownerName(owner), turn, dueTurn: turn, task,
+      armyId: army?.id, armyName: army ? armyName(army) : `${ownerName(owner)}军团`, originCityId: army?.cityId,
+      targetCityId: destination, targetName: cityName(destination), targetOwner: readStrategyState()?.cities?.[destination]?.controller,
+      reason: shortText(text, 120) };
+    const respond = (status, reason, order) => {
+      if (!responseId) return;
+      state.commandResponses.push({ id: responseId, intentId: request.id, kind: "dispatch", authority: options.autonomous ? "lord" : "court",
+        turn, status, reason, request: { ...request }, armyId: army?.id, orderId: order?.id, order: order ? { ...order } : null });
+    };
     if (!army) {
       addLog(turn, "warning", `${ownerName(owner)}没有可执行诏令的完整军团。`);
+      respond("refused", "没有可执行的完整军团");
       return;
     }
-    const access = getCommandAccess(army, coreState, readStrategyState());
+    const access = options.autonomous ? { allowed: true } : getCommandAccess(army, window.XianEmperorGame?.getState?.() || coreState, readStrategyState());
     if (!access.allowed) {
       army.lastChange = access.message;
       addLog(turn, "warning", `${armyName(army)}未承接军令：${access.message}`);
+      respond("refused", access.message);
       return;
     }
-
-    const destination = cityIds.length ? cityIds[cityIds.length - 1] : army.cityId;
+    if (options.intent) {
+      const reason = window.XianLordIntentions.assess(options.intent, army, readStrategyState(), turn, state.orders);
+      const treaty = window.XianLordIntentions.ceasefires(options.intent, readStrategyState(), turn, state);
+      if (reason || (treaty.length && !options.acknowledgeBreach)) { respond("refused", reason || "存在有效停战，拒绝擅自开启敌对军令"); return; }
+    }
     const routeIds = destination !== army.cityId ? STRATEGY_API.findRoutePath(army.cityId, destination) : [];
     if (destination !== army.cityId && !routeIds.length) {
       army.lastChange = `诏令无法落实：${cityName(army.cityId)}至${cityName(destination)}没有可用军路`;
       addLog(turn, "warning", `${armyName(army)}未找到通往${cityName(destination)}的军路。`);
+      respond("refused", "没有可用军路");
       return;
     }
 
@@ -308,7 +332,7 @@
     }
 
     const order = {
-      id: `army-order-${Number(timestamp) || `${turn}-${++state.orderSequence}`}-${army.id}`,
+      id: options.intent ? `lord-order:${options.intent.id}` : `army-order-${Number(timestamp) || `${turn}-${++state.orderSequence}`}-${army.id}`,
       turn,
       armyId: army.id,
       owner,
@@ -321,9 +345,11 @@
       text: shortText(text, 120),
       status: routeIds.length ? "executing" : "arrived",
       arrivedTurn: routeIds.length ? null : turn,
+      ...(options.intent ? { sourceIntentId: options.intent.id, authority: options.autonomous ? "lord" : "court" } : {}),
     };
     army.currentOrderId = order.id;
     state.orders.unshift(order);
+    respond("accepted", options.autonomous ? "主将按本镇军议接令" : "军团已承接朝廷军令", order);
     recordHostility("hostile-order", order.id, turn, owner, order.targetOwner, { armyId: army.id, cityId: destination, sourceOrderId: order.id }, task === "attack");
 
     addLog(
@@ -587,6 +613,15 @@
   function simulateTurn(turn, core) {
     const key = window.XianEmperorGame?.getRandomKey?.("armies", state.gameCreatedAt, core) ?? state.gameCreatedAt;
     const rng = seededRandom(`${key}-${turn}-armies`);
+    // Plans are generated at the previous synchronous commit. Never backfill
+    // missing plans while replaying old months during save migration.
+    const chain = readStrategyState()?.commandChain;
+    for (const intent of chain?.intents || []) if (intent.source === "autonomous" && intent.turn === turn && intent.status === "proposed") {
+      const coreReceipt = intent.intervention?.receiptId && core.appliedReceipts?.includes(intent.intervention.receiptId);
+      if (coreReceipt && intent.intervention.kind === "coordinate") resolveLordIntent(intent.id, "coordinate");
+      const restrained = state.commandResponses.some(r => r.intentId === intent.id && r.status === "restrained");
+      if (!restrained) resolveLordIntent(intent.id, "autonomous");
+    }
     Object.values(state.armies).forEach(army => {
       if (army.status === "destroyed") return;
       if (["marching", "routing"].includes(army.status)) advanceArmy(army, turn, rng);
@@ -1562,7 +1597,43 @@
     return armies.length;
   }
 
+  function previewLordIntent(intentId, kind, acknowledgeBreach = false) {
+    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const intent = strategy?.commandChain?.intents?.find(i => i.id === intentId);
+    if (!intent || intent.source !== "autonomous" || intent.status !== "proposed" || intent.turn !== core?.turn || core.ended) return { ok: false, message: "军议已结算或不属本月。" };
+    const army = state?.armies?.[intent.armyId];
+    const access = getCommandAccess(army, core, strategy);
+    const risk = kind === "coordinate" ? window.XianLordIntentions.ceasefires(intent, strategy, core.turn, state) : [];
+    const refusal = !access.allowed ? access.message : kind === "coordinate" ? window.XianLordIntentions.assess(intent, army, strategy, core.turn, state.orders) : null;
+    return { ok: true, accepted: !refusal, reason: refusal || (kind === "restrain" ? "该镇愿接受暂缓军议" : "该军团具备接令条件"),
+      risk: risk.length > 0, needsAcknowledgement: risk.length > 0 && !acknowledgeBreach, armyName: army ? armyName(army) : intent.armyName };
+  }
+
+  function resolveLordIntent(intentId, kind) {
+    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const intent = strategy?.commandChain?.intents?.find(i => i.id === intentId);
+    if (!intent || intent.source !== "autonomous" || intent.status !== "proposed" || intent.turn !== core?.turn || core.ended) return false;
+    if (kind !== "autonomous" && (!intent.intervention || intent.intervention.kind !== kind || !core.appliedReceipts?.includes(intent.intervention.receiptId))) return false;
+    if (kind === "autonomous" && Number(core.monthlySettledTurn || 0) < intent.turn) return false;
+    const requestId = `${intent.id}:${kind}`, existing = state.commandResponses.find(r => r.id === `response:${requestId}`);
+    if (existing) return existing;
+    // Once a dispatch has been decided, a second path cannot issue it again.
+    if (state.commandResponses.some(r => r.intentId === intent.id && (r.status === "accepted" || r.status === "restrained" || (r.kind === "dispatch" && r.authority === "lord")))) return false;
+    if (kind === "restrain") {
+      const access = getCommandAccess(state.armies[intent.armyId], core, strategy);
+      state.commandResponses.push({ id: `response:${requestId}`, intentId, kind, turn: core.turn, armyId: intent.armyId,
+        status: access.allowed ? "restrained" : "refused", authority: "court", reason: access.allowed ? "接受朝廷劝止，本月军议作罢" : access.message, request: { ...intent } });
+    } else {
+      assignArmyOrder(intent.owner, [intent.targetCityId], intent.task, kind === "autonomous" ? 60 : 70, `${intent.ownerName}军议：${intent.reason}`, core.turn, 0,
+        { intent, requestId, autonomous: kind === "autonomous", acknowledgeBreach: kind === "coordinate" && intent.intervention.acknowledgeBreach === true });
+    }
+    saveState(); renderAll();
+    return state.commandResponses.find(r => r.id === `response:${requestId}`) || false;
+  }
+
   window.XianArmySystem = Object.freeze({
+    previewLordIntent,
+    resolveLordIntent,
     acceptPromiseMission: promise => {
       if (!state || !coreState || coreState.ended || !promise?.contract) return false;
       const existing = state.orders.find(item => item.sourcePromiseId === promise.id);

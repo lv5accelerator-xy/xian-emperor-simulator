@@ -1,4 +1,21 @@
 /* 天子蒙尘：献帝模拟器 v0.4.0 军略网络 */
+.strategy-brief-content .lord-intent-brief{grid-column:1/-1;text-align:left}
+.lord-command-chain{margin-bottom:1.4rem}
+.lord-command-chain p,.lord-command-card small{line-height:1.65;overflow-wrap:anywhere}
+.lord-command-card{border:1px solid rgba(190,148,72,.4);border-radius:10px;padding:1rem;margin:.75rem 0;background:#1e2420;color:#e6d9bd}
+.game-shell.focus-view .strategy-network-brief:has(.lord-intent-brief){display:block!important}
+.game-shell.focus-view .strategy-network-brief .strategy-brief-head,.game-shell.focus-view .strategy-network-brief [data-brief-tab]:not(.lord-intent-brief){display:none}
+.game-shell.focus-view .strategy-network-brief .strategy-brief-content{grid-template-columns:1fr}
+body.strategy-network-open #modal-backdrop{z-index:1400}
+body.strategy-network-open #toast-container{z-index:1450}
+.lord-command-card>div:first-child{display:flex;gap:.75rem;justify-content:space-between;flex-wrap:wrap}
+.lord-command-card h4{margin:.65rem 0}
+.lord-command-actions{display:flex;flex-wrap:wrap;gap:.6rem;margin:.75rem 0}
+.lord-command-actions button{min-height:44px;padding:.55rem .8rem;white-space:normal}
+.lord-command-card summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
+.lord-breach-consent{display:flex;gap:.65rem;align-items:flex-start;line-height:1.7;padding:.75rem 0}
+.lord-breach-consent input{min-width:22px;min-height:22px}
+@media(max-width:600px){.lord-command-card{padding:.8rem}.lord-command-actions button{flex:1 1 100%}.lord-command-chain .strategy-section-head{align-items:flex-start;flex-direction:column;gap:.35rem}}
 .strategy-network-brief{margin-top:1rem;padding:1rem 1.1rem}
 .strategy-brief-head,.strategy-section-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.85rem}
 .strategy-brief-head h2,.strategy-section-head h3{margin:.1rem 0 0}
