@@ -30,3 +30,10 @@
 - [最终验证](VALIDATION_V225.md)
 - [平衡样本与失败记录](BALANCE_V225.md)
 - [交接](HANDOFF_V225.md)
+
+## v2.29 共奉有据
+
+- [外交终局规则](RULES_V229.md)
+- [固定种子对照](BALANCE_V229.md)
+- [回归记录](VALIDATION_V229.md)
+- [施工交接](HANDOFF_V229.md)
