@@ -13,3 +13,9 @@
 新增回归`alliance-coalition-regression.js`、`alliance-diplomacy-regression.js`、`alliance-persistence-regression.js`；原套件继续运行。新适配器加载新增盟约模型，不通过改变旧结论规避回归。
 
 后续继续扩展时，先补失败用例，保留普通局实际预算、拒绝、战败与低资源结果。不得通过改固定种子或增加战力使联军必胜。未到场军团、已经覆灭军团、过期或破裂的盟约不计入协战；需要扩大外交链时继续冻结行为当时的身份与根行动。
+
+签约停止旧令时核对当前目标控制方，不能拿历史军令的旧主人替代现在的对手。援军与盟约警讯须双向去重，不能只处理“援军先发生”的顺序。共同任务关闭后必须在同一提交内更新军议状态，不能等下一次保存补算。
+
+复现工具为`alliance-coalition-balance.cjs`与`browser-alliance-coalition.cjs`。自然对照按种子分层覆盖双边/三边盟约，两种主动策略采用相同成员和目标规则；可选复用只读旧版观察，所有新版样本必须在最终冻结代码上运行。浏览器需要现有Chrome与Playwright，可用`PLAYWRIGHT_MODULE`指定模块位置；分别设置`COUNCIL_BROWSER_URL`、`COUNCIL_BROWSER_WIDTHS`、`COUNCIL_BROWSER_OUTPUT`核验本地或线上。
+
+本矩阵背盟组虽产生信誉损失、拒盟与盟方警惕，15局仍都得到国家数值驱动的“诸侯共奉”。以后若要让外交结局反映守约历史，应先定义结局条件、补失败样本和共同种子对照；本轮不把该标签当作联盟稳定或真实胜率的证明。
