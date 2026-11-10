@@ -1,6 +1,6 @@
 "use strict";
 const assert = require("node:assert/strict");
-const { plain } = require("./helpers/game-harness");
+const { harness, plain } = require("./helpers/game-harness");
 const { parallelFixture } = require("./parallel-council-regression");
 const { resume, month, CORE, ARMY, STRATEGY } = require("./lord-command-chain-regression");
 const treatyText = "令袁绍与公孙瓒结盟，共讨刘表，合攻晋阳";
@@ -18,6 +18,14 @@ const pact = h => plain(h.window.XianStrategyNetwork.getState().promises.find(p 
 const plans = h => plain(h.window.XianStrategyNetwork.getState().allianceDiplomacy?.plans || []);
 function seal(h, text = treatyText) { h.edict(text); return pact(h); }
 const cases = {
+  currentIdentities() {
+    const h=harness();h.loadEngine();h.api.startNewGame("standard","yankang_220",{randomSeed:226001});h.decide(0);
+    const ids=["yuan_shao","gongsun_zan"],names=ids.map(id=>h.window.XianCharacterAvailability.faction(id,h.api.getState()).name),text=`令${names.join("与")}结盟`;
+    assert.ok(!names.includes("袁绍"));
+    const preview=h.window.XianStrategyNetwork.previewContracts(text).find(p=>p.type==="alliance");
+    assert.deepEqual(plain(preview.partyNames),names,"220 treaty names must use current faction institutions rather than resurrect former rulers");
+    seal(h,text);assert.deepEqual(pact(h).contract.partyNames,names);assert.deepEqual(pact(h).contract.receipts.filter(r=>r.kind==="consent").map(r=>r.actorName),names);
+  },
   parsing() {
     const h = alliedFixture(), r = h.window.XianEdictRules.analyze(treatyText);
     assert.equal(r.blocked, false); assert.ok(r.effectiveText.includes("合攻晋阳"));
