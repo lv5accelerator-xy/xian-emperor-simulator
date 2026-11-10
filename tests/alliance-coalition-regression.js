@@ -25,6 +25,7 @@ const cases = {
     const preview=h.window.XianStrategyNetwork.previewContracts(text).find(p=>p.type==="alliance");
     assert.deepEqual(plain(preview.partyNames),names,"220 treaty names must use current faction institutions rather than resurrect former rulers");
     seal(h,text);assert.deepEqual(pact(h).contract.partyNames,names);assert.deepEqual(pact(h).contract.receipts.filter(r=>r.kind==="consent").map(r=>r.actorName),names);
+    const brief=h.node("strategy-brief-content");h.api.commit("current-alliance-example");assert.ok(brief.innerHTML.includes(`令${names.join("与")}结盟`),"current scenario guidance must not recommend unavailable former rulers");
   },
   parsing() {
     const h = alliedFixture(), r = h.window.XianEdictRules.analyze(treatyText);

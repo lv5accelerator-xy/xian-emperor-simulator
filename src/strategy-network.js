@@ -1025,7 +1025,7 @@
     if (current.length) content.innerHTML += `<button type="button" class="lord-intent-brief" data-brief-tab="strategies"><span>本月并行军议 · ${current.length} 镇 · ${current.filter(i=>i.status==="proposed").length} 项待决</span><strong>${current.map(i=>`${escapeHtml(i.ownerName)}：${escapeHtml(orderLabel(i.task))}${escapeHtml(i.targetName)}`).join("；")}</strong><small>每次协调或劝止使用1次行动；未干预军议月末按固定次序决断，旧令与已承接援军优先。查看全部军议、冲突与外交因果 →</small></button>`;
     const pacts = state.promises.filter(p => window.XianAllianceDiplomacy.formal(p) && p.status === "active");
     const joint = state.allianceDiplomacy?.plans.filter(p => p.turn === coreState?.turn) || [];
-    content.innerHTML += `<button type="button" class="alliance-brief" data-brief-tab="strategies"><span>诸侯结盟与联军</span><strong>${pacts.length ? `${pacts.length}份有效盟约 · ${joint.length}项本月共同军议` : "拟旨邀请二至三镇结盟"}</strong><small>例：令袁绍与公孙瓒结盟，共讨刘表，合攻晋阳。各镇须同意，再分别接令；查看联军与背盟后果 →</small></button>`;
+    content.innerHTML += `<button type="button" class="alliance-brief" data-brief-tab="strategies"><span>诸侯结盟与联军</span><strong>${pacts.length ? `${pacts.length}份有效盟约 · ${joint.length}项本月共同军议` : "拟旨邀请二至三镇结盟"}</strong><small>例：令${escapeHtml(controllerName("yuan_shao"))}与${escapeHtml(controllerName("gongsun_zan"))}结盟，共讨${escapeHtml(controllerName("liu_biao"))}，合攻晋阳。各镇须同意，再分别接令；查看联军与背盟后果 →</small></button>`;
     content.querySelectorAll("[data-brief-tab]").forEach(button => button.addEventListener("click", () => { activeTab = button.dataset.briefTab; openOverlay(); }));
   }
 

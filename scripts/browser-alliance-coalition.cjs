@@ -4,6 +4,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { alliedFixture, seal, treatyText } = require("../tests/alliance-coalition-regression");
 
 const { STRATEGY } = require("../tests/lord-command-chain-regression");
+const { harness } = require("../tests/helpers/game-harness");
 const root = path.resolve(__dirname, ".."), out = process.env.COUNCIL_BROWSER_OUTPUT || path.resolve(root, "../browser-alliance-coalition");
 fs.mkdirSync(out, { recursive: true });
 function writeFixture(name, h) {
@@ -13,6 +14,8 @@ function writeFixture(name, h) {
 const invitationFile = writeFixture("invitation",alliedFixture());
 const betrayal = alliedFixture(({s,a})=>{s.cities.luoyang.controller="gongsun_zan";Object.assign(a.armies.yuan_main,{cityId:"xudu",originCityId:"xudu",targetCityId:"xudu"});}); seal(betrayal,"令袁绍与公孙瓒结盟"); const betrayalFile = writeFixture("before-betrayal",betrayal);
 const refused=alliedFixture(({s})=>s.strategies.gongsun_zan.trust=0);seal(refused);const refusalFile=writeFixture("refused",refused);
+const current220=harness();current220.loadEngine();current220.api.startNewGame("standard","yankang_220",{randomSeed:226001});current220.decide(0);
+const current220Names=["yuan_shao","gongsun_zan"].map(id=>current220.window.XianCharacterAvailability.faction(id,current220.api.getState()).name);current220.edict(`令${current220Names.join("与")}结盟`);const current220File=writeFixture("current-220-alliance",current220);
 const server = http.createServer((req, res) => {
   const file = path.resolve(root, "." + decodeURIComponent(new URL(req.url, "http://localhost").pathname).replace(/\/$/, "/index.html"));
   if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
@@ -107,8 +110,10 @@ const results = [];
       await importFile(refusalFile);await openChain(false);await tap(page.locator("[data-strategy-tab='promises']"));
       assert.match(await page.locator(".promise-card").first().innerText(),/未成盟/);assert.match(await page.locator(".promise-card").first().innerText(),/公孙瓒：拒绝/);
       assert.equal((await army()).orders.length,0);await page.screenshot({path:path.join(out,`refused-alliance-${width}.png`)});
+      await tap(page.locator("#strategy-network-close"));await importFile(current220File);assert.ok((await core()).year>=220);assert.ok((await page.locator(".alliance-brief").innerText()).includes(current220Names[0]));
+      await openChain(false);await tap(page.locator("[data-strategy-tab='promises']"));const institutionalText=await page.locator(".promise-card").first().innerText();for(const name of current220Names)assert.ok(institutionalText.includes(name));assert.doesNotMatch(institutionalText,/袁绍|公孙瓒/);await page.screenshot({path:path.join(out,`institutional-alliance-220-${width}.png`)});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);assert.deepEqual(errors,[]);assert.deepEqual(httpFailures,[]);
-      results.push({channel,width,actualInvitation:true,readOnlyPreview:true,twoActionBudget:true,individualOrders:true,singleSiegeTick:true,physicalContributions:true,actualMapBetrayal:true,refusal:true,actualFileExportImport:true,reload:true,pageErrors:errors,httpFailures});
+      results.push({channel,width,current220Identities:true,actualInvitation:true,readOnlyPreview:true,twoActionBudget:true,individualOrders:true,singleSiegeTick:true,physicalContributions:true,actualMapBetrayal:true,refusal:true,actualFileExportImport:true,reload:true,pageErrors:errors,httpFailures});
       fs.writeFileSync(path.join(out,"summary.json"),JSON.stringify(results,null,2));console.log(`PASS alliance browser ${width}`);
     }catch(error){console.error(error);await page.screenshot({path:path.join(out,`failure-${width}.png`),timeout:10000});throw error;}finally{await page.close();}
   }
