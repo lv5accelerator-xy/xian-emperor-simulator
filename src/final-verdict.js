@@ -96,7 +96,8 @@
     if (game.hidden.peopleStability >= 65 && game.stats.prestige >= 62) return "仁";
     if (game.stats.authority >= 62 && game.stats.officials >= 58) return "昭";
     if (game.hidden.loyalNetwork >= 58 && game.stats.authority >= 48) return "烈";
-    if (dimensions[0]?.id === "balance" && game.hidden.externalBalance >= 55) return "和";
+    if (dimensions[0]?.id === "balance" && game.hidden.externalBalance >= 55
+      && (!game.diplomaticOutcome || game.diplomaticOutcome.eligibility?.mediation?.eligible === true)) return "和";
     if (dimensions[0]?.id === "caution" && game.stats.security >= 58) return "安";
     return failed ? "怀" : "定";
   }

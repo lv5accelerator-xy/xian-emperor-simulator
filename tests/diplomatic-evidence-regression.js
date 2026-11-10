@@ -6,7 +6,7 @@ const { alliedFixture, seal } = require("./alliance-coalition-regression");
 const { resume, month, CORE, ARMY, STRATEGY } = require("./lord-command-chain-regression");
 const view = h => plain(h.window.XianDiplomaticEndings.preview(h.api.getState()));
 let groups = 0;
-function check(name, run) { run(); groups++; console.log(`PASS diplomatic evidence ${name}`); }
+function check(name, run) { if (process.argv[2] && !name.includes(process.argv[2])) return; run(); groups++; console.log(`PASS diplomatic evidence ${name}`); }
 check("paper, lone attacker and remote supporter earn no joint victory", () => {
   for (const mode of ["paper", "partial", "remote"]) {
     const h = alliedFixture(({a}) => { if (mode === "partial") a.armies.youzhou_cavalry.supply = 5;
@@ -121,5 +121,14 @@ check("preview ignores foreign stores and escapes source identities", () => {
   const v = view(h); v.supporters[0].name = '<img src=x onerror="boom">'; v.sourceEvidence.pactIds.push("<script>boom</script>");
   const html = h.window.XianDiplomaticEndings.render(v); assert.ok(!html.includes("<img")); assert.ok(!html.includes("<script>"));
   assert.deepEqual(h.stores(), before);
+});
+check("epithet cannot praise harmony over unresolved court betrayal", () => {
+  const h = prepare("betray"); h.api.endTurn(); h.load("final-verdict");
+  const game = { stats: { authority: 10, security: 40, officials: 10, prestige: 10 }, hidden: { externalBalance: 90, peopleStability: 20, loyalNetwork: 10 },
+    diplomaticOutcome: plain(h.api.getState().diplomaticOutcome) };
+  const dimensions = [{ id: "balance", score: 40 }];
+  assert.notEqual(h.window.XianFinalVerdict.choosePosthumousName(game, dimensions, false), "和", "a low score cap alone cannot stop harmony from outranking weaker dimensions");
+  delete game.diplomaticOutcome;
+  assert.equal(h.window.XianFinalVerdict.choosePosthumousName(game, dimensions, false), "和", "legacy verdict grading stays unchanged");
 });
 console.log(`Diplomatic evidence passed: ${groups} groups.`);
