@@ -39,7 +39,7 @@ const coreFixture = () => ({
 
 // Exercise the same parser and outcome builder used by the core and confirmation page.
 const rules = harness();
-rules.load("data", "strategy-network-data", "edict-rules", "game", "monthly-report", "strategy-network", "decree-confirmation", "world-marks");
+rules.load("data", "strategy-network-data", "edict-rules", "game", "monthly-report", "alliance-diplomacy", "strategy-network", "decree-confirmation", "world-marks");
 const game = rules.window.XianEmperorGame;
 const core = coreFixture();
 assert.equal(game.previewEdict("不得练兵，不得任命曹操。", core).ok, false, "negated orders must not become executable positive policies");

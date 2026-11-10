@@ -117,7 +117,7 @@
       lordIds,
       orders,
       promises,
-      contracts: API.previewContracts?.(effectiveText) || [],
+      contracts: API.previewContracts?.(effectiveText, execution.mid) || [],
       primaryOrder,
       routeIds,
       route,
@@ -154,8 +154,8 @@
       <section class="decree-confirmation-promises">
         <div><span class="section-kicker">外交承诺</span><h3>${promiseNames.length ? `${promiseNames.length} 项` : "未建立承诺"}</h3></div>
         ${promiseNames.length ? `<ul>${promiseNames.map(name => `<li>${escapeHtml(name)}</li>`).join("")}</ul>` : "<p>写明奉表、贡赋、援军、结盟、停战、互市、质子或官爵，可建立有期限的履约记录。</p>"}
-        ${(analysis.contracts || []).map(contract => `<p><strong>${escapeHtml(lordDef(contract.responsible)?.name || contract.responsible)}</strong> → 汉廷：${escapeHtml(contract.condition)}；${contract.type === "tribute" ? `约定 ${contract.quantity} 钱粮（未写数量默认 6），从责任方治所粮秣扣除，分月到账` : contract.type === "military_aid" ? `目标 ${escapeHtml(cityDef(contract.targetCityId)?.name || contract.targetCityId)}（未写地点默认许都），须有军团承接并抵达` : `双方 ${contract.parties.map(id => escapeHtml(lordDef(id)?.name || id)).join("、")}，敌对军令或战报将判违约`}；第 ${contract.startTurn}—${contract.deadlineTurn} 月。</p>`).join("")}
-        ${analysis.promises.some(type => !["tribute", "military_aid", "ceasefire"].includes(type)) ? "<p>其他承诺沿用信任与准备度推演，仅影响关系和地方忠诚；不表示钱粮、军团或质子已经实际交付。</p>" : ""}
+        ${(analysis.contracts || []).map(renderContractPreview).join("")}
+        ${analysis.promises.some(type => !["tribute", "military_aid", "ceasefire", "alliance"].includes(type)) ? "<p>其他承诺沿用信任与准备度推演，仅影响关系和地方忠诚；不表示钱粮、军团或质子已经实际交付。</p>" : ""}
       </section>
       ${analysis.warnings.length ? `<section class="decree-confirmation-warnings"><strong>复核提醒</strong>${analysis.warnings.map(text => `<p>${escapeHtml(text)}</p>`).join("")}</section>` : ""}
       <p class="decree-confirmation-note">最终执行度仍包含地方阻力与少量随机波动；军团命令将在圣旨正式写入御前记录后生效。</p>`;
@@ -233,6 +233,14 @@
 
   function promiseLabel(id) {
     return DATA.promiseRules.find(rule => rule.id === id)?.label || id;
+  }
+
+  function renderContractPreview(contract) {
+    if (contract.type === "alliance") return `<p><strong>${contract.partyNames.map(escapeHtml).join(" ↔ ") || "尚未列明盟方"}</strong>：第${contract.startTurn}—${contract.deadlineTurn}月互不进攻。${contract.targetCityId ? `共同${contract.operation === "defend" ? "防守" : "进攻"}${escapeHtml(contract.targetName)}；目标控制方不属于签约成员。` : "未约定共同军事目标。"}${contract.invalid ? escapeHtml(contract.invalid) : "须各方同意；签约不会直接产生军令。"}</p><ul>${contract.receipts.map(r=>`<li>${escapeHtml(r.actorName)}：${r.status === "accepted" ? "预计同意" : "预计拒绝"}，${escapeHtml(r.reason)}</li>`).join("")}</ul><p>按本次执行度估算，接旨时复核。成盟后可在“诸侯结盟与联军”协调一次共同军议；各镇仍单独接令、行军和协战。</p>`;
+    const detail = contract.type === "tribute" ? `约定${contract.quantity}钱粮，从责任方治所粮秣扣除，分月到账`
+      : contract.type === "military_aid" ? `目标${cityDef(contract.targetCityId)?.name || contract.targetCityId}，须有军团承接并抵达`
+        : `双方${contract.parties.map(id=>lordDef(id)?.name || id).join("、")}，敌对军令或战报将判违约`;
+    return `<p><strong>${escapeHtml(lordDef(contract.responsible)?.name || contract.responsible)}</strong> → 汉廷：${escapeHtml(contract.condition)}；${escapeHtml(detail)}；第${contract.startTurn}—${contract.deadlineTurn}月。</p>`;
   }
 
   function cityDef(id) { return DATA.cities.find(city => city.id === id); }

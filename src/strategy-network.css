@@ -1,5 +1,5 @@
 /* 天子蒙尘：献帝模拟器 v0.4.0 军略网络 */
-.strategy-brief-content .lord-intent-brief{grid-column:1/-1;text-align:left}
+.strategy-brief-content .lord-intent-brief,.strategy-brief-content .alliance-brief{grid-column:1/-1;text-align:left}
 .lord-command-chain{margin-bottom:1.4rem}
 .council-ledger{border:1px solid rgba(190,148,72,.35);border-radius:10px;padding:.7rem;margin:.8rem 0;overflow-wrap:anywhere}
 .council-ledger>summary{cursor:pointer;min-height:44px;display:flex;align-items:center}
@@ -7,8 +7,8 @@
 .council-ledger h4{margin:1rem 0 .5rem}.council-ledger small{line-height:1.6}
 .lord-command-chain p,.lord-command-card small{line-height:1.65;overflow-wrap:anywhere}
 .lord-command-card{border:1px solid rgba(190,148,72,.4);border-radius:10px;padding:1rem;margin:.75rem 0;background:#1e2420;color:#e6d9bd}
-.game-shell.focus-view .strategy-network-brief:has(.lord-intent-brief){display:block!important}
-.game-shell.focus-view .strategy-network-brief .strategy-brief-head,.game-shell.focus-view .strategy-network-brief [data-brief-tab]:not(.lord-intent-brief){display:none}
+.game-shell.focus-view .strategy-network-brief:has(.lord-intent-brief,.alliance-brief){display:block!important}
+.game-shell.focus-view .strategy-network-brief .strategy-brief-head,.game-shell.focus-view .strategy-network-brief [data-brief-tab]:not(.lord-intent-brief):not(.alliance-brief){display:none}
 .game-shell.focus-view .strategy-network-brief .strategy-brief-content{grid-template-columns:1fr}
 body.strategy-network-open #modal-backdrop{z-index:1400}
 body.strategy-network-open #toast-container{z-index:1450}
@@ -111,3 +111,5 @@ body.strategy-network-open{overflow:hidden}
   .strategy-summary{grid-template-columns:1fr 1fr}
 }
 @media(max-width:460px){.strategy-summary{grid-template-columns:1fr}.strategy-network-tabs{padding:.55rem .7rem}}
+
+.alliance-desk{margin-bottom:1.5rem;min-width:0;overflow-wrap:anywhere}.alliance-desk>p,.alliance-desk small{line-height:1.7}.alliance-consequences{padding:.8rem;border:1px solid #786441;border-radius:10px}.alliance-consequences summary{cursor:pointer;min-height:44px}.alliance-brief{min-width:0;overflow-wrap:anywhere}.coalition-card p{margin:.6rem 0}
