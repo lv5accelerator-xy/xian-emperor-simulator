@@ -124,7 +124,7 @@ function harness(stores = {}, ambientRandom = .99) {
     // Dynamic UI panels are absent until their modules install them.
     const staticIds = new Set([...fs.readFileSync(path.join(root, "index.html"), "utf8").matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
     document.getElementById = id => nodes.has(id) || staticIds.has(id) ? node(id) : null;
-    load("world-data", "strategy-network-data", "army-data", "campaign-evolution-data", "world-system", "lord-intentions", "strategy-network", "army-system", "court-politics", "campaign-evolution");
+    load("world-data", "strategy-network-data", "army-data", "campaign-evolution-data", "world-system", "lord-intentions", "alliance-diplomacy", "strategy-network", "army-system", "court-politics", "campaign-evolution");
     listeners.get("DOMContentLoaded").slice(initial).forEach(handler => handler()); flush();
   };
   const act = (id, fields = {}) => {

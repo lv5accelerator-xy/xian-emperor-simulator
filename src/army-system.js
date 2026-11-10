@@ -83,6 +83,7 @@
 
     state = migrateState(loaded, core);
     strategyDirty = false;
+    acceptAlliancePeace(core);
     applyPendingMapCommands(core);
     processNewReports(core);
     processElapsedTurns(core);
@@ -179,7 +180,7 @@
       gameCreatedAt: core.createdAt,
       armies: { ...(current.armies || {}) },
       orders: Array.isArray(current.orders) ? current.orders : [],
-      orderSequence: Number(current.orderSequence || current.orders?.length || 0),
+      orderSequence: Number.isFinite(current.orderSequence) ? current.orderSequence : Number(current.orders?.length || 0),
       siegeSequence: Number(current.siegeSequence || 0),
       // This ledger is retained for the whole game, unlike display-only reports.
       // Missing history remains missing: migration never reconstructs damage.
@@ -270,6 +271,7 @@
     const orders = STRATEGY_API.detectOrders(text);
     const primaryOrder = choosePrimaryOrder(orders);
     const execution = extractExecution(report.text || "");
+    if (window.XianAllianceDiplomacy.explicit(text)) return;
 
     if (primaryOrder === "ceasefire") {
       const owners = lordIds.length > 1 ? lordIds.slice(0, 2) : [...lordIds, "court"];
@@ -320,7 +322,8 @@
     if (options.intent) {
       const reason = window.XianLordIntentions.assess(options.intent, army, readStrategyState(), turn, state.orders);
       const treaty = window.XianLordIntentions.ceasefires(options.intent, readStrategyState(), turn, state);
-      if (reason || (treaty.length && !options.acknowledgeBreach)) { respond("refused", reason || "存在有效停战，拒绝擅自开启敌对军令"); return; }
+      const ownBetrayal = options.autonomous && window.XianLordIntentions.canBetray(options.intent, readStrategyState()) && treaty.every(window.XianAllianceDiplomacy.formal);
+      if (reason || (treaty.length && !options.acknowledgeBreach && !ownBetrayal)) { respond("refused", reason || "存在有效停战或盟约，拒绝擅自开启敌对军令"); return; }
     }
     const routeIds = destination !== army.cityId ? STRATEGY_API.findRoutePath(army.cityId, destination) : [];
     if (destination !== army.cityId && !routeIds.length) {
@@ -366,6 +369,7 @@
       arrivedTurn: routeIds.length ? null : turn,
       ...(options.intent ? { sourceIntentId: options.intent.id, authority: options.autonomous ? "lord" : "court" } : {}),
       dispatchPriority: options.intent?.priority || 0,
+      ...(options.intent?.sourceAllianceId ? { sourceAllianceId: options.intent.sourceAllianceId, sourceCoalitionPlanId: options.intent.sourceCoalitionPlanId, coalitionRole: options.intent.coalitionRole } : {}),
     };
     army.currentOrderId = order.id;
     state.orders.unshift(order);
@@ -439,6 +443,8 @@
       return sum + (/栈道|山道|关道|远道/.test(def?.type || "") ? 8 : /水路/.test(def?.type || "") ? 6 : 5) + blockedCost + weatherCost;
     }, task === "supply" ? 2 : 0);
     const warnings = [];
+    const commitment = state.orders.find(o => o.id === army.currentOrderId && o.sourceAllianceId);
+    if (commitment && (commitment.arrivedTurn == null || Object.values(state.sieges).some(s=>s.status === "active" && s.cityId === army.targetCityId))) warnings.push("主动撤换未完成的共同军令会背盟，降低守约信誉；朝廷授意还会影响盟方信任");
     if (treasury < 25) warnings.push("国库不足会削弱军令执行与沿途转运");
     if (factionTension >= 72) warnings.push("朝中派系张力过高，军令可能遭遇封驳");
     if (routeStates.some(route => Number(route.blockadedUntil || 0) >= Number(coreState.turn || 0))) warnings.push("沿途存在道路封锁，军团可能停滞");
@@ -448,11 +454,11 @@
     if (execution < 52) warnings.push("诏令执行度偏低，军团战力会受影响");
     const targetOwner = strategyState?.cities?.[targetCityId]?.controller || null;
     const ceasefireBreaches = task === "attack" ? (STRATEGY_API.getState()?.promises || []).filter(promise =>
-      promise.type === "ceasefire" && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
+      (promise.type === "ceasefire" || window.XianAllianceDiplomacy.formal(promise)) && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
       && promise.contract?.parties?.includes(army.owner) && promise.contract.parties.includes(targetOwner) && army.owner !== targetOwner).map(promise => promise.id) : [];
-    if (ceasefireBreaches.length) warnings.push(`主动违约：此攻击军令将违背 ${ceasefireBreaches.length} 份当前停战约定`);
+    if (ceasefireBreaches.length) warnings.push(`主动违约：此攻击军令将违背 ${ceasefireBreaches.length} 份当前停战或盟约`);
     const ceasefireRisks = task === "attack" ? (STRATEGY_API.getState()?.promises || []).filter(promise =>
-      promise.type === "ceasefire" && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
+      (promise.type === "ceasefire" || window.XianAllianceDiplomacy.formal(promise)) && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
       && promise.contract?.parties?.includes(army.owner) && attackTargetOwners(army.owner, targetCityId).some(owner => promise.contract.parties.includes(owner))
       && !ceasefireBreaches.includes(promise.id)).map(promise => promise.id) : [];
     if (ceasefireRisks.length) warnings.push("停战风险：目的地存在约定对方的野战军，实际交战将构成违约");
@@ -521,9 +527,18 @@
   }
 
   function applyPendingMapCommands(core) {
-    for (const command of [...state.pendingMapCommands]) {
+    const rank = id => core.appliedReceipts?.indexOf(id) ?? -1;
+    for (const command of [...state.pendingMapCommands].sort((a,b) => rank(a.receiptId) - rank(b.receiptId))) {
       state.pendingMapCommands = state.pendingMapCommands.filter(c => c.id !== command.id);
       if (!core.appliedReceipts?.includes(command.receiptId) || state.commandResponses.some(r => r.id === `response:${command.id}`)) continue;
+      const strategy = readStrategyState();
+      const earlier = [...(strategy?.commandChain?.intents || []), ...(strategy?.allianceDiplomacy?.plans || []).map(p => ({ ...p, coalition: true }))]
+        .filter(p => p.intervention && rank(p.intervention.receiptId) >= 0 && rank(p.intervention.receiptId) < rank(command.receiptId))
+        .sort((a,b) => rank(a.intervention.receiptId) - rank(b.intervention.receiptId));
+      for (const p of earlier) {
+        if (p.coalition) resolveCoalitionPlan(p.id, p.intervention.kind);
+        else resolveLordIntent(p.id, p.intervention.kind);
+      }
       const army = state.armies[command.armyId], preview = command.preview;
       const request = { id: command.id, source: "map", turn: core.turn, dueTurn: core.turn, owner: army?.owner, ownerName: ownerName(army?.owner), armyId: command.armyId, armyName: preview.armyName,
         task: command.task, originCityId: preview.originCityId, targetCityId: command.targetCityId, targetName: preview.targetName, targetOwner: preview.targetOwner, reason: "御前舆图军令" };
@@ -626,6 +641,36 @@
     addLog(turn, "ceasefire", `${stopped}支军团已接受停战并停止双方进攻。${rejected.length ? rejected.map(item => `${item.armyId}未接受：${item.reason}`).join("；") : stopped ? "" : "当前无须停止的双方进攻军团；这不代表所有外镇已接受停战。"}`);
   }
 
+  function acceptAlliancePeace(core) {
+    state.allianceResponses ||= [];
+    for (const pact of readStrategyState()?.promises || []) {
+      if (!window.XianAllianceDiplomacy.active(pact, core.turn) || state.allianceResponses.some(r => r.pactId === pact.id)) continue;
+      const stopped = [];
+      for (const army of Object.values(state.armies)) {
+        if (!pact.contract.parties.includes(army.owner) || army.status === "destroyed" || !["attack","siege"].includes(army.task)) continue;
+        const order = state.orders.find(o => o.id === army.currentOrderId);
+        if (!order || !pact.contract.initialOrderIds.includes(order.id) || !pact.contract.parties.includes(readStrategyState()?.cities?.[army.targetCityId]?.controller)) continue;
+        liftArmySieges(army.id, core.turn, "各盟方同意停战，解除旧城围");
+        order.status = "superseded"; order.stoppedTurn = core.turn; order.closedReason = "alliance-consent";
+        Object.assign(army, { routeIds: [], routeIndex: 0, currentRouteId: null, currentOrderId: null, targetCityId: army.cityId, task: "idle", status: "recovering", eta: 0, lastChange: "盟约各方已同意，停止签约前的双方进攻" });
+        stopped.push(order.id);
+      }
+      state.allianceResponses.push({ id: `alliance-peace:${pact.id}`, pactId: pact.id, turn: core.turn, parties: [...pact.contract.parties], stoppedOrderIds: stopped });
+    }
+  }
+
+  function releaseAllianceOrders(pactId, reason) {
+    if (!state) return false;
+    for (const army of Object.values(state.armies)) {
+      const order = state.orders.find(o => o.id === army.currentOrderId && o.sourceAllianceId === pactId);
+      if (!order || ["failed","superseded"].includes(order.status) || !["marching","engaged","besieging"].includes(army.status)) continue;
+      liftArmySieges(army.id, coreState.turn, reason);
+      order.status = "failed"; order.closedReason = "alliance-ended"; order.failedTurn = coreState.turn;
+      Object.assign(army, { task: "idle", status: "recovering", targetCityId: army.cityId, routeIds: [], routeIndex: 0, currentRouteId: null, currentOrderId: null, eta: 0, lastChange: reason });
+    }
+    saveState(); return true;
+  }
+
   function validSiegeArmy(siege, army) {
     return Boolean(army && army.troops >= 500 && army.owner === siege.attackerOwner && army.status === "besieging"
       && army.task === "siege" && army.cityId === siege.cityId && army.targetCityId === siege.cityId
@@ -674,6 +719,7 @@
     const order = state.orders.find(o => o.id === details.sourceOrderId);
     state.militaryFacts.push({ id, kind, source, turn, attackerOwner, defenderOwner, authority: order?.authority || (order ? "court" : undefined),
       attackerName: ownerName(attackerOwner), defenderName: ownerName(defenderOwner),
+      allianceWitnesses: window.XianAllianceDiplomacy.witnesses(readStrategyState(), turn, attackerOwner, defenderOwner),
       aidWitnesses: details.aidWitnesses || snapshotAidWitnesses(turn, attackerOwner, defenderOwner, details), ...details });
   }
 
@@ -699,7 +745,11 @@
     const old = activeArmyOrder(army);
     if (!old) return;
     if (!old.legacyTask) { old.status = "superseded"; old.stoppedTurn = turn; }
-    recordCommandConflict("replacement", requestId, { turn, armyId: army.id, previousOrderId: old.id, decision: "replaced", reason: "朝廷明确撤换旧军令，旧任务不再继续" });
+    const committedSiege = Object.values(state.sieges).some(s => s.status === "active" && s.cityId === army.targetCityId
+      && state.orders.find(o => o.id === state.armies[s.attackerArmyId]?.currentOrderId)?.sourceCoalitionPlanId === old.sourceCoalitionPlanId);
+    recordCommandConflict("replacement", requestId, { turn, armyId: army.id, owner: army.owner, authority: "court", previousOrderId: old.id,
+      previousArmyStatus: army.status, previousTask: army.task, unfulfilledCoalition: Boolean(old.sourceCoalitionPlanId && (old.arrivedTurn == null || committedSiege)),
+      decision: "replaced", reason: "朝廷明确撤换旧军令，旧任务不再继续" });
   }
 
   function selectArmy(owner, preferredCityId, allowBusy = false) {
@@ -728,6 +778,10 @@
     // Plans are generated at the previous synchronous commit. Never backfill
     // missing plans while replaying old months during save migration.
     const chain = readStrategyState()?.commandChain;
+    for (const plan of readStrategyState()?.allianceDiplomacy?.plans || []) if (plan.turn === turn) {
+      if (plan.intervention?.kind === "coordinate" && core.appliedReceipts?.includes(plan.intervention.receiptId)) resolveCoalitionPlan(plan.id, "coordinate");
+      resolveCoalitionPlan(plan.id, "autonomous");
+    }
     for (const intent of [...(chain?.intents || [])].sort((a, b) => Number(b.priority || 0) - Number(a.priority || 0) || a.id.localeCompare(b.id))) if (intent.source === "autonomous" && intent.turn === turn && intent.status === "proposed") {
       const coreReceipt = intent.intervention?.receiptId && core.appliedReceipts?.includes(intent.intervention.receiptId);
       if (coreReceipt && intent.intervention.kind === "coordinate") resolveLordIntent(intent.id, "coordinate");
@@ -791,7 +845,9 @@
       if(!old){
         const attackers=[a,b].filter(u=>u.task==="attack").sort((x,y)=>Number(state.orders.find(o=>o.id===y.currentOrderId)?.dispatchPriority||0)-Number(state.orders.find(o=>o.id===x.currentOrderId)?.dispatchPriority||0)||x.id.localeCompare(y.id));
         const attacker=attackers[0],defender=attacker===a?b:a;
-        resolveBattle(attacker,defender,null,turn,core,rng,{routeId});
+        const participating = [...coalitionUnits(attacker, { routeId, departures, fought }), ...coalitionUnits(defender, { routeId, departures, fought })];
+        resolveBattle(attacker,defender,null,turn,core,rng,{routeId, departures, fought});
+        for (const unit of participating) fought.add(unit.id);
       }
       const fact=state.militaryFacts.find(f=>f.kind==="battle"&&f.turn===turn&&f.routeId===routeId&&[a.id,b.id].includes(f.armyId)&&[a.id,b.id].includes(f.defenderArmyId));
       if(fact&&!conflict.factIds.includes(fact.id))conflict.factIds.push(fact.id);
@@ -958,12 +1014,12 @@
   }
 
   function areHostile(ownerA, ownerB) {
-    if (ownerA === ownerB) return false;
-    if ([ownerA, ownerB].includes("court") && [ownerA, ownerB].includes("cao_cao")) return false;
-    return true;
+    return !window.XianAllianceDiplomacy.allied(ownerA, ownerB, readStrategyState(), Number(state.lastProcessedTurn || coreState?.turn || 1));
   }
 
   function resolveBattle(attacker, defender, cityId, turn, core, rng, context = {}) {
+    const attacking = coalitionUnits(attacker, context), defending = coalitionUnits(defender, context);
+    if (attacking.length > 1 || defending.length > 1) return resolveCoalitionBattle(attacker, defender, attacking, defending, cityId, turn, core, rng, context);
     const road = Boolean(context.routeId), sourceOrderId = attacker.currentOrderId || null, opposingOrderId = defender.currentOrderId || null;
     const aidWitnesses = snapshotAidWitnesses(turn, attacker.owner, defender.owner, { cityId, routeId: context.routeId, opposingOrderId });
     const strategy = readStrategyState();
@@ -1060,6 +1116,59 @@
     army.lastChange = `军路遭遇战被击退，仍停在${cityName(army.cityId)}整顿，旧军令失败`;
   }
 
+  function coalitionUnits(anchor, context = {}) {
+    const order = state.orders.find(o => o.id === anchor.currentOrderId), strategy = readStrategyState();
+    if (!order?.sourceCoalitionPlanId || !window.XianAllianceDiplomacy.active(strategy?.promises.find(p => p.id === order.sourceAllianceId), state.lastProcessedTurn)) return [anchor];
+    return Object.values(state.armies).filter(a => {
+      const current = state.orders.find(o => o.id === a.currentOrderId);
+      if (a.status === "destroyed" || a.troops < 500 || a.cityId !== anchor.cityId || current?.sourceCoalitionPlanId !== order.sourceCoalitionPlanId
+        || ["failed","superseded"].includes(current.status) || a.targetCityId !== anchor.targetCityId) return false;
+      if (context.routeId) return a.status === "marching" && context.departures?.has(a.id) && !context.fought?.has(a.id) && a.routeIds[a.routeIndex] === context.routeId;
+      return !["marching","routing"].includes(a.status) && a.cityId === order.targetCityId;
+    }).sort((a,b) => a.id === anchor.id ? -1 : b.id === anchor.id ? 1 : a.id.localeCompare(b.id));
+  }
+
+  function sameCoalition(a, b) {
+    const first = state.orders.find(o => o.id === a.currentOrderId), second = state.orders.find(o => o.id === b.currentOrderId);
+    return first?.sourceCoalitionPlanId && first.sourceCoalitionPlanId === second?.sourceCoalitionPlanId && !areHostile(a.owner, b.owner);
+  }
+
+  function resolveCoalitionBattle(attacker, defender, attacking, defending, cityId, turn, core, rng, context) {
+    const road = Boolean(context.routeId), sourceOrderId = attacker.currentOrderId, opposingOrderId = defender.currentOrderId;
+    const cityDefense = road ? 0 : Number(readStrategyState()?.cities?.[cityId]?.defense ?? 55), ar = .9 + rng() * .2, dr = .9 + rng() * .2;
+    const attackPower = attacking.reduce((n,a) => n + calculateCombatPower(a, commanderDef(a.commander), 0, false, ar), 0);
+    const defendPower = defending.reduce((n,a) => n + calculateCombatPower(a, commanderDef(a.commander), cityDefense, !road, dr), 0);
+    const total = Math.max(1, attackPower + defendPower), al = clamp(.1 + defendPower / total * .34 + rng() * .05, .09, .43), dl = clamp(.1 + attackPower / total * .35 + rng() * .05, .09, .44);
+    const ratio = attackPower / Math.max(1, defendPower), winner = ratio >= 1.18 ? "attacker" : ratio <= .85 ? "defender" : null;
+    const participants = [], aidWitnesses = snapshotAidWitnesses(turn, attacker.owner, defender.owner, { cityId, routeId: context.routeId, opposingOrderId });
+    for (const [side, units, lossRate, supplyCost, fatigue] of [["attacker",attacking,al,8,18],["defender",defending,dl,6,16]]) for (const unit of units) {
+      const before = unit.troops, supply = unit.supply, orderId = unit.currentOrderId, losses = Math.min(before, Math.max(80, Math.round(before * lossRate)));
+      unit.troops -= losses; unit.supply = clamp(supply - supplyCost, 0, 100); unit.fatigue = clamp(unit.fatigue + fatigue, 0, 100);
+      unit.morale = clamp(unit.morale + (winner === side ? 5 : winner ? -12 : side === "attacker" ? -5 : -4), 0, 100);
+      if (winner && winner !== side) { if (road) haltRoadOrder(unit, turn); else orderRetreat(unit, cityId, turn); }
+      else unit.status = road ? "marching" : winner === "attacker" ? "engaged" : winner === "defender" ? "defending" : "recovering";
+      checkDestroyed(unit, turn);
+      participants.push({ armyId: unit.id, owner: unit.owner, side, orderId, troopsBefore: before, losses, troopsAfter: unit.troops, supplySpent: supply - unit.supply });
+    }
+    const attackerLosses = participants.filter(p => p.side === "attacker").reduce((n,p) => n+p.losses,0), defenderLosses = participants.filter(p => p.side === "defender").reduce((n,p) => n+p.losses,0);
+    const result = winner === "attacker" ? "联军进攻得胜" : winner === "defender" ? "守军击退联军" : "双方相持", victor = winner === "attacker" ? attacker.owner : winner === "defender" ? defender.owner : null;
+    const report = { id: `battle-${turn}-${context.routeId || cityId}-${attacker.id}-${defender.id}`, turn, date: formatTurnDate(core, turn), cityId,
+      ...(road ? { routeId: context.routeId } : {}), sourceOrderId, opposingOrderId, participants,
+      title: `${road ? "军路" : cityName(cityId)}联军之战`, attackerId: attacker.id, defenderId: defender.id, attackerOwner: attacker.owner, defenderOwner: defender.owner,
+      attackerName: attacking.map(armyName).join("、"), defenderName: defending.map(armyName).join("、"), attackerCommander: commanderName(attacker.commander), defenderCommander: commanderName(defender.commander),
+      attackerLosses, defenderLosses, attackerRemaining: attacking.reduce((n,a)=>n+a.troops,0), defenderRemaining: defending.reduce((n,a)=>n+a.troops,0), result, victor, cityControlChanged: false,
+      note: road ? "仅本月实际进入同一军路的同一联军协战；本月均不跨路，不损坏远端城墙" : "仅同城到场联军计入战力；各军分别消耗军粮、承担伤亡" };
+    state.battleReports.unshift(report);
+    recordHostility("battle", report.id, turn, attacker.owner, defender.owner, { cityId, ...(road ? { routeId: context.routeId } : {}), armyId: attacker.id, defenderArmyId: defender.id, sourceOrderId, opposingOrderId, participants, aidWitnesses });
+    for (const p of participants) { const order = state.orders.find(o => o.id === p.orderId); if (order?.status === "failed") order.failureFactId = `military:battle:${report.id}`; }
+    if (!road) adjustStrategyCity(cityId, { defense: -Math.round((attackerLosses + defenderLosses) / 2200), supply: -5, pressure: 14 }, report.title);
+    const route = context.routeId || attacker.routeIds[Math.max(0, attacker.routeIndex - 1)];
+    if (route) adjustStrategyRoute(route, { supply: -4, pressure: 10 }, report.title);
+    if (!road && winner === "attacker" && attacker.status !== "destroyed") beginSiege(attacker, defender, cityId, turn, report);
+    addLog(turn, "battle", `${report.title}：${result}；进攻方损失${attackerLosses}，守方损失${defenderLosses}。`);
+    document.dispatchEvent(new CustomEvent("xian:battle-report", { detail: report }));
+  }
+
   function beginSiege(attacker, defender, cityId, turn, report) {
     const strategy = readStrategyState();
     const city = strategy?.cities?.[cityId];
@@ -1071,7 +1180,7 @@
     const existing = state.sieges[cityId];
     if (existing?.status === "active") {
       const primary = state.armies[existing.attackerArmyId];
-      if (primary && primary.id !== attacker.id && primary.owner === attacker.owner && validSiegeArmy(existing, primary)) {
+      if (primary && primary.id !== attacker.id && (primary.owner === attacker.owner || sameCoalition(primary, attacker)) && validSiegeArmy(existing, primary)) {
         attacker.status = "engaged"; attacker.lastChange = `协助${armyName(primary)}在${cityName(cityId)}城外列阵，主攻军令未撤换`;
         recordCommandConflict("siege-command", `${existing.id}:${attacker.currentOrderId || attacker.id}`, { turn, cityId, armyIds: [primary.id, attacker.id], orderIds: [primary.currentOrderId, attacker.currentOrderId].filter(Boolean), decision: "support", reason: "本方援军协战，主攻军令保持；不重复推进城防" });
         return existing;
@@ -1138,7 +1247,15 @@
         siege.citySupply = Number(city.supply || 0);
         siege.lastChange = "目标控制者改变，按现有城防继续围城";
       }
-      const outcome = calculateSiegeTurn(siege, army, city, core, rng());
+      const units = coalitionUnits(army), troops = units.reduce((n,a) => n+a.troops,0);
+      const pooled = units.length > 1 ? { ...army, troops,
+        morale: units.reduce((n,a)=>n+a.morale*a.troops,0)/troops, supply: units.reduce((n,a)=>n+a.supply*a.troops,0)/troops } : army;
+      const outcome = calculateSiegeTurn(siege, pooled, city, core, rng());
+      let allocated = 0;
+      const participants = units.map((a,i) => {
+        const losses = Math.min(a.troops, i === units.length - 1 ? outcome.attackerLoss - allocated : Math.floor(outcome.attackerLoss * a.troops / troops)); allocated += losses;
+        return { armyId: a.id, owner: a.owner, side: "attacker", orderId: a.currentOrderId, troopsBefore: a.troops, losses, supplySpent: Math.min(a.supply, outcome.attackerSupply) };
+      });
       siege.progress = clamp(siege.progress + outcome.progress, 0, 100);
       siege.walls = clamp(siege.walls - outcome.wallLoss, 0, 100);
       siege.citySupply = clamp(siege.citySupply - outcome.supplyLoss, 0, 100);
@@ -1148,10 +1265,13 @@
       recordHostility("siege-progress", `${siege.id}:${turn}`, turn, army.owner, city.controller, {
         cityId: siege.cityId, armyId: army.id, sourceOrderId: army.currentOrderId || null,
         wallLoss: outcome.wallLoss, supplyLoss: outcome.supplyLoss, garrisonLoss: outcome.garrisonLoss, attackerLoss: outcome.attackerLoss,
+        ...(units.length > 1 ? { participants } : {}),
       });
-      army.troops = Math.max(0, army.troops - outcome.attackerLoss);
-      army.supply = clamp(army.supply - outcome.attackerSupply, 0, 100);
-      army.fatigue = clamp(army.fatigue + outcome.fatigue, 0, 100);
+      for (const p of participants) {
+        const unit = state.armies[p.armyId]; unit.troops = Math.max(0, unit.troops - p.losses);
+        unit.supply = clamp(unit.supply - outcome.attackerSupply, 0, 100); unit.fatigue = clamp(unit.fatigue + outcome.fatigue, 0, 100);
+        checkDestroyed(unit, turn);
+      }
       adjustStrategyCity(siege.cityId, {
         defense: -outcome.wallLoss,
         supply: -outcome.supplyLoss,
@@ -1811,6 +1931,40 @@
       overlapWarnings, risk: risk.length > 0, needsAcknowledgement: risk.length > 0 && !acknowledgeBreach, armyName: army ? armyName(army) : intent.armyName };
   }
 
+  function previewCoalitionPlan(planId, kind) {
+    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const plan = strategy?.allianceDiplomacy?.plans.find(p => p.id === planId), pact = strategy?.promises.find(p => p.id === plan?.pactId);
+    if (!plan || plan.turn !== core?.turn || core.ended || !window.XianAllianceDiplomacy.active(pact, core.turn)
+      || !plan.members.some(m => m.status === "proposed")) return { ok: false, message: "共同军议已结算或盟约已结束。" };
+    const members = plan.members.map(intent => {
+      const army = state.armies[intent.armyId], access = getCommandAccess(army, core, strategy);
+      const reason = intent.status !== "proposed" ? "已答复" : !access.allowed ? access.message : kind === "restrain" ? null : window.XianLordIntentions.assess(intent, army, strategy, core.turn, state.orders)
+        || (window.XianLordIntentions.ceasefires(intent, strategy, core.turn, state).length ? "目标受现有停战或盟约保护" : null);
+      return { ...intent, accepted: !reason, reason: reason || (kind === "restrain" ? "同意暂缓共同军议" : "具备接令条件"), eta: intent.routeIds.length };
+    });
+    return { ok: true, planId, members };
+  }
+
+  function resolveCoalitionPlan(planId, kind) {
+    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const plan = strategy?.allianceDiplomacy?.plans.find(p => p.id === planId), pact = strategy?.promises.find(p => p.id === plan?.pactId);
+    if (!plan || plan.turn !== core?.turn || core.ended || !window.XianAllianceDiplomacy.active(pact, core.turn)) return false;
+    if (kind !== "autonomous" && (!plan.intervention || plan.intervention.kind !== kind || !core.appliedReceipts?.includes(plan.intervention.receiptId))) return false;
+    if (kind === "autonomous" && Number(core.monthlySettledTurn || 0) < plan.turn) return false;
+    for (const intent of plan.members) {
+      if (state.commandResponses.some(r => r.intentId === intent.id && (r.status === "accepted" || r.status === "restrained" || r.authority === "lord"))) continue;
+      const requestId = `${intent.id}:${kind}`;
+      if (state.commandResponses.some(r => r.id === `response:${requestId}`)) continue;
+      if (kind === "restrain") {
+        const access = getCommandAccess(state.armies[intent.armyId], core, strategy);
+        state.commandResponses.push({ id: `response:${requestId}`, intentId: intent.id, kind, turn: core.turn, armyId: intent.armyId,
+          status: access.allowed ? "restrained" : "refused", authority: "court", reason: access.allowed ? "接受暂缓共同军议" : access.message, request: { ...intent } });
+      } else assignArmyOrder(intent.owner, [intent.targetCityId], intent.task, kind === "autonomous" ? 60 : 70, intent.reason, core.turn, 0,
+        { intent, requestId, autonomous: kind === "autonomous", acknowledgeBreach: false });
+    }
+    saveState(); return true;
+  }
+
   function resolveLordIntent(intentId, kind) {
     const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
     const intent = strategy?.commandChain?.intents?.find(i => i.id === intentId);
@@ -1834,6 +1988,9 @@
   }
 
   window.XianArmySystem = Object.freeze({
+    previewCoalitionPlan,
+    resolveCoalitionPlan,
+    releaseAllianceOrders,
     previewLordIntent,
     resolveLordIntent,
     acceptPromiseMission: promise => {

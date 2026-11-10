@@ -8,7 +8,7 @@
     ["military", /练兵|整军|整顿宿卫|武备|讨伐|征讨|出兵|调兵|驰援|协防|坚守|守备|驻防|布防|输粮|运粮|补给|攻取|攻城|进兵/],
     ["ritual", /宗庙|祭祀|朝仪|礼制|经筵|大朝会/], ["secret", /密诏|密令|秘密|暗中|衣带|联络/],
     ["appointment", /任命|加封|封爵|拜为|授官|罢免|黜|封为|赐爵/],
-    ["diplomacy", /遣使|结盟|外援|牵制|贡赋|进贡|朝贡|输贡|纳贡|援军|救援|救应|勤王|奉表|互市|通商|停战|罢兵|休兵|议和|送质|质子/],
+    ["diplomacy", /遣使|结盟|盟约|会盟|同盟|联盟|外援|牵制|贡赋|进贡|朝贡|输贡|纳贡|援军|救援|救应|勤王|奉表|互市|通商|停战|罢兵|休兵|议和|送质|质子/],
     ["appease", /安抚|嘉奖|褒奖|信任|赐宴|军务便宜/],
   ];
   const negation = /不得|不可|不许|不准|不要|不再|不予|勿|毋|禁止|严禁|无需|不必|停止|暂停|暂缓|取消|拒绝|不(?:练兵|出兵|任命|加封|赈济|进贡|奉表|结盟|驰援)/;
@@ -21,10 +21,14 @@
     // 否定句不转成正面命令。复合句不能确定否定范围时，要求玩家拆句。
     const ignoredClauses = clauses.filter(item => negation.test(item));
     const affirmative = clauses.filter(item => !negation.test(item));
-    const policyClauses = affirmative.filter(item => patterns.some(([, pattern]) => pattern.test(item)));
+    const treaty = affirmative.some(item => /结盟|盟约|会盟|同盟|联盟/.test(item));
+    const joint = /共讨|合攻|共同进攻|共同攻打|共同防守|协同防守/;
+    const policyClauses = affirmative.filter(item => patterns.some(([, pattern]) => pattern.test(item)) || (treaty && joint.test(item)));
     const effectiveText = policyClauses.join("；");
-    const categories = patterns.filter(([, pattern]) => pattern.test(effectiveText)).map(([id]) => id);
-    const targets = characters.filter(character => policyClauses.some(clause => clause.includes(character.name))).map(character => character.id);
+    const categoryText = treaty ? policyClauses.filter(clause => !joint.test(clause)).join("；") : effectiveText;
+    const categories = patterns.filter(([, pattern]) => pattern.test(categoryText)).map(([id]) => id);
+    const targetText = treaty ? effectiveText.split(joint)[0] : effectiveText;
+    const targets = characters.filter(character => targetText.includes(character.name)).map(character => character.id);
     const targetDisposition = Object.fromEntries(characters.filter(character => targets.includes(character.id)).map(character => [character.id,
       policyClauses.some(clause => clause.includes(character.name) && punitive.test(clause)) ? "punitive" : "positive",
     ]));
@@ -40,8 +44,9 @@
     const dispositions = Object.values(targetDisposition);
     const mixedTargets = dispositions.includes("positive") && dispositions.includes("punitive");
     if (mixedTargets) warnings.push("褒奖与问罪对象请分开拟旨，避免承办对象混淆。" );
-    if (targets.length > 2) warnings.push("一份圣旨最多明确处分两名人物，请将其他对象分开办理。" );
-    const blocked = !currentTargets.ok || categories.length > 2 || substantiveOrders.length > 1 || mixedTargets || targets.length > 2 || !affirmative.length;
+    const maxTargets = treaty ? 3 : 2;
+    if (targets.length > maxTargets) warnings.push(treaty ? "共同盟约最多列明三方。" : "一份圣旨最多明确处分两名人物，请将其他对象分开办理。" );
+    const blocked = !currentTargets.ok || categories.length > 2 || substantiveOrders.length > 1 || mixedTargets || targets.length > maxTargets || !affirmative.length;
     return { categories: categories.length ? categories : ["generic"], targets, targetDisposition,
       effectiveText, ignoredClauses, warnings, blocked, labels: (categories.length ? categories : ["generic"]).map(id => labels[id]) };
   }

@@ -41,7 +41,7 @@
   let settlementStage = "";
   let commitRunning = false;
   let operationDepth = 0;
-  const RULES_VERSION = 227;
+  const RULES_VERSION = 228;
 
   // One synchronous boundary owns gameplay. Timers may repaint, never settle a save.
   function commit(kind = "save") {

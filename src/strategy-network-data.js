@@ -73,7 +73,7 @@ window.XIAN_STRATEGY_DATA = Object.freeze({
   promiseRules: [
     { id: "tribute", label: "贡赋承诺", pattern: "奉表|朝贡|贡赋|进贡|输贡|纳贡", deadline: 3, direction: "lord_to_court" },
     { id: "military_aid", label: "出兵承诺", pattern: "援军|出兵相助|勤王|协防|救援", deadline: 3, direction: "lord_to_court" },
-    { id: "alliance", label: "盟约承诺", pattern: "结盟|盟约|会盟|共讨|同盟", deadline: 4, direction: "mutual" },
+    { id: "alliance", label: "盟约承诺", pattern: "结盟|盟约|会盟|共讨|同盟|联盟", deadline: 4, direction: "mutual" },
     { id: "ceasefire", label: "停战承诺", pattern: "停战|罢兵|休兵|议和|止戈", deadline: 2, direction: "mutual" },
     { id: "trade", label: "互市承诺", pattern: "互市|通商|市易|商路", deadline: 4, direction: "mutual" },
     { id: "hostage", label: "质子承诺", pattern: "送质|质子|人质|入侍", deadline: 3, direction: "lord_to_court" },
