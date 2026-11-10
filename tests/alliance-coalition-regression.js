@@ -90,6 +90,16 @@ const cases = {
     assert.equal(f.length,1);assert.equal(f[0].participants.length,3);assert.equal(new Set(f[0].participants.map(p=>p.armyId)).size,3);
     assert.ok(f[0].participants.every(p=>p.orderId&&p.losses>0&&p.supplySpent>0));
     assert.equal(a.armies.yuan_main.cityId,"ye");assert.equal(a.armies.youzhou_cavalry.cityId,"ye");assert.equal(a.conquests.length,0);
+  },
+  currentOpponent() {
+    for(const [previous,current,stopped] of [["gongsun_zan","liu_biao",false],["liu_biao","gongsun_zan",true]]){
+      const original=alliedFixture(({s})=>s.cities.ji.controller=previous);
+      assert.equal(original.window.XianArmySystem.issueMapOrder("yuan_main","ji","attack").ok,true);
+      const b=plain(original.api.captureFullSave()),id=b.stores[ARMY].armies.yuan_main.currentOrderId;
+      b.stores[STRATEGY].cities.ji.controller=current;const h=resume(b);seal(h,"令袁绍与公孙瓒结盟");
+      assert.equal(pact(h).status,"active");
+      assert.equal(h.window.XianArmySystem.getState().orders.find(o=>o.id===id).status,stopped?"superseded":"executing","consensual peace considers the actual current opponent, preserving the original target owner as history");
+    }
   }
 };
 if (require.main === module) for (const [name, run] of Object.entries(cases)) if (!process.argv[2] || process.argv[2] === name) { run(); console.log(`PASS alliance ${name}`); }
