@@ -21,3 +21,5 @@
 复现工具为`alliance-coalition-balance.cjs`与`browser-alliance-coalition.cjs`。自然对照按种子分层覆盖双边/三边盟约，两种主动策略采用相同成员和目标规则；可选复用只读旧版观察，所有新版样本必须在最终冻结代码上运行。浏览器需要现有Chrome与Playwright，可用`PLAYWRIGHT_MODULE`指定模块位置；分别设置`COUNCIL_BROWSER_URL`、`COUNCIL_BROWSER_WIDTHS`、`COUNCIL_BROWSER_OUTPUT`核验本地或线上。
 
 本矩阵背盟组虽产生信誉损失、拒盟与盟方警惕，15局仍都得到国家数值驱动的“诸侯共奉”。以后若要让外交结局反映守约历史，应先定义结局条件、补失败样本和共同种子对照；本轮不把该标签当作联盟稳定或真实胜率的证明。
+
+修改数据表同样需要更新入口缓存标记；发布资源回归已纳入`strategy-network-data.js`。最终入口缓存修正不改变玩法脚本，单独保留反向替换入口哈希证明及模拟旧缓存浏览器记录。
