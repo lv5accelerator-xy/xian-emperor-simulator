@@ -24,8 +24,9 @@ const groups = [old,next].flatMap(data => ["observe","cooperate","betray"].map(p
   for (const row of rows) endingCounts[row.ending] = (endingCounts[row.ending] || 0) + 1;
   return {version:rows[0].version,policy,runs:rows.length,deadline:rows.filter(r=>!r.early).length,endings:endingCounts,
     actions:rows.reduce((n,r)=>n+r.actions,0),spent:rows.reduce((n,r)=>n+r.spent,0),captures:rows.reduce((n,r)=>n+r.captures,0),
-    fulfilled:rows.reduce((n,r)=>n+(r.diplomaticOutcome?.counts.fulfilledAlliances||0),0),jointVictories:rows.reduce((n,r)=>n+(r.diplomaticOutcome?.counts.jointVictories||0),0),
-    unresolvedCourtBreaches:rows.reduce((n,r)=>n+(r.diplomaticOutcome?.counts.unresolvedCourtBreaches||0),0)};
+    fulfilled:rows.every(r=>r.diplomaticOutcome)?rows.reduce((n,r)=>n+r.diplomaticOutcome.counts.fulfilledAlliances,0):null,
+    jointVictories:rows.every(r=>r.diplomaticOutcome)?rows.reduce((n,r)=>n+r.diplomaticOutcome.counts.jointVictories,0):null,
+    unresolvedCourtBreaches:rows.every(r=>r.diplomaticOutcome)?rows.reduce((n,r)=>n+r.diplomaticOutcome.counts.unresolvedCourtBreaches,0):null};
 }));
 const result = {runs:90,pairs:45,pairedMetrics:metrics,identicalMetricPairs:paired.filter(r=>!r.metricDifferences.length).length,
   sourceFiles:Object.keys(next.sourceAfter).length,sourceBefore:next.sourceBefore,sourceAfter:next.sourceAfter,groups,paired};

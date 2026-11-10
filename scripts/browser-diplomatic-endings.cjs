@@ -4,12 +4,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const { alliedFixture, seal, treatyText } = require("../tests/alliance-coalition-regression");
 
 const { STRATEGY } = require("../tests/lord-command-chain-regression");
+const { resume, CORE } = require("../tests/lord-command-chain-regression");
 const { harness } = require("../tests/helpers/game-harness");
 const root = path.resolve(__dirname, ".."), out = process.env.COUNCIL_BROWSER_OUTPUT || path.resolve(root, "../browser-diplomatic-endings");
 fs.mkdirSync(out, { recursive: true });
 const { prepare } = require("../tests/diplomatic-ending-regression");
-const fixtures = Object.fromEntries(["none","cooperate","peace","betray"].map(mode => {
-  const file=path.join(out,`before-ending-${mode}.json`);fs.writeFileSync(file,JSON.stringify(prepare(mode).api.captureFullSave()));return [mode,file];
+const fixtures = Object.fromEntries(["none","cooperate","peace","betray","epithet"].map(mode => {
+  let h=prepare(mode==="epithet"?"cooperate":mode);
+  if(mode==="epithet"){
+    const army=h.window.XianArmySystem,p=army.previewMapOrder("yuan_main","ji","attack");assert.equal(p.ok,true);
+    assert.equal(army.issueMapOrder("yuan_main","ji","attack",{replaceExisting:true,expectedOrderId:p.expectedOrderId}).ok,true);
+    const b=h.api.captureFullSave();Object.assign(b.stores[CORE].stats,{authority:10,prestige:10,security:40,officials:10,treasury:10,caoAlert:85});Object.assign(b.stores[CORE].hidden,{externalBalance:90,peopleStability:20,loyalNetwork:10,leakRisk:95});h=resume(b);
+  }
+  const file=path.join(out,`before-ending-${mode}.json`);fs.writeFileSync(file,JSON.stringify(h.api.captureFullSave()));return [mode,file];
 }));
 const legacyFallback=prepare("betray");legacyFallback.api.endTurn();const old=legacyFallback.api.captureFullSave();
 old.stores.xian_emperor_simulator_v01.ending={title:"诸侯共奉",text:"旧规则结局，原样保留。"};old.stores.xian_emperor_simulator_v01.rulesVersion=228;delete old.stores.xian_emperor_simulator_v01.diplomaticOutcome;
@@ -74,7 +81,7 @@ const results = [];
       await page.goto(process.env.COUNCIL_BROWSER_URL || `http://127.0.0.1:${server.address().port}/`, { waitUntil: "domcontentloaded" });await skipTutorial();
       await page.evaluate(()=>window.XianEmperorGame.startNewGame("standard","jianan_196",{randomSeed:226001}));await skipTutorial();
       const cases=[];
-      for(const mode of ["betray","cooperate","peace","none"]){
+      for(const mode of (process.env.ENDING_BROWSER_MODES||"betray,cooperate,peace,none,epithet").split(",")){
         await leaveEnding();await importFile(fixtures[mode]);
         const before=await core(),stores=await page.evaluate(()=>JSON.stringify(Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith("xian_emperor_")).map(k=>[k,localStorage.getItem(k)]))));
         await page.evaluate(()=>window.XianDiplomaticEndings.preview(window.XianEmperorGame.getState()));
@@ -83,11 +90,15 @@ const results = [];
         await openChain(false);assert.match(await page.locator(".alliance-desk [data-diplomatic-outcome='preview']").innerText(),/外交终局核验/);
         await page.screenshot({path:path.join(out,`ending-preview-${mode}-${width}.png`)});await tap(page.locator("#strategy-network-close"));
         await endMonth();const ended=await core(),snapshot=ended.diplomaticOutcome;
-        assert.equal(ended.ending.title,mode==="betray"?"盟约离心":mode==="none"?"合纵未固":"诸侯共奉");
+        assert.equal(ended.ending.title,mode==="betray"?"盟约离心":mode==="none"?"合纵未固":mode==="epithet"?"有名无实":"诸侯共奉");
         assert.match(await page.locator("#ending-stats").innerText(),/外交终局依据/);
         if(mode==="betray")assert.equal(snapshot.counts.unresolvedCourtBreaches,1);
         if(mode==="cooperate")assert.ok(snapshot.counts.jointCaptures>=1);
         if(mode==="peace")assert.equal(snapshot.confederationRoute,"sustained-peace");
+        if(mode==="epithet"){
+          const v=await page.evaluate(()=>window.XianFinalVerdict.getState().verdicts.find(v=>v.gameCreatedAt===window.XianEmperorGame.getState().createdAt&&!v.archivedByCoreImport));
+          assert.equal(v.dimensions[0].id,"balance");assert.notEqual(v.posthumous,"和");
+        }
         const panel=page.locator("#ending-stats [data-diplomatic-outcome='frozen']");await panel.scrollIntoViewIfNeeded();
         await page.screenshot({path:path.join(out,`ending-${mode}-${width}.png`)});
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
@@ -102,7 +113,7 @@ const results = [];
         assert.match(await page.locator("#command-center-overlay").innerText(),/外交终局依据/);
         const verdict=await download(page.locator("[data-verdict-export]").first(),`verdict-${mode}`);assert.match(verdict,/外交终局依据/);
         assert.ok(verdict.includes(`朝廷背盟${snapshot.counts.courtBreaches}宗`));
-        if(mode==="betray")assert.match(verdict,/朝廷授意背盟尚有1宗未修复/);
+        if(mode==="betray"||mode==="epithet")assert.match(verdict,/朝廷授意背盟尚有1宗未修复/);
         await page.screenshot({path:path.join(out,`verdict-${mode}-${width}.png`)});await tap(page.locator("#command-center-overlay [data-command-close]"));
         const file=await exportFile(`ended-${mode}`);const exported=JSON.parse(fs.readFileSync(file,"utf8"));assert.deepEqual(exported.stores.xian_emperor_simulator_v01.diplomaticOutcome,snapshot);
         await importFile(file);assert.deepEqual((await core()).diplomaticOutcome,snapshot);assert.equal((await core()).ending.title,ended.ending.title);
@@ -116,7 +127,7 @@ const results = [];
       assert.equal((await core()).ending.title,legacy.ending.title);assert.equal((await core()).diplomaticOutcome,undefined);
       assert.equal(await page.locator("#ending-stats [data-diplomatic-outcome]").count(),0);await page.screenshot({path:path.join(out,`legacy-ended-${width}.png`)});
       assert.deepEqual(errors,[]);assert.deepEqual(httpFailures,[]);
-      results.push({channel,width,cases,largestFontNoOverflow:true,legacyOriginalEnding:true,legacySource:process.env.DIPLOMATIC_LEGACY_SAVE?"actual-v228-baseline":"controlled-legacy-fixture",pageErrors:errors,httpFailures});
+      results.push({channel,width,cases,largestFontNoOverflow:cases.some(c=>c.mode==="cooperate")?true:null,legacyOriginalEnding:true,legacySource:process.env.DIPLOMATIC_LEGACY_SAVE?"actual-v228-baseline":"controlled-legacy-fixture",pageErrors:errors,httpFailures});
       fs.writeFileSync(path.join(out,"summary.json"),JSON.stringify(results,null,2));console.log(`PASS diplomatic ending browser ${width}`);
     }catch(error){console.error(error);await page.screenshot({path:path.join(out,`failure-${width}.png`),timeout:10000});throw error;}finally{await page.close();}
   }
