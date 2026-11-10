@@ -1095,7 +1095,7 @@
       note: road ? "本月在军路交战，双方不跨越此路；败军停止本次军令，胜军下月再行。未产生城防损失或占领。" : victor === attacker.owner ? "进攻军已经兵临城下，将进入围城结算。" : victor === defender.owner ? "守军维持城池控制，败军沿原路撤退。" : "双方暂时脱离接触，等待下月整补。",
     };
     state.battleReports.unshift(report);
-    recordHostility("battle", report.id, turn, report.attackerOwner, report.defenderOwner, { cityId, ...(road ? { routeId: context.routeId } : {}), armyId: attacker.id, defenderArmyId: defender.id, sourceOrderId, opposingOrderId, aidWitnesses });
+    recordHostility("battle", report.id, turn, report.attackerOwner, report.defenderOwner, { cityId, ...(road ? { routeId: context.routeId } : {}), armyId: attacker.id, defenderArmyId: defender.id, sourceOrderId, opposingOrderId, victor, aidWitnesses });
     for (const id of [sourceOrderId, opposingOrderId]) {
       const failed = state.orders.find(o => o.id === id && o.status === "failed" && o.failedTurn === turn);
       if (failed) failed.failureFactId = `military:battle:${report.id}`;
@@ -1159,7 +1159,7 @@
       attackerLosses, defenderLosses, attackerRemaining: attacking.reduce((n,a)=>n+a.troops,0), defenderRemaining: defending.reduce((n,a)=>n+a.troops,0), result, victor, cityControlChanged: false,
       note: road ? "仅本月实际进入同一军路的同一联军协战；本月均不跨路，不损坏远端城墙" : "仅同城到场联军计入战力；各军分别消耗军粮、承担伤亡" };
     state.battleReports.unshift(report);
-    recordHostility("battle", report.id, turn, attacker.owner, defender.owner, { cityId, ...(road ? { routeId: context.routeId } : {}), armyId: attacker.id, defenderArmyId: defender.id, sourceOrderId, opposingOrderId, participants, aidWitnesses });
+    recordHostility("battle", report.id, turn, attacker.owner, defender.owner, { cityId, ...(road ? { routeId: context.routeId } : {}), armyId: attacker.id, defenderArmyId: defender.id, sourceOrderId, opposingOrderId, participants, victor, aidWitnesses });
     for (const p of participants) { const order = state.orders.find(o => o.id === p.orderId); if (order?.status === "failed") order.failureFactId = `military:battle:${report.id}`; }
     if (!road) adjustStrategyCity(cityId, { defense: -Math.round((attackerLosses + defenderLosses) / 2200), supply: -5, pressure: 14 }, report.title);
     const route = context.routeId || attacker.routeIds[Math.max(0, attacker.routeIndex - 1)];
@@ -1341,7 +1341,8 @@
     const city = strategy?.cities?.[siege.cityId];
     if (!city || siege.status !== "active" || !validSiegeArmy(siege, army) || !areHostile(army.owner, city.controller)) return;
     const previousOwner = city.controller;
-    recordHostility("occupation", `conquest-${siege.id}`, turn, army.owner, previousOwner, { cityId: siege.cityId, armyId: army.id, sourceOrderId: army.currentOrderId || null });
+    const participants = coalitionUnits(army).map(a => ({ armyId: a.id, owner: a.owner, side: "attacker", orderId: a.currentOrderId, troopsBefore: a.troops }));
+    recordHostility("occupation", `conquest-${siege.id}`, turn, army.owner, previousOwner, { cityId: siege.cityId, armyId: army.id, sourceOrderId: army.currentOrderId || null, ...(participants.length > 1 ? { participants } : {}) });
     city.controller = army.owner;
     city.controllerName = ownerName(army.owner);
     city.defense = clamp(Math.max(18, siege.walls), 0, 100);

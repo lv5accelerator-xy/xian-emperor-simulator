@@ -113,3 +113,5 @@ body.strategy-network-open{overflow:hidden}
 @media(max-width:460px){.strategy-summary{grid-template-columns:1fr}.strategy-network-tabs{padding:.55rem .7rem}}
 
 .alliance-desk{margin-bottom:1.5rem;min-width:0;overflow-wrap:anywhere}.alliance-desk>p,.alliance-desk small{line-height:1.7}.alliance-consequences{padding:.8rem;border:1px solid #786441;border-radius:10px}.alliance-consequences summary{cursor:pointer;min-height:44px}.alliance-brief{min-width:0;overflow-wrap:anywhere}.coalition-card p{margin:.6rem 0}
+
+.diplomatic-outcome{grid-column:1/-1;margin:1rem 0;padding:1rem;border:1px solid #b99a64;border-radius:8px;background:#f6efdf;color:#493d2b;overflow-wrap:anywhere}.diplomatic-outcome h3{margin:0 0 .6rem}.diplomatic-outcome p{line-height:1.65}.diplomatic-outcome details{font-size:.85rem}.diplomatic-outcome summary{cursor:pointer}

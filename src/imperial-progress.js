@@ -592,7 +592,7 @@
     const qualified = path.id === "covert"
       ? h.loyalNetwork >= 58 && s.security >= 30 && s.caoAlert < 98
       : path.id === "balance"
-        ? h.externalBalance >= 60 && s.prestige >= 62
+        ? h.externalBalance >= 60 && s.prestige >= 62 && Boolean(window.XianDiplomaticEndings?.preview(gameState)?.eligibility.confederation.eligible)
         : s.authority >= 62 && s.security >= 52;
     return qualified ? { ...path.ending } : null;
   }

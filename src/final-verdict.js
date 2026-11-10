@@ -9,7 +9,7 @@
     { id: "legitimacy", name: "守正", text: "以名分、百官与制度维持汉廷存在。", score: g => avg(g.stats.authority, g.stats.prestige, g.stats.officials) },
     { id: "mercy", name: "仁恤", text: "愿意为民生和秩序承受眼前代价。", score: g => avg(g.stats.prestige, g.stats.treasury, g.hidden.peopleStability) },
     { id: "caution", name: "持重", text: "懂得在宫禁安全与强权警戒之间保存自身。", score: g => avg(g.stats.security, 100 - g.stats.caoAlert, 100 - g.hidden.leakRisk) },
-    { id: "balance", name: "制衡", text: "以外镇、官爵和朝廷承认牵制一家独大。", score: g => avg(g.stats.prestige, g.hidden.externalBalance, 100 - g.stats.caoAlert) },
+    { id: "balance", name: "制衡", text: "以外镇、官爵和朝廷承认牵制一家独大。", score: g => g.diplomaticOutcome ? Math.min(avg(g.stats.prestige, g.hidden.externalBalance, 100 - g.stats.caoAlert), g.diplomaticOutcome.rating ?? 0) : avg(g.stats.prestige, g.hidden.externalBalance, 100 - g.stats.caoAlert) },
     { id: "resolve", name: "决断", text: "在风险中仍试图建立忠汉网络并收回主动。", score: g => avg(g.stats.authority, g.hidden.loyalNetwork, 100 - g.hidden.leakRisk) },
   ];
 
@@ -28,8 +28,10 @@
       onMount: mountTab,
     });
     const core = readCore();
-    if (core?.ended && !store.verdicts.some(item => item.gameCreatedAt === core.createdAt && !item.archivedByCoreImport)) {
-      recordVerdict({ state: core, scenario: scenarioById(core.scenarioId), score: fallbackScore(core), challenge: { completed: false } });
+    if (core?.ended) {
+      const current = store.verdicts.find(item => item.gameCreatedAt === core.createdAt && !item.archivedByCoreImport);
+      if (current) installEndingVerdict(current);
+      else recordVerdict({ state: core, scenario: scenarioById(core.scenarioId), score: fallbackScore(core), challenge: { completed: false } });
     }
   }
 
@@ -80,9 +82,10 @@
       controversies,
       characters,
       promiseSummary,
+      diplomaticOutcome: game.diplomaticOutcome ? JSON.parse(JSON.stringify(game.diplomaticOutcome)) : null,
       turningPoints,
       worldSummary: buildWorldSummary(normalized),
-      finalComment: buildFinalComment(posthumous, route, dimensions, failed, promiseSummary),
+      finalComment: buildFinalComment(posthumous, route, dimensions, failed, promiseSummary, game.diplomaticOutcome),
       storyAfterword: window.XianScenario220Story?.buildAfterword(game) || null,
       completedAt: new Date().toISOString(),
     };
@@ -100,6 +103,7 @@
 
   function buildControversies(game, dimensions, promises, failed) {
     const result = [];
+    if (game.diplomaticOutcome) result.push(window.XianDiplomaticEndings.text(game.diplomaticOutcome));
     if (game.stats.caoAlert >= 72) result.push("锐意自振，却屡令掌兵者疑惧；后世争论这是勇决，还是把宫廷置于险地。");
     if (game.stats.authority <= 35) result.push("保存宗庙有功，但诏令常借他人之手；史家因此争论存续是否等同于中兴。");
     if (game.stats.treasury <= 28) result.push("礼义与军政多有施为，却留下财政亏空；仁政究竟能否脱离仓廪，成为本朝未解之问。");
@@ -145,15 +149,18 @@
     return "汉廷既未真正重掌天下，也没有完全失去声音；山河在妥协、名分与兵权之间继续演变。";
   }
 
-  function buildFinalComment(posthumous, route, dimensions, failed, promises) {
+  function buildFinalComment(posthumous, route, dimensions, failed, promises, diplomacy) {
     const promiseText = promises.broken ? `其失信 ${promises.broken} 次，亦为后世所讥。` : promises.fulfilled ? `其能守御前旧诺，故近臣尚愿相随。` : "其少轻许，亦少得可托生死之人。";
-    return `史臣曰：帝行${route.name}之道，以${dimensions[0].name}为长，以${dimensions[dimensions.length - 1].name}为短。${failed ? "虽终于困厄，然乱世之败未必皆由一人。" : "终能在强权与乱世之间留下有限而真实的自主。"}${promiseText}故拟谥“${posthumous}”，非为定论，正因功过仍可再议。`;
+    const diplomacyText = diplomacy ? diplomacy.counts.unresolvedCourtBreaches
+      ? `朝廷授意背盟尚有${diplomacy.counts.unresolvedCourtBreaches}宗未修复，虽有名望，难称诸侯共奉。`
+      : `外交有${diplomacy.counts.fulfilledAlliances}份完整盟约履行、${diplomacy.counts.jointVictories}次联军实绩，${diplomacy.eligibility.confederation.eligible ? "共奉已有实证" : "共奉的履约与支持条件仍未齐备"}。` : "";
+    return `史臣曰：帝行${route.name}之道，以${dimensions[0].name}为长，以${dimensions[dimensions.length - 1].name}为短。${failed ? "虽终于困厄，然乱世之败未必皆由一人。" : "终能在强权与乱世之间留下有限而真实的自主。"}${promiseText}${diplomacyText}故拟谥“${posthumous}”，非为定论，正因功过仍可再议。`;
   }
 
   function renderTab() {
     const current = store.verdicts[0];
     if (!current) return '<div class="command-empty">完成任意普通剧本、短局或汉祚长卷章节后，史家才会形成完整定论。</div>';
-    return `<div class="verdict-current"><span>${escapeHtml(current.scenarioName)} · ${escapeHtml(current.ending)}</span><strong>${escapeHtml(current.fullTitle)}</strong><p>${escapeHtml(current.finalComment)}</p></div>${renderStoryAfterword(current.storyAfterword)}<section class="verdict-virtues">${current.virtues.map(item => `<article><span>${escapeHtml(item.name)}</span><b>${item.score}</b><p>${escapeHtml(item.text)}</p></article>`).join("")}</section><section class="verdict-section"><h3>史家争议</h3>${current.controversies.map(item => `<p>“${escapeHtml(item)}”</p>`).join("")}</section><section class="verdict-section"><h3>人物后记</h3><div class="verdict-people">${current.characters.map(item => `<article><strong>${escapeHtml(item.name)}</strong><span>关系 ${item.relation} · 旧事 ${item.remembered}</span><p>${escapeHtml(item.fate)}</p></article>`).join("")}</div></section><section class="verdict-section"><h3>山河终卷</h3><p>${escapeHtml(current.worldSummary)}</p></section><div class="verdict-actions"><button type="button" data-verdict-export="${current.id}">导出《帝纪终评》</button></div>${store.verdicts.length > 1 ? `<section class="verdict-history"><h3>历次拟谥</h3>${store.verdicts.slice(1, 8).map(item => `<button type="button" data-verdict-select="${item.id}"><span>${escapeHtml(item.scenarioName)}</span><strong>汉${escapeHtml(item.posthumous)}帝</strong><small>${escapeHtml(item.ending)}</small></button>`).join("")}</section>` : ""}`;
+    return `<div class="verdict-current"><span>${escapeHtml(current.scenarioName)} · ${escapeHtml(current.ending)}</span><strong>${escapeHtml(current.fullTitle)}</strong><p>${escapeHtml(current.finalComment)}</p></div>${window.XianDiplomaticEndings?.render(current.diplomaticOutcome, true) || ""}${renderStoryAfterword(current.storyAfterword)}<section class="verdict-virtues">${current.virtues.map(item => `<article><span>${escapeHtml(item.name)}</span><b>${item.score}</b><p>${escapeHtml(item.text)}</p></article>`).join("")}</section><section class="verdict-section"><h3>史家争议</h3>${current.controversies.map(item => `<p>“${escapeHtml(item)}”</p>`).join("")}</section><section class="verdict-section"><h3>人物后记</h3><div class="verdict-people">${current.characters.map(item => `<article><strong>${escapeHtml(item.name)}</strong><span>关系 ${item.relation} · 旧事 ${item.remembered}</span><p>${escapeHtml(item.fate)}</p></article>`).join("")}</div></section><section class="verdict-section"><h3>山河终卷</h3><p>${escapeHtml(current.worldSummary)}</p></section><div class="verdict-actions"><button type="button" data-verdict-export="${current.id}">导出《帝纪终评》</button></div>${store.verdicts.length > 1 ? `<section class="verdict-history"><h3>历次拟谥</h3>${store.verdicts.slice(1, 8).map(item => `<button type="button" data-verdict-select="${item.id}"><span>${escapeHtml(item.scenarioName)}</span><strong>汉${escapeHtml(item.posthumous)}帝</strong><small>${escapeHtml(item.ending)}</small></button>`).join("")}</section>` : ""}`;
   }
 
   function renderStoryAfterword(word) {
@@ -189,6 +196,7 @@
       "史臣总评：", value.finalComment, "", "三项长处：", ...value.virtues.map(item => `${item.name}（${item.score}）：${item.text}`), "",
       "史家争议：", ...value.controversies.map((item, index) => `${index + 1}. ${item}`), "", "人物后记：", ...value.characters.map(item => `${item.name}：${item.fate}`), "", "山河终卷：", value.worldSummary,
     ];
+    if (value.diplomaticOutcome) lines.push("", "外交终局依据：", window.XianDiplomaticEndings.text(value.diplomaticOutcome));
     if (value.storyAfterword && Array.isArray(value.storyAfterword.paragraphs)) {
       lines.push("", value.storyAfterword.title, ...value.storyAfterword.paragraphs.filter(text => typeof text === "string"));
     }
@@ -201,7 +209,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 500);
   }
 
-  function normalizeGame(game) { return { stats: { authority: 0, prestige: 0, security: 0, treasury: 0, officials: 0, caoAlert: 0, ...(game.stats || {}) }, hidden: { loyalNetwork: 0, leakRisk: 0, peopleStability: 0, externalBalance: 0, escapeRoute: 0, ...(game.hidden || {}) } }; }
+  function normalizeGame(game) { return { diplomaticOutcome: game.diplomaticOutcome || null, stats: { authority: 0, prestige: 0, security: 0, treasury: 0, officials: 0, caoAlert: 0, ...(game.stats || {}) }, hidden: { loyalNetwork: 0, leakRisk: 0, peopleStability: 0, externalBalance: 0, escapeRoute: 0, ...(game.hidden || {}) } }; }
   function avg(...values) { return values.reduce((sum, value) => sum + Number(value || 0), 0) / Math.max(1, values.length); }
   function fallbackScore(game) { const value = normalizeGame(game); return Math.round(value.stats.authority + value.stats.prestige + value.stats.security + value.stats.treasury + value.stats.officials + (100 - value.stats.caoAlert)); }
   function scenarioById(id) { return window.GAME_DATA?.scenarios?.find(item => item.id === id); }

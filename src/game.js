@@ -41,7 +41,7 @@
   let settlementStage = "";
   let commitRunning = false;
   let operationDepth = 0;
-  const RULES_VERSION = 228;
+  const RULES_VERSION = 229;
 
   // One synchronous boundary owns gameplay. Timers may repaint, never settle a save.
   function commit(kind = "save") {
@@ -1778,6 +1778,8 @@
   }
 
   function finishCampaign() {
+    // Close the final military observation before testing either diplomatic path.
+    window.XianStrategyNetwork?.reconcilePromises?.();
     const s = state.stats;
     const h = state.hidden;
     let ending;
@@ -1827,6 +1829,15 @@
   }
 
   function concludeGame(ending) {
+    const requestedTitle = ending.title;
+    if (!window.XianShortChallenges?.getActiveStatus?.(state)) {
+      window.XianStrategyNetwork?.reconcilePromises?.();
+      const outcome = window.XianDiplomaticEndings?.preview(state);
+      if (outcome) {
+        ending = window.XianDiplomaticEndings.resolve(ending, outcome, state);
+        state.diplomaticOutcome = { ...outcome, ruling: { requested: requestedTitle, resolved: ending.title } };
+      }
+    }
     state.ended = true;
     state.ending = ending;
     finalizeSettlement();
@@ -1879,7 +1890,7 @@
     const finalStats = Object.entries(DATA.statMeta)
       .map(([key, meta]) => `<div><span>${meta.name}</span><strong>${Math.round(state.stats[key])}</strong></div>`)
       .join("") + `<div class="scenario-result ${challenge.completed ? "complete" : "incomplete"}"><span>${escapeHtml(challenge.title)}</span><strong>${short ? `${short.completed}/${short.total} 项目标${short.endedEarly ? " · 提前终局" : ""}` : challenge.completed ? "挑战完成" : "尚未完成"}</strong></div>`;
-    el["ending-stats"].innerHTML = short ? `<details><summary>终局国势 · 六项指标</summary><div class="ending-final-grid">${finalStats}</div></details>` : finalStats;
+    el["ending-stats"].innerHTML = short ? `<details><summary>终局国势 · 六项指标</summary><div class="ending-final-grid">${finalStats}</div></details>` : finalStats + (window.XianDiplomaticEndings?.render(state.diplomaticOutcome, true) || "");
     const afterword = document.getElementById("story220-afterword");
     if (afterword) {
       const html = window.XianScenario220Story?.afterwordHtml(state) || "";
@@ -2288,6 +2299,7 @@
       "终局数值：",
       ...Object.entries(DATA.statMeta).map(([key, meta]) => `${meta.name}：${Math.round(state.stats[key])}`),
     ];
+    if (state.diplomaticOutcome) lines.push("", "外交终局依据：", window.XianDiplomaticEndings.text(state.diplomaticOutcome));
     const shortReview = window.XianShortChallenges?.formatReviewText?.(state);
     if (shortReview) lines.push("", shortReview);
     const afterword = window.XianScenario220Story?.afterwordText(state);

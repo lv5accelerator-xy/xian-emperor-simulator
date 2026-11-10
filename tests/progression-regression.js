@@ -55,7 +55,7 @@ vm.runInNewContext(read("src/imperial-progress.js"), context, { filename: "imper
 const api = context.window.XianImperialProgress;
 assert.ok(api, "imperial progress diagnostics API should load");
 assert.equal(api.getPathEnding({ createdAt: "other-game", stats: {}, hidden: {} }), null, "path rewards must not leak across runs");
-assert.equal(api.getPathEnding({ createdAt: "test-game", stats: { prestige: 70 }, hidden: { externalBalance: 65 } })?.title, "天下共奉");
+assert.equal(api.getPathEnding({ createdAt: "test-game", stats: { prestige: 70 }, hidden: { externalBalance: 65 } }), null, "high national values without factual diplomatic evidence cannot grant common allegiance");
 assert.equal(api.getPathEnding({ createdAt: "test-game", stats: { prestige: 50 }, hidden: { externalBalance: 65 } }), null, "special ending conditions must be enforced");
 
 function loadEndingApi(pathId) {
