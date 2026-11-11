@@ -7,6 +7,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const DATA = window.XIAN_WORLD_DATA;
   if (!DATA) {
     console.error("XIAN_WORLD_DATA 未加载，天下模块无法启动。");
@@ -140,7 +149,7 @@
   function saveWorldState() {
     if (!worldState) return;
     try {
-      localStorage.setItem(WORLD_SAVE_KEY, JSON.stringify(worldState));
+      storageWrite("setItem", WORLD_SAVE_KEY, JSON.stringify(worldState));
     } catch (error) {
       console.warn("天下模块保存失败", error);
     }

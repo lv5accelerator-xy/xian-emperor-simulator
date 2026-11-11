@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const DATA = window.XIAN_CAMPAIGN_DATA;
   if (!DATA) return;
   const CORE_KEY = "xian_emperor_simulator_v01";
@@ -163,7 +172,7 @@
 
   function saveState() {
     if (!state) return;
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (error) { console.warn("战役进程保存失败", error); }
+    try { storageWrite("setItem", STORE_KEY, JSON.stringify(state)); } catch (error) { console.warn("战役进程保存失败", error); }
   }
 
   function stages() { return DATA.scenarioStages[core?.scenarioId] || []; }

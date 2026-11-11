@@ -1,0 +1,8 @@
+{
+  "source": "history/xian-emperor-simulator-v2.13.0.zip",
+  "sha256": "e99231d560d7abe7b0a0bd5f574c5842f47c26edf54a527ae45316b6250339ae",
+  "method": "Isolated VM executes archived data.js and game.js; exposes private createInitialState only in the VM, calls standard/jianan_196 with fixed Date. Constructed initial core, not an actual player's save. Source gameplay is unchanged.",
+  "constructorSourceSha256": "775878929ed83efa7f0db028ecc5ca0b13ed170d61250c3a45158c540fec91f7",
+  "version": "2.13.0",
+  "schemaVersion": 101
+}

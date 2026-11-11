@@ -1,0 +1,68 @@
+{
+  "version": "2.13.0",
+  "schemaVersion": 101,
+  "scenarioId": "jianan_196",
+  "difficulty": "standard",
+  "turn": 1,
+  "year": 196,
+  "month": 10,
+  "maxTurns": 24,
+  "actionPoints": 2,
+  "stats": {
+    "authority": 34,
+    "prestige": 72,
+    "security": 56,
+    "treasury": 42,
+    "officials": 46,
+    "caoAlert": 38
+  },
+  "hidden": {
+    "loyalNetwork": 18,
+    "leakRisk": 12,
+    "peopleStability": 48,
+    "externalBalance": 18,
+    "escapeRoute": 0
+  },
+  "relations": {
+    "liu_xie": 100,
+    "empress_fu": 78,
+    "dong_cheng": 66,
+    "yang_biao": 58,
+    "xun_yu": 50,
+    "cao_cao": 42,
+    "yuan_shao": 44,
+    "yuan_shu": 24,
+    "liu_biao": 57,
+    "sun_ce": 39
+  },
+  "usedRandomEvents": [],
+  "recentEventIds": [],
+  "currentEventId": null,
+  "eventResolved": false,
+  "reports": [],
+  "chronicle": [],
+  "totalActions": 0,
+  "edictsIssued": 0,
+  "causality": {
+    "version": 290,
+    "pending": [],
+    "history": [],
+    "processedEventIds": [],
+    "metrics": {
+      "battles": 0,
+      "courtVictories": 0,
+      "courtDefeats": 0,
+      "citiesTaken": 0,
+      "citiesLost": 0,
+      "lastBattleTurn": 0,
+      "lastCaptureTurn": 0
+    },
+    "lastMonthResolved": 0,
+    "updatedAt": null
+  },
+  "ended": false,
+  "ending": null,
+  "challengeRecorded": false,
+  "createdAt": "2026-11-01T00:00:00.000Z",
+  "updatedAt": "2026-11-01T00:00:00.000Z"
+}

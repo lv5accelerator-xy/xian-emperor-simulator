@@ -1,6 +1,15 @@
 /* 天子蒙尘 v2.23.0 · 阅读字号独立于字风、存档与随机进度。 */
 (() => {
   "use strict";
+
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
   const KEY = "xian_reading_size_v1";
   const SIZES = ["standard", "large", "largest"];
   const LABELS = { standard: "标准", large: "大字", largest: "特大" };
@@ -24,7 +33,7 @@
     size = normalize(value);
     document.documentElement.dataset.readingSize = size;
     if (persist) {
-      try { localStorage.setItem(KEY, size); } catch (_) { /* The current page can still change size. */ }
+      try { storageWrite("setItem", KEY, size); } catch (_) { /* The current page can still change size. */ }
     }
     render();
   }

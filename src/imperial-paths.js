@@ -1,6 +1,15 @@
 /* 天子蒙尘 v2.13.0：帝业殊途 */
 (() => {
   "use strict";
+
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
   const VERSION = "2.13.0";
   const STORAGE_KEY = "xian_emperor_imperial_paths_v2130";
   const PATHS = [
@@ -55,7 +64,7 @@
 
   function blankState() { return { version: 1, gameCreatedAt: null, unlocked: false, offers: [], active: null, history: [] }; }
   function loadState() { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); return { ...blankState(), ...(value || {}), offers: Array.isArray(value?.offers) ? value.offers : [], history: Array.isArray(value?.history) ? value.history : [] }; } catch (_) { return blankState(); } }
-  function saveState(renderNow = true) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {} if (renderNow) render(); }
+  function saveState(renderNow = true) { try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (_) {} if (renderNow) render(); }
   function coreState() { return window.XianEmperorGame?.getState?.() || null; }
   function quarterlyState() { return window.XianQuarterlyAgenda?.getState?.() || null; }
   function councilState() { return window.XianCouncilAdvice?.getState?.() || null; }

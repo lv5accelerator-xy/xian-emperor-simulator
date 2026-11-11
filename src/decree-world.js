@@ -5,6 +5,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const DATA = window.XIAN_WORLD_DATA;
   if (!DATA) return;
 
@@ -132,7 +141,7 @@
 
     if (changed) {
       try {
-        localStorage.setItem(WORLD_SAVE_KEY, JSON.stringify(world));
+        storageWrite("setItem", WORLD_SAVE_KEY, JSON.stringify(world));
       } catch (error) {
         console.warn("诏令天下影响保存失败。", error);
       }
@@ -469,7 +478,7 @@
   function saveExtensionState() {
     if (!extensionState) return;
     try {
-      localStorage.setItem(EXTENSION_KEY, JSON.stringify(extensionState));
+      storageWrite("setItem", EXTENSION_KEY, JSON.stringify(extensionState));
     } catch (error) {
       console.warn("诏令天下扩展保存失败。", error);
     }

@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STORE_KEY = "xian_emperor_world_marks_v180";
   const MAX_HISTORY = 48;
@@ -148,7 +157,7 @@
 
   function defaultState() { return { version: 1, active: [], history: [] }; }
   function loadState() { try { const value = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); return { ...defaultState(), ...(value || {}), active: Array.isArray(value?.active) ? value.active : [], history: Array.isArray(value?.history) ? value.history : [] }; } catch (_) { return defaultState(); } }
-  function saveState() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (error) { console.warn("山河印记保存失败", error); } }
+  function saveState() { try { storageWrite("setItem", STORE_KEY, JSON.stringify(state)); } catch (error) { console.warn("山河印记保存失败", error); } }
   function readCore() { try { const value = JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
   function escapeHtml(value) { return window.XianCommandCenter?.escapeHtml?.(value) || String(value ?? ""); }
 

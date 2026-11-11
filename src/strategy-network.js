@@ -5,6 +5,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const DATA = window.XIAN_STRATEGY_DATA;
   if (!DATA) {
     console.error("XIAN_STRATEGY_DATA 未加载，军略网络无法启动。");
@@ -110,7 +119,7 @@
 
   function saveState() {
     if (!state) return;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (error) { console.warn("军略网络保存失败", error); }
+    try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (error) { console.warn("军略网络保存失败", error); }
   }
 
   function createState(core) {

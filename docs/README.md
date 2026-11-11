@@ -61,3 +61,5 @@
 - [历史包迁移及版本工具](RELEASE_MIGRATION.md)
 - [手写版本盘点](VERSION_INVENTORY.md)
 - [参与维护](../CONTRIBUTING.md)
+
+- [存档与存储架构评估](SAVE_ARCHITECTURE.md)：全键清单、导入兼容、容量风险与迁移候选方案。

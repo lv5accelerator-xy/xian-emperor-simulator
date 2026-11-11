@@ -5,6 +5,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const DATA = window.XIAN_ARMY_DATA;
   const STRATEGY_DATA = window.XIAN_STRATEGY_DATA;
   const STRATEGY_API = window.XianStrategyNetwork;
@@ -104,7 +113,7 @@
 
   function saveState() {
     if (!state) return;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); }
     catch (error) { console.warn("军团系统保存失败", error); }
   }
 
@@ -1394,7 +1403,7 @@
     strategy.log = Array.isArray(strategy.log) ? strategy.log : [];
     strategy.log.unshift({ id: `capture-${siege.id}`, turn, type: "attack", text: `${cityName(siege.cityId)}由${ownerName(previousOwner)}转归${ownerName(army.owner)}。` });
     strategy.updatedAt = new Date().toISOString();
-    localStorage.setItem(STRATEGY_KEY, JSON.stringify(strategy));
+    storageWrite("setItem", STRATEGY_KEY, JSON.stringify(strategy));
     strategyDirty = true;
     siege.status = "captured";
     siege.capturedTurn = turn;
@@ -1561,7 +1570,7 @@
     strategy.log = Array.isArray(strategy.log) ? strategy.log : [];
     strategy.log.unshift({ id: `judgment-result-${judgment.id}`, turn: judgment.turn, type: "diplomacy", text: `${cityName(judgment.cityId)}战后裁决：${result.label}。` });
     strategy.updatedAt = new Date().toISOString();
-    localStorage.setItem(STRATEGY_KEY, JSON.stringify(strategy));
+    storageWrite("setItem", STRATEGY_KEY, JSON.stringify(strategy));
     strategyDirty = true;
     judgment.status = "resolved";
     judgment.decision = decision;
@@ -1676,7 +1685,7 @@
     route.status = routeStatus(route.supply, route.pressure);
     route.lastChange = note;
     strategy.updatedAt = new Date().toISOString();
-    localStorage.setItem(STRATEGY_KEY, JSON.stringify(strategy));
+    storageWrite("setItem", STRATEGY_KEY, JSON.stringify(strategy));
     strategyDirty = true;
   }
 
@@ -1692,7 +1701,7 @@
     strategy.log = Array.isArray(strategy.log) ? strategy.log : [];
     strategy.log.unshift({ id: `army-strategy-${Date.now()}-${cityId}`, turn: state.lastProcessedTurn, type: "warning", text: `${cityName(cityId)}：${note}。` });
     strategy.updatedAt = new Date().toISOString();
-    localStorage.setItem(STRATEGY_KEY, JSON.stringify(strategy));
+    storageWrite("setItem", STRATEGY_KEY, JSON.stringify(strategy));
     strategyDirty = true;
   }
 
@@ -1704,7 +1713,7 @@
     if (!rawCore) return;
     window.__xianArmyRefreshOnly = true;
     window.__xianStrategyRefreshOnly = true;
-    try { localStorage.setItem(CORE_KEY, rawCore); }
+    try { storageWrite("setItem", CORE_KEY, rawCore); }
     finally {
       window.__xianArmyRefreshOnly = false;
       window.__xianStrategyRefreshOnly = false;

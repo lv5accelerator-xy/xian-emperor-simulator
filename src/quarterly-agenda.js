@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const VERSION = "2.10.0";
   const STORAGE_KEY = "xian_emperor_quarterly_agenda_v2100";
   const MAX_HISTORY = 12;
@@ -102,7 +111,7 @@
 
   function saveState(notify = true) {
     state.updatedAt = new Date().toISOString();
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+    try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
     render();
     if (notify) document.dispatchEvent(new CustomEvent("xian:quarterly-agenda-updated", { detail: getState() }));
   }

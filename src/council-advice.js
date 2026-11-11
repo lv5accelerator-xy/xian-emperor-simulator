@@ -1,6 +1,15 @@
 /* 天子蒙尘 v2.11.0：群臣对策 */
 (() => {
   "use strict";
+
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
   const VERSION = "2.11.0";
   const MODIFIERS = Object.freeze({
     yang_biao: { actions: ["ritual", "appointment", "revenue"], effects: { officials: 2 }, discount: 1, description: "朝仪、任官、筹措：百官额外 +2；有费用时减少国库用度 1" },
@@ -53,7 +62,7 @@
 
   function blankState() { return { version: 1, gameCreatedAt: null, cycle: 0, agendaId: null, chosen: null, processed: [], history: [] }; }
   function loadState() { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); return { ...blankState(), ...(value || {}) }; } catch (_) { return blankState(); } }
-  function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {} render(); }
+  function saveState() { try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (_) {} render(); }
   function coreState() { return window.XianEmperorGame?.getState?.() || null; }
   function agendaState() { return window.XianQuarterlyAgenda?.getState?.() || null; }
 

@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STORE_KEY = "xian_emperor_command_center_v160";
   const ACTION_ADVICE = {
@@ -490,7 +499,7 @@
   }
 
   function saveStore() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); }
+    try { storageWrite("setItem", STORE_KEY, JSON.stringify(store)); }
     catch (error) { console.warn("御前总览设置保存失败", error); }
   }
 

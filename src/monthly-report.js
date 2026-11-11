@@ -8,6 +8,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const GAME_SAVE_KEY = "xian_emperor_simulator_v01";
   const REPORT_STORE_KEY = "xian_emperor_monthly_reports_v011";
   const SNAPSHOT_STORE_KEY = "xian_emperor_month_snapshot_v011";
@@ -65,7 +74,7 @@
 
   function writeReportStore(store) {
     try {
-      localStorage.setItem(
+      storageWrite("setItem",
         REPORT_STORE_KEY,
         JSON.stringify({
           gameCreatedAt: store.gameCreatedAt || null,
@@ -102,7 +111,7 @@
       capturedAt: new Date().toISOString(),
     };
     try {
-      localStorage.setItem(SNAPSHOT_STORE_KEY, JSON.stringify(snapshot));
+      storageWrite("setItem", SNAPSHOT_STORE_KEY, JSON.stringify(snapshot));
     } catch (error) {
       console.error("月报扩展保存月初快照失败", error);
     }
@@ -139,8 +148,8 @@
 
   function bindSnapshotHooks() {
     const resetForNewGame = () => {
-      localStorage.removeItem(REPORT_STORE_KEY);
-      localStorage.removeItem(SNAPSHOT_STORE_KEY);
+      storageWrite("removeItem", REPORT_STORE_KEY);
+      storageWrite("removeItem", SNAPSHOT_STORE_KEY);
       ensureCurrentMonthSnapshot("month-start");
     };
 
