@@ -21,6 +21,7 @@
   let state = null;
   let coreState = null;
   let activeTab = "cities";
+  let diplomaticSelection = ["yuan_shao","gongsun_zan"];
   let initialized = false;
   let processTimer = null;
   let pendingCoreCommit = false;
@@ -70,6 +71,7 @@
       state = createState(core);
       window.XianAllianceDiplomacy.migrate(state, core);
       processNewReports(core);
+      reconcileDiplomaticRelations(core);
       saveState();
       renderAll();
       return;
@@ -78,6 +80,7 @@
     state = migrateState(loaded, core);
     migrateLegacyOrderedRoutes(core);
     processNewReports(core);
+    reconcileDiplomaticRelations(core);
     processElapsedTurns(core);
     state.updatedAt = new Date().toISOString();
     saveState();
@@ -792,7 +795,48 @@
       window.XianAllianceDiplomacy.reconcile(state, window.XianArmySystem?.getState?.() || {}, coreState);
     }
     window.XianDiplomaticEndings?.reconcile(state, window.XianArmySystem?.getState?.() || {}, coreState);
+    reconcileDiplomaticRelations(coreState);
     window.XianAllianceDiplomacy.propose(state, window.XianArmySystem?.getState?.() || {}, coreState);
+  }
+
+  function reconcileDiplomaticRelations(core) {
+    const model=window.XianDiplomaticRelations,armies=window.XianArmySystem?.getState?.();
+    if (!model || !core || core.ended || state?.gameCreatedAt!==core.createdAt || window.__xianFullSaveImporting) return;
+    model.ledger(state,core);
+    if (armies?.gameCreatedAt!==core.createdAt) return;
+    model.reconcile(state,armies,core);
+  }
+
+  // The army replays paid diplomacy and military actions in their original order.
+  function resolveDiplomaticRequest(id,armies,core) {
+    if(!state||state.gameCreatedAt!==core?.createdAt||core.ended)return false;
+    const model=window.XianDiplomaticRelations;if(!model)return false;
+    model.reconcile(state,armies,core);
+    model.resolveRequests(state,armies,core,window.XianWorldSystem?.getState?.()||{},id);
+    model.reconcile(state,armies,core);saveState();return true;
+  }
+
+  function previewDiplomaticAction(kind,parties) {
+    const core=window.XianEmperorGame?.getState?.(),model=window.XianDiplomaticRelations;
+    if(!core || !model)return {ok:false,message:"外交档案尚未载入。"};
+    const result=model.preview(kind,parties,state,window.XianArmySystem?.getState?.(),core,window.XianWorldSystem?.getState?.()||{});
+    if(!result.ok)return result;
+    if(!core.eventResolved||core.ended||core.actionPoints<1||Number(core.monthlySettledTurn||0)>=core.turn)return {ok:false,message:"先裁决本月奏报，并保留1次行动。"};
+    if(core.stats.treasury<result.treasuryCost)return {ok:false,message:"国库不足，议和或修好需国库2。"};
+    if(state.diplomaticRelations.requests.some(r=>r.kind===kind&&r.pairId===result.pairId&&r.turn===core.turn&&core.appliedReceipts.includes(r.id)))return {ok:false,message:"本月已就同一事项交涉，请等待下一月。"};
+    return result;
+  }
+
+  function performDiplomaticAction(kind,parties) {
+    const view=previewDiplomaticAction(kind,parties);if(!view.ok)return false;
+    const core=window.XianEmperorGame.getState(),id=`diplomatic-action:${core.createdAt}:${core.turn}:${kind}:${view.pairId}`;
+    const d=state.diplomaticRelations;d.requests=d.requests.filter(r=>r.id!==id);
+    d.requests.push({id,kind,parties:view.parties,pairId:view.pairId,turn:core.turn,gameCreatedAt:core.createdAt,operationSequence:core.operationSequence+1,
+      offer:JSON.parse(JSON.stringify(view)),initialFactIds:(window.XianArmySystem.getState().militaryFacts||[]).map(f=>f.id),sourceConflictIds:d.hostilities.filter(f=>[f.attackerOwner,f.defenderOwner].sort().join("~")===view.pairId).map(f=>f.id),resolved:false});saveState();
+    const applied=window.XianEmperorGame.performExternalAction({receiptId:id,actionId:"diplomatic-relations",causal:false,title:kind==="peace"?"外交·战后议和":"外交·遣使修好",
+      text:view.message,chronicle:`天子为${view.parties.map(controllerName).join("与")}遣使${kind==="peace"?"议和":"修好"}，双方分别答复。`,effects:{treasury:-view.treasuryCost}});
+    if(!applied&&!window.XianEmperorGame.getState().appliedReceipts.includes(id)){state.diplomaticRelations.requests=state.diplomaticRelations.requests.filter(r=>r.id!==id);saveState();}
+    return applied===true;
   }
 
   function resolvePendingLordCommands() {
@@ -850,7 +894,7 @@
     const preview = previewCoalitionIntervention(planId, kind);
     if (!preview.ok) return false;
     const plan = state.allianceDiplomacy.plans.find(p => p.id === planId), receiptId = `coalition-intervention:${planId}`;
-    plan.intervention = { receiptId, kind, turn: coreState.turn }; saveState();
+    plan.intervention = { receiptId, kind, turn: coreState.turn, operationSequence: Number(coreState.operationSequence || 0)+1 }; saveState();
     const applied = window.XianEmperorGame.performExternalAction({ receiptId, actionId: "lord-command", causal: false,
       title: `联军·${kind === "coordinate" ? "协调" : "劝止"}`, text: preview.message,
       chronicle: `天子${kind === "coordinate" ? "协调" : "劝止"}诸侯共同军议。`, effects: { treasury: -preview.treasuryCost } });
@@ -864,7 +908,7 @@
     if (preview.needsAcknowledgement) { window.XianEmperorGame.notify("请先勾选承担主动违背停战或盟约的后果，再确认交涉。", "warning"); return false; }
     const intent = state.commandChain.intents.find(i => i.id === intentId);
     const receiptId = `lord-intervention:${intentId}`;
-    intent.intervention = { receiptId, kind, acknowledgeBreach: acknowledgeBreach === true, turn: coreState.turn };
+    intent.intervention = { receiptId, kind, acknowledgeBreach: acknowledgeBreach === true, turn: coreState.turn, operationSequence: Number(coreState.operationSequence || 0)+1 };
     saveState();
     const applied = window.XianEmperorGame.performExternalAction({ receiptId, actionId: "lord-command", causal: false,
       title: `军议·${kind === "coordinate" ? "协调" : "劝止"}`, text: `${intent.ownerName}拟${orderLabel(intent.task)}${intent.targetName}；${preview.message}`,
@@ -1026,7 +1070,7 @@
     if (current.length) content.innerHTML += `<button type="button" class="lord-intent-brief" data-brief-tab="strategies"><span>本月并行军议 · ${current.length} 镇 · ${current.filter(i=>i.status==="proposed").length} 项待决</span><strong>${current.map(i=>`${escapeHtml(i.ownerName)}：${escapeHtml(orderLabel(i.task))}${escapeHtml(i.targetName)}`).join("；")}</strong><small>每次协调或劝止使用1次行动；未干预军议月末按固定次序决断，旧令与已承接援军优先。查看全部军议、冲突与外交因果 →</small></button>`;
     const pacts = state.promises.filter(p => window.XianAllianceDiplomacy.formal(p) && p.status === "active");
     const joint = state.allianceDiplomacy?.plans.filter(p => p.turn === coreState?.turn) || [];
-    content.innerHTML += `<button type="button" class="alliance-brief" data-brief-tab="strategies"><span>诸侯结盟与联军</span><strong>${pacts.length ? `${pacts.length}份有效盟约 · ${joint.length}项本月共同军议` : "拟旨邀请二至三镇结盟"}</strong><small>例：令${escapeHtml(controllerName("yuan_shao"))}与${escapeHtml(controllerName("gongsun_zan"))}结盟，共讨${escapeHtml(controllerName("liu_biao"))}，合攻晋阳。各镇须同意，再分别接令；查看联军与背盟后果 →</small></button>`;
+    content.innerHTML += `<button type="button" class="alliance-brief" data-brief-tab="strategies"><span>诸侯结盟与联军</span><strong>${pacts.length ? `${pacts.length}份有效盟约 · ${joint.length}项本月共同军议` : "拟旨邀请二至三镇结盟"}</strong><small>例：令${escapeHtml(controllerName("yuan_shao"))}与${escapeHtml(controllerName("gongsun_zan"))}结盟，共讨${escapeHtml(controllerName("liu_biao"))}，合攻晋阳。各镇须同意，再分别接令；查看联军、战后议和、遣使修好与背盟后果 →</small></button>`;
     content.querySelectorAll("[data-brief-tab]").forEach(button => button.addEventListener("click", () => { activeTab = button.dataset.briefTab; openOverlay(); }));
   }
 
@@ -1040,6 +1084,8 @@
     const renderers = { cities: renderCities, routes: renderRoutes, promises: renderPromises, strategies: renderStrategies };
     content.innerHTML = renderSummary() + (renderers[activeTab] || renderCities)();
     content.querySelectorAll("[data-lord-action]").forEach(button => button.addEventListener("click", () => openLordIntervention(button.dataset.intentId, button.dataset.lordAction)));
+    content.querySelectorAll("[data-relations-party]").forEach(select=>select.addEventListener("change",()=>{diplomaticSelection[Number(select.dataset.relationsParty)]=select.value;renderOverlay();}));
+    content.querySelectorAll("[data-relations-action]").forEach(button=>button.addEventListener("click",()=>openDiplomaticAction(button.dataset.relationsAction)));
     content.querySelectorAll("[data-coalition-action]").forEach(button => button.addEventListener("click", () => openCoalitionIntervention(button.dataset.planId, button.dataset.coalitionAction)));
   }
 
@@ -1093,7 +1139,7 @@
 
   function renderStrategies() {
     const entries = Object.values(state.strategies).sort((a, b) => b.readiness - a.readiness);
-    return renderAlliances() + renderCommandChain() + `<section><div class="strategy-section-head"><div><span class="section-kicker">诸侯战略</span><h3>当前方略</h3></div><small>诏令目标与准备度；实际行动以军令回执为准</small></div><div class="lord-strategy-grid">${entries.map(strategy => `<article class="lord-strategy-card"><div><strong>${escapeHtml(strategyName(strategy.lordId))}</strong><b>${escapeHtml(orderLabel(strategy.order))}</b></div><h4>${escapeHtml(strategy.objective)}</h4>${metric("战备", strategy.readiness)}${metric("信任", strategy.trust)}<p>${escapeHtml(strategy.lastChange)}</p></article>`).join("")}</div><section class="strategy-log"><div class="strategy-section-head"><div><span class="section-kicker">军国记录</span><h3>最近变化</h3></div></div>${state.log.slice(0, 12).map(item => `<article><span>${escapeHtml(logIcon(item.type))}</span><div><strong>第 ${item.turn} 月</strong><p>${escapeHtml(item.text)}</p></div></article>`).join("")}</section></section>`;
+    return renderDiplomaticRelations() + renderAlliances() + renderCommandChain() + `<section><div class="strategy-section-head"><div><span class="section-kicker">诸侯战略</span><h3>当前方略</h3></div><small>诏令目标与准备度；实际行动以军令回执为准</small></div><div class="lord-strategy-grid">${entries.map(strategy => `<article class="lord-strategy-card"><div><strong>${escapeHtml(strategyName(strategy.lordId))}</strong><b>${escapeHtml(orderLabel(strategy.order))}</b></div><h4>${escapeHtml(strategy.objective)}</h4>${metric("战备", strategy.readiness)}${metric("信任", strategy.trust)}<p>${escapeHtml(strategy.lastChange)}</p></article>`).join("")}</div><section class="strategy-log"><div class="strategy-section-head"><div><span class="section-kicker">军国记录</span><h3>最近变化</h3></div></div>${state.log.slice(0, 12).map(item => `<article><span>${escapeHtml(logIcon(item.type))}</span><div><strong>第 ${item.turn} 月</strong><p>${escapeHtml(item.text)}</p></div></article>`).join("")}</section></section>`;
   }
 
   function chainStatus(status) { return { proposed: "待接令", requested: "待回执", accepted: "已接令", restrained: "已劝止", refused: "拒令", marching: "行军中", arrived: "已抵达", besieging: "围城中", captured: "已占领", failed: "军令失败", superseded: "已换令", expired: "逾期无回执" }[status] || status; }
@@ -1127,6 +1173,22 @@
       } });
   }
 
+  function openDiplomaticAction(kind) {
+    const parties=[...diplomaticSelection],view=previewDiplomaticAction(kind,parties);
+    if(!view.ok){window.XianEmperorGame.notify(view.message,"warning");return;}
+    window.XianEmperorGame.openUtilityModal({title:kind==="peace"?"提议战后议和":"遣使修复盟好",wide:true,
+      body:`<p>${escapeHtml(parties.map(controllerName).join(" ↔ "))}</p><p>${escapeHtml(view.message)}</p>${view.consents.map(c=>`<p><strong>${escapeHtml(c.actorName)}：${c.status==="accepted"?"愿意承接":"将拒绝"}</strong> · 交涉意愿${c.score}；厌战${c.weariness}，对朝廷信任${c.trust}。${escapeHtml(c.reason)}</p>`).join("")}<p>${kind==="peace"?"各镇同意后，军团按本镇意愿停止双方进攻并撤围；第三方战事不受此约影响。须完成四个月观察，和约才算履行；其后继续维持和平，除非实际破约。":"须先有至少两个月实际和平观察。修好承接可改善互信与信誉；旧背盟仍须两个后续完整守约期才确认修复。每轮旧怨最多两次修好承接，同月不能重复。"}</p>`,
+      confirmText:"确认交涉 · 1行动／2国库",onConfirm:()=>{window.XianEmperorGame.closeUtilityModal();performDiplomaticAction(kind,parties);}});
+  }
+
+  function renderDiplomaticRelations() {
+    if(!window.XianDiplomaticRelations||!coreState||!state.diplomaticRelations)return "";
+    const d=state.diplomaticRelations,p=window.XianDiplomaticRelations.pair(state,...diplomaticSelection),peace=previewDiplomaticAction("peace",diplomaticSelection),repair=previewDiplomaticAction("repair",diplomaticSelection);
+    const options=i=>DATA.lords.map(l=>`<option value="${escapeHtml(l.id)}" ${diplomaticSelection[i]===l.id?"selected":""}>${escapeHtml(controllerName(l.id))}</option>`).join("");
+    const status=t=>({active:"观察中",fulfilled:"已完整履行，继续维持和平",broken:"和约已破",unverified:"历史观察有缺项，保留当前和平同意"}[t.status]||t.status);
+    return `<section class="relations-desk" aria-label="战后议和与信任修复"><h3>战后议和与信任修复</h3><p>双方须分别同意。议和先停攻撤围，再按实际军事结算观察；遣使修好与后续守约逐步重建信任。</p><div class="relations-selectors"><label>一方<select data-relations-party="0" aria-label="交涉一方">${options(0)}</select></label><label>另一方<select data-relations-party="1" aria-label="交涉另一方">${options(1)}</select></label></div><p class="relations-current">${escapeHtml(diplomaticSelection.map(controllerName).join(" ↔ "))} · 双方互信${p.trust}／100 · 旧怨${p.grievance}／100</p><div class="lord-command-actions"><button type="button" data-relations-action="peace" ${peace.ok?"":"disabled"}>提议议和 · 1行动／2国库</button><button type="button" data-relations-action="repair" ${repair.ok?"":"disabled"}>遣使修好 · 1行动／2国库</button></div><p>${escapeHtml(peace.message)}</p><p>${escapeHtml(repair.message)}</p><details><summary>查看和约与双方长期关系</summary>${d.treaties.slice().reverse().map(t=>`<p>${escapeHtml(t.parties.map(controllerName).join(" ↔ "))} · ${escapeHtml(status(t))}；第${t.createdTurn}—${t.deadlineTurn}月观察，实际观察${t.observedTurns.length}月，${t.stoppedArmies||0}支军团停攻。${t.brokenTurn?`第${t.brokenTurn}月实际破约；旧履约记录保留。`:""}</p>`).join("")||"<p>尚无战后和约。</p>"}${Object.values(d.pairs).sort((a,b)=>a.id.localeCompare(b.id)).map(p=>`<p>${escapeHtml(p.parties.map(controllerName).join(" ↔ "))} · 互信${p.trust}，旧怨${p.grievance}；${d.repairs.filter(r=>r.pairId===p.id).length}宗背盟责任已获修复确认。</p>`).join("")}${d.requests.filter(r=>r.resolved).slice(-6).reverse().map(r=>`<p>第${r.turn}月 · ${escapeHtml(r.parties.map(controllerName).join(" ↔ "))} ${r.kind==="peace"?"议和":"修好"}：${r.accepted?"双方已承接":"未获全部承接"}。${r.consents.map(c=>`${escapeHtml(c.actorName)}：${escapeHtml(c.reason)}`).join("；")}</p>`).join("")}</details></section>`;
+  }
+
   function renderAlliances() {
     const d = state.allianceDiplomacy, pacts = state.promises.filter(window.XianAllianceDiplomacy.formal);
     const plans = d.plans.filter(p=>p.turn===coreState?.turn || p.orderIds.length).slice(-6).reverse();
@@ -1138,7 +1200,7 @@
       const participation = facts.filter(f=>f.participants?.some(p=>plan.orderIds.includes(p.orderId))).slice(-3);
       return `<article class="lord-command-card coalition-card" data-coalition-plan="${escapeHtml(plan.id)}"><div><strong>第${plan.turn}月 · 共同军议 · ${escapeHtml(cityDef(plan.targetCityId)?.name || "本镇")}</strong><b>${escapeHtml({proposed:"待接令",accepted:"各镇已接令",partial:"部分承接",refused:"未承接",restrained:"已暂缓"}[plan.status] || plan.status)}</b></div><p>主攻方${escapeHtml(controllerName(plan.leaderOwner))}；${escapeHtml(plan.lastChange)}</p>${plan.members.map(m=>`<p><strong>${escapeHtml(m.ownerName)} · ${escapeHtml(m.armyName)}</strong>：${m.coalitionRole === "leader" ? "主攻" : "协战"}，${escapeHtml(cityDef(m.originCityId)?.name || "无驻地")} → ${escapeHtml(m.targetName)}；${m.routeIds.length}段军路，预计${m.routeIds.length}月；${escapeHtml(chainStatus(m.status))}。${escapeHtml(m.lastProgress || m.responseReason || "尚无实际军令")}</p>`).join("")}<small>${staggered ? "各军到达时间不同；早到军须独自承受战事，迟到军不能远程助战。" : "各军分别行军；须实际同城或同路、同向出发才协战。"}同城每月仅推进一次城围，实际主攻方接管城池。</small>${current ? `<div class="lord-command-actions"><button type="button" data-coalition-action="coordinate" data-plan-id="${escapeHtml(plan.id)}" ${coordinate.ok ? "" : "disabled"}>协调联军 · 1行动 / ${coordinate.treasuryCost || 0}国库</button><button type="button" data-coalition-action="restrain" data-plan-id="${escapeHtml(plan.id)}" ${restrain.ok ? "" : "disabled"}>劝止联军 · 1行动</button></div><small>${escapeHtml(coordinate.message || "")}</small>` : ""}${participation.map(f=>`<p>第${f.turn}月实际协战：${f.participants.map(p=>`${escapeHtml(controllerName(p.owner))}到场${p.troopsBefore}兵，伤亡${p.losses}、耗粮${p.supplySpent}`).join("；")}。</p>`).join("")}</article>`;
     }).join("");
-    return `<section class="alliance-desk"><div class="strategy-section-head"><h3>盟约与联军</h3><small>${pacts.filter(p=>p.status==="active").length}份有效盟约 · 各方独立同意与接令</small></div><p>结盟须明确二至三镇；可写“共讨某镇，合攻某城”。签约使用拟旨行动，协调或劝止整项共同军议另用1行动；月末未干预军议由各镇自主决定。</p>${pacts.slice(0,6).map(p=>`<p><strong>${escapeHtml(p.contract.partyNames.join(" ↔ "))}</strong> · ${promiseStatus(p.status)} · 第${p.deadlineTurn}月止；${escapeHtml(p.lastChange)}</p>`).join("") || "<p>尚无正式盟约。</p>"}${cards}${window.XianDiplomaticEndings?.render(window.XianDiplomaticEndings.preview(coreState)) || ""}<details class="alliance-consequences"><summary>守约信誉与背盟后果</summary><p>${DATA.lords.map(l=>`${escapeHtml(controllerName(l.id))} ${d.reputations[l.id] ?? 50}`).join(" · ")}</p><p>信誉初始50，背盟至多−13；低于35难以再次结盟。朝廷授意背盟另使受害方对朝廷信任至多−5，相关盟方警惕至多−2；诸侯自主背盟由本镇承担。重复事实不重复扣罚，不自动引发盟友的盟友参战。</p>${d.consequences.slice(-8).reverse().map(c=>`<p>第${c.turn}月 · ${escapeHtml(c.actorName)}${c.kind === "coalition-withdrawal" ? "撤离共同任务" : "攻击盟方"}：守约信誉实际${c.reputationDelta}；${c.responsibility === "court" ? "朝廷授意" : "诸侯自主"}；${c.trustChanges.map(x=>`${escapeHtml(controllerName(x.actor))}对朝廷信任${x.actual}`).join("，")}。</p>`).join("") || "<p>尚无背盟事实。</p>"}${d.reactions.slice(-8).map(r=>`<p>第${r.turn}月 · ${escapeHtml(r.actorName)}因本镇盟约而警惕；对朝廷信任实际${r.trustDelta}${r.sharedAidWarning ? "，与援军警惕共用一次处罚" : ""}。</p>`).join("")}</details></section>`;
+    return `<section class="alliance-desk"><div class="strategy-section-head"><h3>盟约与联军</h3><small>${pacts.filter(p=>p.status==="active").length}份有效盟约 · 各方独立同意与接令</small></div><p>结盟须明确二至三镇；可写“共讨某镇，合攻某城”。签约使用拟旨行动，协调或劝止整项共同军议另用1行动；月末未干预军议由各镇自主决定。</p>${pacts.slice(0,6).map(p=>`<p><strong>${escapeHtml(p.contract.partyNames.join(" ↔ "))}</strong> · ${promiseStatus(p.status)} · 第${p.deadlineTurn}月止；${escapeHtml(p.lastChange)}</p>`).join("") || "<p>尚无正式盟约。</p>"}${cards}${window.XianDiplomaticEndings?.render(window.XianDiplomaticEndings.preview(coreState)) || ""}<details class="alliance-consequences"><summary>守约信誉与背盟后果</summary><p>${DATA.lords.map(l=>`${escapeHtml(controllerName(l.id))} ${d.reputations[l.id] ?? 50}`).join(" · ")}</p><p>信誉初始50，背盟至多−13；低于35难以再次结盟。朝廷授意背盟另使受害方对朝廷信任至多−5，相关盟方警惕至多−2；诸侯自主背盟由本镇承担。重复事实不重复扣罚，不自动引发盟友的盟友参战。</p>${d.consequences.slice(-8).reverse().map(c=>`<p>第${c.turn}月 · ${escapeHtml(c.actorName)}${c.kind === "coalition-withdrawal" ? "撤离共同任务" : c.kind === "peace-breach" ? "违背和约" : "攻击盟方"}：守约信誉实际${c.reputationDelta}；${c.responsibility === "court" ? "朝廷授意" : "诸侯自主"}；${c.trustChanges.map(x=>`${escapeHtml(controllerName(x.actor))}对朝廷信任${x.actual}`).join("，")}。</p>`).join("") || "<p>尚无背盟事实。</p>"}${d.reactions.slice(-8).map(r=>`<p>第${r.turn}月 · ${escapeHtml(r.actorName)}因本镇盟约而警惕；对朝廷信任实际${r.trustDelta}${r.sharedAidWarning ? "，与援军警惕共用一次处罚" : ""}。</p>`).join("")}</details></section>`;
   }
 
   function openCoalitionIntervention(planId, kind) {
@@ -1224,7 +1286,7 @@
     const targetOwner = state.cities[targetCityId]?.controller;
     const fieldOwners = Object.values(window.XianArmySystem?.getState?.()?.armies || {}).filter(army => army.cityId === targetCityId
       && army.troops >= 500 && !["destroyed", "routing", "marching"].includes(army.status)).map(army => army.owner);
-    return state.promises.filter(promise => (promise.type === "ceasefire" || window.XianAllianceDiplomacy.formal(promise)) && promise.status === "active"
+    return [...state.promises,...(window.XianDiplomaticRelations?.protectedTreaties(state)||[])].filter(promise => (promise.type === "ceasefire" || promise.type === "postwar_peace" || window.XianAllianceDiplomacy.formal(promise)) && promise.status === "active"
       && core.turn <= promise.deadlineTurn
       && (owners.length ? owners : ["court"]).some(owner => promise.contract?.parties?.includes(owner)
         && [targetOwner, ...fieldOwners].some(opponent => opponent !== owner && promise.contract.parties.includes(opponent))))
@@ -1234,6 +1296,9 @@
   }
 
   window.XianStrategyNetwork = Object.freeze({
+    previewDiplomaticAction,
+    performDiplomaticAction,
+    resolveDiplomaticRequest,
     previewCoalitionIntervention,
     interveneCoalition,
     previewLordIntervention,

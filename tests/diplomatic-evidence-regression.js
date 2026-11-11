@@ -68,12 +68,12 @@ check("autonomous betrayal is the lord's responsibility", () => {
   assert.ok(!v.supporters.some(p => p.id === "yuan_shao"));
 });
 check("a new signature cannot erase breach; two later observed terms repair it", () => {
-  let h = alliedFixture(({c}) => c.maxTurns = 18); seal(h, "令袁绍与公孙瓒结盟");
-  assert.equal(h.window.XianArmySystem.issueMapOrder("yuan_main", "ji", "attack").ok, true); month(h); choose(h);
+  const diplomacy = require("./diplomatic-relations-regression");
+  let h = diplomacy.betrayedFixture(({c}) => c.maxTurns = 18);
   seal(h, "令袁绍与公孙瓒结盟"); assert.equal(view(h).counts.unresolvedCourtBreaches, 1);
-  while (h.api.getState().turn < 7) month(h);
-  assert.equal(view(h).counts.repairedBreaches, 0); choose(h); seal(h, "令袁绍与公孙瓒结盟");
-  while (h.api.getState().turn < 12) month(h);
+  assert.equal(h.window.XianStrategyNetwork.getState().promises.find(p=>p.type==="alliance").status,"refused");
+  diplomacy.recover(h);assert.equal(view(h).counts.repairedBreaches, 0,"one observed peace term and repair acknowledgement still need later full performance");
+  while (h.api.getState().turn < 11) month(h);
   const v = view(h); assert.equal(v.counts.repairedBreaches, 1); assert.equal(v.counts.unresolvedCourtBreaches, 0);
   assert.equal(v.counts.courtBreaches, 1); assert.equal(v.sourceEvidence.breachIds.length, 1);
   const restored = resume(plain(h.api.captureFullSave())); assert.deepEqual(view(restored), v);

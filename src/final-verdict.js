@@ -155,7 +155,7 @@
     const diplomacyText = diplomacy ? diplomacy.counts.unresolvedCourtBreaches
       ? `朝廷授意背盟尚有${diplomacy.counts.unresolvedCourtBreaches}宗未修复，虽有名望，难称诸侯共奉。`
       : `外交有${diplomacy.counts.fulfilledAlliances}份完整盟约履行、${diplomacy.counts.jointVictories}次联军实绩，${diplomacy.eligibility.confederation.eligible ? "共奉已有实证" : "共奉的履约与支持条件仍未齐备"}。` : "";
-    return `史臣曰：帝行${route.name}之道，以${dimensions[0].name}为长，以${dimensions[dimensions.length - 1].name}为短。${failed ? "虽终于困厄，然乱世之败未必皆由一人。" : "终能在强权与乱世之间留下有限而真实的自主。"}${promiseText}${diplomacyText}故拟谥“${posthumous}”，非为定论，正因功过仍可再议。`;
+    return `史臣曰：帝行${route.name}之道，以${dimensions[0].name}为长，以${dimensions[dimensions.length - 1].name}为短。${failed ? "虽终于困厄，然乱世之败未必皆由一人。" : "终能在强权与乱世之间留下有限而真实的自主。"}${promiseText}${diplomacyText}${diplomacy?.relations?`另有${diplomacy.counts.peaceSettlements}份战后和约履行、${diplomacy.counts.reconciliationMissions}次修好承接；旧失信责任修复${diplomacy.counts.repairedBreaches}宗。`:""}故拟谥“${posthumous}”，非为定论，正因功过仍可再议。`;
   }
 
   function renderTab() {

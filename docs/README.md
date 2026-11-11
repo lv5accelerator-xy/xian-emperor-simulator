@@ -37,3 +37,10 @@
 - [固定种子对照](BALANCE_V229.md)
 - [回归记录](VALIDATION_V229.md)
 - [施工交接](HANDOFF_V229.md)
+
+## v2.30 和而有信
+
+- [议和、修好与长期关系](RULES_V230.md)
+- [固定种子对照](BALANCE_V230.md)
+- [验证记录](VALIDATION_V230.md)
+- [交接](HANDOFF_V230.md)

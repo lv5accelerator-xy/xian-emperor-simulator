@@ -28,7 +28,8 @@
   function betrayalPact(owner, targetOwner, strategy, turn, world = window.XianWorldSystem?.getState?.()) {
     const lord = world?.lords?.[owner] || window.XIAN_STRATEGY_DATA.lords.find(l => l.id === owner) || {};
     if (Number(strategy.strategies[owner]?.trust ?? 50) >= 30 || Number(lord.expansion ?? 50) - Number(lord.caution ?? 50) < 25 || owner === targetOwner) return null;
-    return (strategy.promises || []).find(p => window.XianAllianceDiplomacy.active(p, turn) && p.contract.parties.includes(owner) && p.contract.parties.includes(targetOwner));
+    return (strategy.promises || []).find(p => window.XianAllianceDiplomacy.active(p, turn) && p.contract.parties.includes(owner) && p.contract.parties.includes(targetOwner))
+      || ((strategy.diplomaticRelations?.treaties||[]).find(t=>t.id===window.XianDiplomaticRelations?.policy(owner,targetOwner,strategy,{turn},world||{}).peaceId));
   }
   function canBetray(intent, strategy) { return intent.betrayalPactId && betrayalPact(intent.owner, intent.targetOwner, strategy, intent.turn)?.id === intent.betrayalPactId; }
   function conflictWarnings(intent, strategy, armies) {
@@ -59,10 +60,13 @@
     const { lord, army, expansion, caution } = chosen;
     let targets = data.routes.filter(r => r.from === army.cityId || r.to === army.cityId).map(r => ({ route: r.id, city: r.from === army.cityId ? r.to : r.from }))
       .filter(x => strategy.cities[x.city] && (!allied(lord.id, strategy.cities[x.city].controller, strategy, core.turn) || betrayalPact(lord.id, strategy.cities[x.city].controller, strategy, core.turn, world)))
-      .sort((a, b) => hash(`${key}:${core.turn}:${a.city}`) - hash(`${key}:${core.turn}:${b.city}`));
+      .sort((a,b)=>(window.XianDiplomaticRelations?.policy(lord.id,strategy.cities[b.city].controller,strategy,core,world||{}).revenge||0)
+        -(window.XianDiplomaticRelations?.policy(lord.id,strategy.cities[a.city].controller,strategy,core,world||{}).revenge||0)
+        || hash(`${key}:${core.turn}:${a.city}`)-hash(`${key}:${core.turn}:${b.city}`));
     const betrayals = targets.filter(x => betrayalPact(lord.id, strategy.cities[x.city].controller, strategy, core.turn, world));
     if (betrayals.length) targets = betrayals;
-    const attack = targets.length && expansion >= caution && Number(strategy.strategies[lord.id]?.readiness || 0) >= 30;
+    const relationship = targets.length ? window.XianDiplomaticRelations?.policy(lord.id,strategy.cities[targets[0].city].controller,strategy,core,world||{}) : null;
+    const attack = targets.length && !relationship?.avoidAttack && expansion >= caution && Number(strategy.strategies[lord.id]?.readiness || 0) >= 30;
     const reaction = chosen.threats.at(-1) || chosen.aid.at(-1);
     const target = reaction?.cityId || (attack ? targets[0].city : army.cityId);
     const task = reaction ? (chosen.threats.length ? "defend" : "support") : attack ? "attack" : "defend";
@@ -74,6 +78,7 @@
       targetName: data.cities.find(c => c.id === target)?.name || target, targetOwner: strategy.cities[target]?.controller,
       task, routeIds: pathBetween(army.cityId, target), status: "proposed", priority: chosen.rank, ...(betrayal ? { betrayalPactId: betrayal.id } : {}),
       reactionIds: reaction ? [reaction.id] : [],
+      relationshipReason: relationship?.reason || "",
       reason: reaction ? `${chosen.threats.length ? "本镇目标遭到实际敌对行动，拟增防" : "已有援军目的地遭到实际敌对行动，拟护援"}；依据第${reaction.turn}月军务凭据`
         : betrayal ? `对朝廷信任不足30，扩张意愿${expansion}、谨慎${caution}；拟主动背盟进攻，接令时复核；失信由该镇承担`
           : attack ? `扩张意愿 ${expansion}、谨慎 ${caution}；拟沿相邻军路进攻` : `扩张意愿 ${expansion}、谨慎 ${caution}；拟就地守备整顿` };
@@ -85,7 +90,7 @@
     const opponents = [strategy.cities[intent.targetCityId]?.controller, ...Object.values(armies.armies || {})
       .filter(a => a.troops >= 500 && a.status !== "destroyed" && a.status !== "routing" && (a.cityId === intent.targetCityId
         || (a.status === "marching" && a.routeIds[a.routeIndex] === intent.routeIds?.[0] && a.cityId !== intent.originCityId))).map(a => a.owner)];
-    return (strategy.promises || []).filter(p => (p.type === "ceasefire" || window.XianAllianceDiplomacy.formal(p)) && p.status === "active" && turn <= p.deadlineTurn
+    return [...(strategy.promises || []), ...(window.XianDiplomaticRelations?.protectedTreaties(strategy) || [])].filter(p => (p.type === "ceasefire" || p.type === "postwar_peace" || window.XianAllianceDiplomacy.formal(p)) && p.status === "active" && turn <= p.deadlineTurn
       && p.contract?.parties?.includes(intent.owner) && opponents.some(owner => owner !== intent.owner && p.contract.parties.includes(owner)));
   }
   function assess(intent, army, strategy, turn, orders = []) {
@@ -95,6 +100,7 @@
     if (!["idle", "recovering", "defending", "supplying"].includes(army.status) || (army.currentOrderId && prior?.status !== "arrived")) return "军团已有军令，不能覆盖正在执行的任务";
     if ((strategy.promises || []).some(p => p.status === "active" && p.type === "military_aid" && (p.contract?.armyId === army.id || (!p.contract?.armyId && p.lordId === army.owner)))) return "该镇须优先履行现有援军约定";
     if (strategy.cities[intent.targetCityId]?.controller !== intent.targetOwner) return "目标归属已改变，原军议作废";
+    if (intent.task === "attack" && intent.source === "autonomous" && window.XianDiplomaticRelations?.policy(intent.owner,intent.targetOwner,strategy,{turn},window.XianWorldSystem?.getState?.()||{}).avoidAttack) return "长期外交关系或有效和约要求维持和平";
     if (intent.task === "attack" && allied(intent.owner, intent.targetOwner, strategy, turn) && !canBetray(intent, strategy)) return "目标属于本镇或友军";
     if (army.morale < 40 || army.fatigue > 70) return "士气不足40或疲劳超过70，军团请求整顿";
     if (intent.task === "attack" && army.troops < 2000) return "出战兵力不足2000";

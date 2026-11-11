@@ -31,7 +31,7 @@ assert.equal(reloaded.api.getState().actionPoints, 1, "review restoration cannot
 run.replaceCore({ reports: [] });
 assert.equal(run.window.XianShortChallenges.getState().active.reviewLog.receipts.length, 2, "review must retain choices no longer in the core report window");
 const result = finish(run);
-assert.equal(result.rulesVersion, 229, "new gameplay records carry new rules; legacy records remain unchanged");
+assert.equal(result.rulesVersion, 230, "new gameplay records carry new rules; legacy records remain unchanged");
 assert.equal(result.review.months.length, 5);
 assert.equal(result.review.goals.length, 3);
 for (const goal of result.review.goals) {

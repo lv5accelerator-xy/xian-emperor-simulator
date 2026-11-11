@@ -84,8 +84,8 @@
     state = migrateState(loaded, core);
     strategyDirty = false;
     acceptAlliancePeace(core);
-    applyPendingMapCommands(core);
-    processNewReports(core);
+    acceptDiplomaticPeace(core);
+    recoverPaidOperations(core);
     processElapsedTurns(core);
     state.updatedAt = new Date().toISOString();
     saveState();
@@ -322,7 +322,8 @@
     if (options.intent) {
       const reason = window.XianLordIntentions.assess(options.intent, army, readStrategyState(), turn, state.orders);
       const treaty = window.XianLordIntentions.ceasefires(options.intent, readStrategyState(), turn, state);
-      const ownBetrayal = options.autonomous && window.XianLordIntentions.canBetray(options.intent, readStrategyState()) && treaty.every(window.XianAllianceDiplomacy.formal);
+      const ownBetrayal = options.autonomous && window.XianLordIntentions.canBetray(options.intent, readStrategyState()) && treaty.every(p=>window.XianAllianceDiplomacy.formal(p)
+        || p.type==="postwar_peace"&&window.XianDiplomaticRelations?.policy(owner,options.intent.targetOwner,readStrategyState(),{turn},window.XianWorldSystem?.getState?.()||{}).peaceId===p.id);
       if (reason || (treaty.length && !options.acknowledgeBreach && !ownBetrayal)) { respond("refused", reason || "存在有效停战或盟约，拒绝擅自开启敌对军令"); return; }
     }
     const routeIds = destination !== army.cityId ? STRATEGY_API.findRoutePath(army.cityId, destination) : [];
@@ -453,12 +454,12 @@
     if (army.supply < estimatedSupplyCost + 15) warnings.push("军团现有粮秣可能不足");
     if (execution < 52) warnings.push("诏令执行度偏低，军团战力会受影响");
     const targetOwner = strategyState?.cities?.[targetCityId]?.controller || null;
-    const ceasefireBreaches = task === "attack" ? (STRATEGY_API.getState()?.promises || []).filter(promise =>
-      (promise.type === "ceasefire" || window.XianAllianceDiplomacy.formal(promise)) && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
+    const ceasefireBreaches = task === "attack" ? [...(STRATEGY_API.getState()?.promises || []), ...(window.XianDiplomaticRelations?.protectedTreaties(STRATEGY_API.getState()) || [])].filter(promise =>
+      (promise.type === "ceasefire" || promise.type === "postwar_peace" || window.XianAllianceDiplomacy.formal(promise)) && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
       && promise.contract?.parties?.includes(army.owner) && promise.contract.parties.includes(targetOwner) && army.owner !== targetOwner).map(promise => promise.id) : [];
     if (ceasefireBreaches.length) warnings.push(`主动违约：此攻击军令将违背 ${ceasefireBreaches.length} 份当前停战或盟约`);
-    const ceasefireRisks = task === "attack" ? (STRATEGY_API.getState()?.promises || []).filter(promise =>
-      (promise.type === "ceasefire" || window.XianAllianceDiplomacy.formal(promise)) && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
+    const ceasefireRisks = task === "attack" ? [...(STRATEGY_API.getState()?.promises || []), ...(window.XianDiplomaticRelations?.protectedTreaties(STRATEGY_API.getState()) || [])].filter(promise =>
+      (promise.type === "ceasefire" || promise.type === "postwar_peace" || window.XianAllianceDiplomacy.formal(promise)) && promise.status === "active" && Number(currentCore.turn) <= promise.deadlineTurn
       && promise.contract?.parties?.includes(army.owner) && attackTargetOwners(army.owner, targetCityId).some(owner => promise.contract.parties.includes(owner))
       && !ceasefireBreaches.includes(promise.id)).map(promise => promise.id) : [];
     if (ceasefireRisks.length) warnings.push("停战风险：目的地存在约定对方的野战军，实际交战将构成违约");
@@ -508,7 +509,7 @@
     if (!game?.performExternalAction) return { ok: false, message: "核心行动接口尚未就绪。" };
     const core = game.getState?.() || coreState;
     const id = `map-request:${core.createdAt}:${core.turn}:${Number(core.operationSequence || 0) + 1}:${armyId}`;
-    const command = { id, receiptId: id, gameCreatedAt: core.createdAt, turn: core.turn, armyId, targetCityId, task, preview, expectedOrderId: expected };
+    const command = { id, receiptId: id, gameCreatedAt: core.createdAt, turn: core.turn, operationSequence: Number(core.operationSequence || 0)+1, armyId, targetCityId, task, preview, expectedOrderId: expected };
     state.pendingMapCommands.push(command); saveState();
     const treasuryCost = -preview.treasuryCost;
     const actionAccepted = game.performExternalAction({
@@ -526,9 +527,30 @@
       ? "军令已承接；本次主动违背停战，后果按原约凭据结算。" : response?.reason || "军令尚无处理回执。" };
   }
 
-  function applyPendingMapCommands(core) {
+  function recoverPaidOperations(core) {
+    const strategy=readStrategyState(),reports=Array.isArray(core.reports)?core.reports:[];
+    const rank=item=>Number(item.operationSequence || reports.find(r=>r.receiptId===(item.receiptId||item.id))?.operationSequence || 0)
+      || (item.timestamp ? Number(item.timestamp)-1e15 : 1e9+(core.appliedReceipts?.indexOf(item.receiptId||item.id)??-1));
+    const operations=[...(strategy?.diplomaticRelations?.requests||[]).filter(r=>!r.resolved&&core.appliedReceipts?.includes(r.id)).map(r=>({...r,type:"diplomacy"})),
+      ...state.pendingMapCommands.filter(r=>core.appliedReceipts?.includes(r.receiptId)).map(r=>({...r,type:"map"})),
+      ...(strategy?.commandChain?.intents||[]).filter(r=>r.intervention&&core.appliedReceipts?.includes(r.intervention.receiptId)).map(r=>({...r.intervention,id:r.id,type:"lord"})),
+      ...(strategy?.allianceDiplomacy?.plans||[]).filter(r=>r.intervention&&core.appliedReceipts?.includes(r.intervention.receiptId)).map(r=>({...r.intervention,id:r.id,type:"coalition"})),
+      ...reports.filter(r=>Number(r.timestamp)>Number(state.lastReportTimestamp||0)&&/^圣旨·/.test(r.title||"")).map(r=>({...r,type:"edict"}))];
+    for(const op of operations.sort((a,b)=>rank(a)-rank(b)||String(a.id).localeCompare(String(b.id)))){
+      if(op.type==="diplomacy") { STRATEGY_API.resolveDiplomaticRequest(op.id,state,core);acceptDiplomaticPeace(core); }
+      else if(op.type==="map")applyPendingMapCommands(core,op.id);
+      else if(op.type==="lord")resolveLordIntent(op.id,op.kind);
+      else if(op.type==="coalition")resolveCoalitionPlan(op.id,op.kind);
+      else processArmyEdict(op,core);
+    }
+    state.pendingMapCommands=state.pendingMapCommands.filter(r=>core.appliedReceipts?.includes(r.receiptId));
+    state.lastReportTimestamp=Math.max(state.lastReportTimestamp||0,latestTimestamp(reports));
+  }
+
+  function applyPendingMapCommands(core,onlyId) {
     const rank = id => core.appliedReceipts?.indexOf(id) ?? -1;
     for (const command of [...state.pendingMapCommands].sort((a,b) => rank(a.receiptId) - rank(b.receiptId))) {
+      if(onlyId&&command.id!==onlyId)continue;
       state.pendingMapCommands = state.pendingMapCommands.filter(c => c.id !== command.id);
       if (!core.appliedReceipts?.includes(command.receiptId) || state.commandResponses.some(r => r.id === `response:${command.id}`)) continue;
       const strategy = readStrategyState();
@@ -639,6 +661,25 @@
     const response = { id: `ceasefire-response:${sourceId}`, turn, parties: [...owners], stopped, rejected };
     if (!state.ceasefireResponses.some(item => item.id === response.id)) state.ceasefireResponses.push(response);
     addLog(turn, "ceasefire", `${stopped}支军团已接受停战并停止双方进攻。${rejected.length ? rejected.map(item => `${item.armyId}未接受：${item.reason}`).join("；") : stopped ? "" : "当前无须停止的双方进攻军团；这不代表所有外镇已接受停战。"}`);
+  }
+
+  function acceptDiplomaticPeace(core) {
+    if(core.ended)return;
+    const strategy=readStrategyState();state.diplomaticPeaceResponses||=[];
+    for(const treaty of strategy?.diplomaticRelations?.treaties||[]){
+      if(!window.XianDiplomaticRelations?.active(treaty)||state.diplomaticPeaceResponses.some(r=>r.treatyId===treaty.id))continue;
+      const stoppedArmyIds=[],stoppedOrderIds=[];
+      for(const army of Object.values(state.armies).sort((a,b)=>a.id.localeCompare(b.id))){
+        if(army.status==="destroyed"||!treaty.parties.includes(army.owner)||!["attack","siege"].includes(army.task))continue;
+        const opponents=army.task==="siege"?[strategy.cities[army.targetCityId]?.controller]:attackTargetOwners(army.owner,army.targetCityId);
+        if(!opponents.some(id=>id!==army.owner&&treaty.parties.includes(id)))continue;
+        liftArmySieges(army.id,core.turn,"本镇接受议和，解除双方城围");
+        const order=state.orders.find(o=>o.id===army.currentOrderId);if(order){order.status="superseded";order.stoppedTurn=core.turn;order.closedReason="diplomatic-peace";stoppedOrderIds.push(order.id);}
+        Object.assign(army,{routeIds:[],routeIndex:0,currentRouteId:null,currentOrderId:null,targetCityId:army.cityId,task:"idle",status:"recovering",eta:0,lastChange:"本镇同意议和，停止双方进攻并撤围"});stoppedArmyIds.push(army.id);
+      }
+      state.diplomaticPeaceResponses.push({id:`diplomatic-peace:${treaty.id}`,treatyId:treaty.id,turn:core.turn,authority:"lord",accepted:true,stoppedArmyIds,stoppedOrderIds});
+      addLog(core.turn,"ceasefire",`双方已分别同意议和，${stoppedArmyIds.length}支军团停止双方进攻；第三方战事另行处置。`);
+    }
   }
 
   function acceptAlliancePeace(core) {
