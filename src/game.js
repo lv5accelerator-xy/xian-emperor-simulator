@@ -2061,6 +2061,7 @@
   }
 
   function openModal({ title, body, confirmText = "确定", onConfirm, cancelHidden = false, wide = false }) {
+    const opener = document.activeElement;
     el["modal-title"].textContent = title;
     el["modal-body"].innerHTML = body;
     el["modal-confirm"].textContent = confirmText;
@@ -2068,7 +2069,9 @@
     el["modal-backdrop"].classList.toggle("wide", Boolean(wide));
     modalConfirmHandler = onConfirm;
     el["modal-backdrop"].classList.remove("hidden");
-    setTimeout(() => el["modal-confirm"].focus(), 0);
+    if (!window.XianModalFocus?.activate(el["modal-backdrop"], el["modal-confirm"], opener)) {
+      setTimeout(() => el["modal-confirm"].focus(), 0);
+    }
   }
 
   function closeModal() {
@@ -2076,6 +2079,7 @@
     el["modal-backdrop"].classList.add("hidden");
     el["modal-backdrop"].classList.remove("wide");
     modalConfirmHandler = null;
+    window.XianModalFocus?.deactivate();
   }
 
   function addReport(title, text, type = "neutral", metadata = {}) {
