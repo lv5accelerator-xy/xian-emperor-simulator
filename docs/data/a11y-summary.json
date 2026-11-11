@@ -1,0 +1,560 @@
+{
+  "scope": "Chrome headless, file://, 1366x900 and 390x900, start screen and ordinary first-month screen; real pointer, native Tab and Escape, CDP AX tree",
+  "rawSha256": "859a5299f49fbe267cb5a6be43ab449f397442e1be316b6d1ac7bc5a8abdc8db",
+  "results": [
+    {
+      "width": 1366,
+      "startButtons": 10,
+      "gameButtons": 38,
+      "unnamedButtons": 0,
+      "unnamedAx": [],
+      "gameImages": [
+        {
+          "id": "img.xian-portrait.mini-character-portrait",
+          "alt": "刘协立绘",
+          "role": null,
+          "loaded": true
+        },
+        {
+          "id": "event-illustration-image",
+          "alt": "暮色宫门加强戒备，宿卫查验来往使者",
+          "role": null,
+          "loaded": true
+        }
+      ],
+      "positiveTabIndex": [],
+      "startTabs": [
+        {
+          "id": "BUTTON",
+          "name": "古风楷书",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "清晰阅读",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "标准",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "大字",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "特大",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "开始长卷",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "scenario-select",
+          "name": "189 中平六年｜洛阳孤灯 195 兴平二年｜天子东归 196 建安元年｜许都 200 建安五年｜官渡风云 220 延康元年｜禅代前夜",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "difficulty-select",
+          "name": "宽政｜资源较多，适合第一次游玩 史实压力｜推荐 危局｜国库与宫禁更加脆弱",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "new-game-btn",
+          "name": "开启新局",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "start-short-challenge-btn",
+          "name": "初次临朝：先玩五个月 · 许都夜变",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "start-backups-btn",
+          "name": "存档备份",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BODY",
+          "name": "<div class=\"noscript\">本游戏需要启用 JavaScript。</div> 汉末政治策略模拟 · 正式版 v2.30.0",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "古风楷书",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "清晰阅读",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "标准",
+          "inModal": false,
+          "visible": true
+        }
+      ],
+      "gameTabs": [
+        {
+          "id": "BODY",
+          "name": "<div class=\"noscript\">本游戏需要启用 JavaScript。</div> 汉末政治策略模拟 · 正式版 v2.30.0",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "save-btn",
+          "name": "保存",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "month-report-btn",
+          "name": "月报",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "imperial-archive-btn",
+          "name": "御前档案",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "world-map-btn",
+          "name": "舆图",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "army-system-btn",
+          "name": "军团",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "court-politics-btn",
+          "name": "政议",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "imperial-command-btn",
+          "name": "总览",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "utility-more-toggle",
+          "name": "更多",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "裁决奏报，当前步骤",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "安排一事",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "月末结算",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "本月并行军议 · 3 镇 · 3 项待决公孙瓒：进攻邺城；刘璋：守备成都；袁术：进攻襄阳每次协调或劝止使用1次行动；未干预军议月末按固定次序",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "诸侯结盟与联军拟旨邀请二至三镇结盟例：令袁绍与公孙瓒结盟，共讨刘表，合攻晋阳。各镇须同意，再分别接令；查看联军、战后议和、遣使修好与背盟后果",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "event-source-btn",
+          "name": "史料依据 3",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "1 准其统筹，以安朝廷 安全与国库改善，但皇权受限。 宫廷安全 +8国库 +6皇权 -4曹氏警戒 -6",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "2 设御前署，军政分理 尝试保留中枢权力，会提高警戒。 皇权 +7百官支持 +4宫廷安全 -3曹氏警戒 +8",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "3 先议赈粮，不争名目 以民生为先，威望增加。 汉室威望 +6国库 -4百官支持 +3曹氏警戒 +1",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "decree-helper-open",
+          "name": "拟写圣旨",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "当前建议 · 内政裁决奏报所有行动都要在本月奏报裁决后进行。",
+          "inModal": false,
+          "visible": true
+        }
+      ],
+      "help": {
+        "initialFocus": "modal-confirm",
+        "tabs": [
+          {
+            "id": "BODY",
+            "name": "<div class=\"noscript\">本游戏需要启用 JavaScript。</div> 汉末政治策略模拟 · 正式版 v2.30.0",
+            "inModal": false,
+            "visible": true
+          },
+          {
+            "id": "save-btn",
+            "name": "保存",
+            "inModal": false,
+            "visible": true
+          },
+          {
+            "id": "month-report-btn",
+            "name": "月报",
+            "inModal": false,
+            "visible": true
+          },
+          {
+            "id": "imperial-archive-btn",
+            "name": "御前档案",
+            "inModal": false,
+            "visible": true
+          },
+          {
+            "id": "world-map-btn",
+            "name": "舆图",
+            "inModal": false,
+            "visible": true
+          },
+          {
+            "id": "army-system-btn",
+            "name": "军团",
+            "inModal": false,
+            "visible": true
+          },
+          {
+            "id": "court-politics-btn",
+            "name": "政议",
+            "inModal": false,
+            "visible": true
+          },
+          {
+            "id": "imperial-command-btn",
+            "name": "总览",
+            "inModal": false,
+            "visible": true
+          }
+        ],
+        "returnFocus": {
+          "id": "imperial-command-btn",
+          "visible": true
+        },
+        "closed": true
+      },
+      "pageErrors": []
+    },
+    {
+      "width": 390,
+      "startButtons": 10,
+      "gameButtons": 37,
+      "unnamedButtons": 0,
+      "unnamedAx": [],
+      "gameImages": [
+        {
+          "id": "img.xian-portrait.mini-character-portrait",
+          "alt": "刘协立绘",
+          "role": null,
+          "loaded": true
+        },
+        {
+          "id": "event-illustration-image",
+          "alt": "暮色宫门加强戒备，宿卫查验来往使者",
+          "role": null,
+          "loaded": true
+        }
+      ],
+      "positiveTabIndex": [],
+      "startTabs": [
+        {
+          "id": "BUTTON",
+          "name": "古风楷书",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "清晰阅读",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "标准",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "大字",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "特大",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "开始长卷",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "scenario-select",
+          "name": "189 中平六年｜洛阳孤灯 195 兴平二年｜天子东归 196 建安元年｜许都 200 建安五年｜官渡风云 220 延康元年｜禅代前夜",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "difficulty-select",
+          "name": "宽政｜资源较多，适合第一次游玩 史实压力｜推荐 危局｜国库与宫禁更加脆弱",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "new-game-btn",
+          "name": "开启新局",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "start-short-challenge-btn",
+          "name": "初次临朝：先玩五个月 · 许都夜变",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "start-backups-btn",
+          "name": "存档备份",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BODY",
+          "name": "<div class=\"noscript\">本游戏需要启用 JavaScript。</div> 汉末政治策略模拟 · 正式版 v2.30.0",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "古风楷书",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "清晰阅读",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "标准",
+          "inModal": false,
+          "visible": true
+        }
+      ],
+      "gameTabs": [
+        {
+          "id": "BODY",
+          "name": "<div class=\"noscript\">本游戏需要启用 JavaScript。</div> 汉末政治策略模拟 · 正式版 v2.30.0",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "裁决奏报，当前步骤",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "安排一事",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "月末结算",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "字体：古风，切换为清晰阅读",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "字号：标准，切换为大字",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "mobile-save-tools",
+          "name": "存档工具",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "本月并行军议 · 3 镇 · 3 项待决孙策：进攻襄阳；张鲁：守备南郑；袁绍：进攻许都每次协调或劝止使用1次行动；未干预军议月末按固定次序决",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "诸侯结盟与联军拟旨邀请二至三镇结盟例：令袁绍与公孙瓒结盟，共讨刘表，合攻晋阳。各镇须同意，再分别接令；查看联军、战后议和、遣使修好与背盟后果",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "event-source-btn",
+          "name": "史料依据 3",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "1 准其统筹，以安朝廷 安全与国库改善，但皇权受限。 宫廷安全 +8国库 +6皇权 -4曹氏警戒 -6",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "2 设御前署，军政分理 尝试保留中枢权力，会提高警戒。 皇权 +7百官支持 +4宫廷安全 -3曹氏警戒 +8",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "3 先议赈粮，不争名目 以民生为先，威望增加。 汉室威望 +6国库 -4百官支持 +3曹氏警戒 +1",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "decree-helper-open",
+          "name": "拟写圣旨",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "当前建议 · 内政裁决奏报所有行动都要在本月奏报裁决后进行。",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "帑财政",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "廷内政",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "密权谋",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "BUTTON",
+          "name": "使外交",
+          "inModal": false,
+          "visible": true
+        },
+        {
+          "id": "SUMMARY",
+          "name": "长期朝局 · 方略、御题与战役（可选）",
+          "inModal": false,
+          "visible": true
+        }
+      ],
+      "help": null,
+      "pageErrors": []
+    }
+  ],
+  "contrast": {
+    "status": "candidate, not a full WCAG certification",
+    "selector": ".stat-card small",
+    "foregroundFromStylesheet": [
+      126,
+      110,
+      89
+    ],
+    "nearbyBackgroundFromScreenshot": [
+      23,
+      30,
+      26
+    ],
+    "screenshot": "game-1366.png",
+    "samplePixel": [
+      35,
+      225
+    ],
+    "approxRatio": 3.4450709083695155,
+    "limitations": "Gradient/alpha backgrounds require per-state measurement; do not count the initial white-background automatic candidate list as failures. Disabled controls excluded."
+  }
+}
