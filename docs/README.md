@@ -69,3 +69,5 @@
 - [仓库门面设置清单](REPOSITORY_PROFILE.md)：Description、Website、Topics及页面分享元信息。
 
 - [圣旨解析行为与已知误判](EDICT_CASES.md)：48条固定上下文快照，仅记录、不修改解析规则。
+
+- [平衡采样汇总](BALANCE_SUMMARY.md)：历史720局短局/策略表，明确数据版本未认证与成功率口径。
