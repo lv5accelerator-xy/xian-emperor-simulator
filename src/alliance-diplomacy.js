@@ -8,6 +8,7 @@
   const formal = p => p?.type === "alliance" && p.contract?.treatyType === "alliance" && p.contract.version === 1;
   const active = (p, turn) => formal(p) && p.status === "active" && p.contract.startTurn <= turn && turn <= p.deadlineTurn;
   const allied = (a, b, strategy, turn) => a === b || [a,b].every(x => ["court","cao_cao"].includes(x))
+    || window.XianDiplomaticRelations?.atPeace(a, b, strategy)
     || (strategy?.promises || []).some(p => active(p, turn) && p.contract.parties.includes(a) && p.contract.parties.includes(b));
   function migrate(strategy, core, armies = {}) {
     if (strategy.allianceDiplomacy?.schemaVersion === 1) { strategy.allianceDiplomacy.peaceRewards ||= []; return strategy.allianceDiplomacy; }
@@ -32,8 +33,9 @@
     const invalid = parties.length < 2 || parties.length > 3 ? "盟约须明确列出二至三方" : operation === "attack" && parties.some(id => allied(id, targetOwner, strategy, core.turn)) ? "共同进攻目标属于盟方或现有友军" : null;
     const receipts = parties.map(actor => {
       const trust = Number(strategy.strategies[actor]?.trust || 0), reputation = Number(strategy.allianceDiplomacy?.reputations[actor] ?? 50);
-      const reason = invalid || (trust < 30 ? "对朝廷信任不足30" : reputation < 35 ? "守约信誉不足35" : execution < 45 ? "诏令执行力不足45" : "同意共同盟约");
-      return { id: `consent:${actor}`, kind: "consent", actor, actorName: name(actor), turn: core.turn, status: invalid || trust < 30 || reputation < 35 || execution < 45 ? "refused" : "accepted", reason, trust, reputation, execution };
+      const relationshipReason = parties.filter(id => id !== actor).map(id => window.XianDiplomaticRelations?.allianceReason(actor,id,strategy,core)).find(Boolean);
+      const reason = invalid || relationshipReason || (trust < 30 ? "对朝廷信任不足30" : reputation < 35 ? "守约信誉不足35" : execution < 45 ? "诏令执行力不足45" : "同意共同盟约");
+      return { id: `consent:${actor}`, kind: "consent", actor, actorName: name(actor), turn: core.turn, status: invalid || relationshipReason || trust < 30 || reputation < 35 || execution < 45 ? "refused" : "accepted", reason, trust, reputation, execution };
     });
     return { type: "alliance", version: 1, treatyType: "alliance", parties, partyNames: parties.map(name), leaderOwner: parties[0],
       targetCityId: city, targetOwner, targetName: window.XIAN_STRATEGY_DATA.cities.find(c => c.id === city)?.name || null,
@@ -95,7 +97,7 @@
       if (plan.members.every(m => m.status === "restrained")) plan.status = "restrained";
       plan.lastChange = `${accepted.length}/${plan.members.length}镇已实际接令；${plan.members.map(m => `${m.ownerName}：${m.responseReason || "待答复"}`).join("；")}`;
     }
-    const events = (armies.militaryFacts || []).filter(f => !d.ignoredFactIds.includes(f.id)).map(f => ({ ...f, root: f.sourceOrderId || f.id,
+    const events = (armies.militaryFacts || []).filter(f => !d.ignoredFactIds.includes(f.id)).map(f => ({ ...f, root: window.XianDiplomaticRelations?.actionRoot(f,strategy,armies) || f.sourceOrderId || f.id,
       witnesses: f.allianceWitnesses || witnesses(strategy, f.turn, f.attackerOwner, f.defenderOwner) }));
     for (const conflict of armies.commandConflicts || []) {
       if (conflict.kind !== "replacement" || d.ignoredConflictIds.includes(conflict.id)) continue;

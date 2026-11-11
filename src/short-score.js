@@ -8,7 +8,7 @@
   const unknown = "旧成绩未记录评分构成，或记录与总分不一致；保留原总分，不推算缺失数值。";
 
   function build(result, core) {
-    if (![216, 224, 225, 226, 227, 228, 229].includes(result?.rulesVersion) || !Number.isFinite(result.score) || !Number.isInteger(result.completed)
+    if (![216, 224, 225, 226, 227, 228, 229, 230].includes(result?.rulesVersion) || !Number.isFinite(result.score) || !Number.isInteger(result.completed)
       || !Number.isInteger(result.total) || result.total < 0 || result.completed < 0 || result.completed > result.total
       || !Number.isFinite(core?.stats?.prestige) || !Number.isFinite(core?.stats?.authority)) return null;
     const inputs = { completed: result.completed, total: result.total, prestige: core.stats.prestige, authority: core.stats.authority };

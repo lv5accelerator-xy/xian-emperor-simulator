@@ -41,7 +41,7 @@
   let settlementStage = "";
   let commitRunning = false;
   let operationDepth = 0;
-  const RULES_VERSION = 229;
+  const RULES_VERSION = 230;
 
   // One synchronous boundary owns gameplay. Timers may repaint, never settle a save.
   function commit(kind = "save") {
@@ -1539,6 +1539,7 @@
     const report = addReport(pkg.title, `${pkg.text}${deltaText ? `｜${deltaText}` : ""}`, "action", {
       ...(pkg.edict ? { edict: pkg.edict } : {}),
       id: operationId,
+      operationSequence: state.operationSequence, receiptId: receipt || null,
       repetition: pkg.repetition || null, advice: pkg.advice || null,
       outcome: buildActionOutcome(before, pkg, "action"),
     });
