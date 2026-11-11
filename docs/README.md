@@ -67,3 +67,5 @@
 - [模块重构评估](MODULE_REFACTOR_PLAN.md)：加载顺序、全局依赖、双击运行取舍和独立回退步骤（仅方案）。
 
 - [仓库门面设置清单](REPOSITORY_PROFILE.md)：Description、Website、Topics及页面分享元信息。
+
+- [圣旨解析行为与已知误判](EDICT_CASES.md)：48条固定上下文快照，仅记录、不修改解析规则。
