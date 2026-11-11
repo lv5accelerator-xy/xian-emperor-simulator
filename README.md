@@ -189,7 +189,11 @@ GitHub Pages 从 `main` 分支根目录直接发布。每次正式更新应同�
 
 ## 地图、音乐与授权
 
-海岸线轮廓改编自公有领域的 [Natural Earth 1:110m 数据](https://www.naturalearthdata.com/)；历史势力边界和山川标注属于游戏化近似。游戏另包含原创人物立绘、操作音效和五首场景背景音乐；三首备选曲仅归档，不进入运行时清单。仓库当前未附带开源许可证，公开可见不代表其他内容可被任意复制、修改或再发布。
+项目许可证待所有者选择，见[LICENSE](LICENSE)；逐项来源、署名、许可及待决策项见[CREDITS.md](CREDITS.md)。
+
+海岸线轮廓改编自公有领域的[Natural Earth 1:110m数据](https://www.naturalearthdata.com/)；历史势力边界和山川标注属于游戏化近似。
+
+霞鹜文楷、站酷小薇体、Noto字体的本地子集与随附OFL文本见[字体说明](assets/fonts/README.md)。Noto Serif SC产物与附件署名存在不一致，已列TODO。五首运行音乐、三首备选曲及其他素材的来源缺项不能视为可自由再分发。
 
 ### v2.24.0 完整验证
 
