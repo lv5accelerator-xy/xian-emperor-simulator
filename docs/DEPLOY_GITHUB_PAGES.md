@@ -5,7 +5,7 @@
 解压后进入：
 
 ```text
-xian-emperor-simulator-v2.0.0
+xian-emperor-simulator（仓库根目录）
 ```
 
 确认里面直接有：

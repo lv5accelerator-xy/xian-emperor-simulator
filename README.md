@@ -1,209 +1,88 @@
-<h1 align="center">天子蒙尘：献帝模拟器</h1>
+# 天子蒙尘：献帝模拟器
 
-<p align="center">
-  一款以汉献帝刘协为主角的汉末政治与军略模拟游戏。
-</p>
+扮演汉献帝刘协，在汉末危局中以奏报、诏令、外交与军略维系汉室的纯前端游戏。
 
-<p align="center">
-  <a href="https://lv5accelerator-xy.github.io/xian-emperor-simulator/"><strong>▶ 在线试玩</strong></a>
-  ·
-  <a href="CHANGELOG.md">更新记录</a>
-  ·
-  <a href="docs/README.md">维护文档</a>
-  ·
-  <a href="patch-notes/README.md">独立版本说明</a>
-</p>
+## 在线试玩
 
-<p align="center">
-  <a href="https://github.com/lv5accelerator-xy/xian-emperor-simulator/actions/workflows/release-check.yml">
-    <img alt="版本检查状态" src="https://github.com/lv5accelerator-xy/xian-emperor-simulator/actions/workflows/release-check.yml/badge.svg">
-  </a>
-</p>
+[开始游玩](https://lv5accelerator-xy.github.io/xian-emperor-simulator/)
 
-## 游戏简介
-
-《天子蒙尘：献帝模拟器》使用原生 HTML、CSS 与 JavaScript 制作，无框架、无构建步骤。玩家扮演汉献帝刘协，在法统最高、实权最低的处境中，通过奏报裁决、诏令、人物关系、外交承诺、军团和州郡网络维持汉室，并尝试走向不同终局。
-
-游戏提供五段汉末历史剧本，每局持续 12 至 24 个月。所有规则均在浏览器本地运行；自由拟写圣旨使用关键词规则解析，不调用付费 AI API。
+<!-- TODO: 截图 -->
 
 ## 核心玩法
 
-- **朝堂裁决**：每月处理奏报，在皇权、威望、宫廷安全、国库与百官支持之间取舍。
-- **自由诏令**：拟写圣旨并在用玺前核对受命者、动作、城池顺序、军路与外交承诺。
-- **御前方略**：潜结忠汉、借力制衡、掌控宿卫三条路线各有阶段目标、专属行动与终局。
-- **人物与派系**：连续人物事件、政治奏请、派系张力和动态谈判共同影响朝局。
-- **山河舆图**：全屏真实地理骨架承载 14 个州域、32 处郡国治所标注、16 座战略城池、18 条军路和 14 支初始军团。
-- **军团与攻城**：逐月行军、野战、围城、城池易手、俘虏归降和战后裁决形成完整战役链。
-- **战役演进**：剧本阶段、人物差遣、季节天气和动态战线集中在统一战役台。
-- **御前总览**：三步月度流程、人物记忆、山河印记、旧事回响与长卷进度集中在同一入口。
-- **汉祚长卷**：五个历史剧本可以按年代连续游玩，前章留下有限历史印记影响后章。
-- **短局与同题**：五组四至六个月短局，以及可通过分享码复现的每周固定挑战。
-- **千秋定论**：终局生成史家拟谥、人物后记、争议与可导出的帝纪终评。
-- **跨局收藏**：保存方略记录、人物遗物、终局、称号、挑战成绩与朝仪外观。
+- 五个历史剧本，持续12至24个月，每月裁决奏报并使用有限行动。
+- 自由拟旨，在用玺前复核人物、动作、城池顺序和军路；使用本地关键词规则。
+- 处理人物与派系关系，选择御前方略和三月施政目标。
+- 调遣军团，经历行军、野战、围城与战后裁决。
+- 诸侯军议、结盟协战、议和及修好，以实际军务与长期履约决定外交后果。
+- 短局、同题挑战与汉祚长卷提供复玩目标，终局可导出帝纪与千秋定论。
 
 ## 当前版本
 
-当前版本为 **v2.30.0「和而有信」**。
-
-战后议和分别征询两镇并实际停军，背盟后须以和平观察、遣使修好和后续守约恢复信任；长期关系影响诸侯决策与外交终局。详见[规则](docs/RULES_V230.md)、[验证](docs/VALIDATION_V230.md)、[固定种子对照](docs/BALANCE_V230.md)。
-
-外交终局以履约、真实联军战果和背盟责任核验共奉与调停；支持三镇两期守约的和平路径。规则见 [外交终局](docs/RULES_V229.md)。
-
-二至三镇分别同意正式盟约，联军逐军接令，实际到场后才协战；主动背盟与撤离共同任务按实际凭据记录守约信誉、朝廷责任和盟方警惕。详见 [玩法规则](docs/RULES_V228.md)、[验证记录](docs/VALIDATION_V228.md)与[固定种子对照](docs/BALANCE_V228.md)。
-
-- **v2.27.0**：最多三镇并议、旧令撤换确认、真实军路遭遇、同城争夺与协围；援军和停战依据同一实际战斗产生连锁后果，完整历史可恢复。详见 [规则](docs/RULES_V227.md)、[验证](docs/VALIDATION_V227.md)、[玩法对照](docs/BALANCE_V227.md)、[交接](docs/HANDOFF_V227.md)。
-
-- **v2.26.0**：常规局每月诸侯军议，接令或拒绝后沿真实军路执行；协调、劝止与自主行动保留各自责任，外交仅消费实际军事凭据。详见 [规则](docs/RULES_V226.md)、[验证](docs/VALIDATION_V226.md)、[玩法对照](docs/BALANCE_V226.md)、[交接](docs/HANDOFF_V226.md)。
-- **v2.25.0**：停战解除失效围城、召见公共计次、当前人物身份解析与延康四幕。详见 [规则](docs/RULES_V225.md)、[主线](docs/SCENARIO_220_STORY.md)。
-
-- **v2.24.0**：同步提交玩法、统一预算与期限、完整恢复及旧核心迁移；主议每季两次实际修正、同月同类同对象收益递减，贡赋／援军／停战按真实凭据履约。详见 [规则与兼容](docs/RULES_V224.md)、[配对策略对照](docs/BALANCE_V224.md)。
-
-- **v2.23.0**：标准、大字、特大字号独立保存；月报先呈现实际目标、关键净变与警讯，原详情可展开；手机流程标签、月报滚动与继续按钮完善，详见 [阅读字号与月报](docs/READING_COMFORT.md)。
-
-- **v2.22.0**：新增默认古风楷书与清晰阅读双字风，开局、游戏内和结局均可切换并记住选择；现代开源霞鹜文楷配合书卷题名，数字保留清晰字体，补齐当前版本字符子集，详见 [字体主题与维护](docs/TYPOGRAPHY.md)。
-
-- **v2.21.0**：短局记录评分时的目标、威望与皇权构成，同题对比解释总分差；方案卡片直接展示目标余量与泄密概率、损失；窄屏结局先看结果、关键记录和下一局建议，重试按钮前置，详见 [择策与两局对比](docs/DECISION_COMPARISON.md)。
-
-- **v2.20.0**：推荐旁可比较当前方案、最多两个有真实取舍的候选及守成基准；复盘解释目标转折与当月真实来源；相同同题码、种子、规则和开局条件下对比两局终值、实际投入与逐月选择，详见 [择策与两局对比](docs/DECISION_COMPARISON.md)。
-- **v2.19.0**：月报逐项对比预检与实际结算并列出真实来源；推荐细化到人物与具体方案，综合全部短局目标后打开待确认选项；备份显示名称、时间与版本，恢复前对比现局，支持单份完整导出，详见 [结算对账与具体推荐](docs/SETTLEMENT_AUDIT.md)。
-- **v2.18.0**：行动推荐优先照看失败风险与短局目标，目标有余量时可留行动守成；月末先核对固定用度、目标变化与随机风险；最近三个月完整备份及替换前备份支持整体恢复，详见 [月末预检与完整备份](docs/MONTHLY_SAFETY.md)。
-- **v2.17.0**：短局结局显示目标差额、实际处分与逐月净变化，并给出下一局建议；复盘随存档保存，可查看最近六局或一键重试，同题重试保留分享码种子，完整实录导出含复盘。沿用原成绩规则，详见 [短局复盘](docs/SHORT_REVIEW.md)。
-- **v2.16.0**：圣旨可按对象、政令与目标生成可编辑草稿，实时显示识别、成本与拦截原因；草稿随存档保留，继续御览会定位当前步骤；短局主界面显示真实期限与目标差额，触屏确认按钮保持可达。完成 360 局策略对照及 120 局按目标补缺的验证，详见 [策略对照](docs/BALANCE_V216.md)。
-- **v2.15.0**：短局在最后一月与季度结算后核验成绩；行动显示实际投入、净变化与后续事项；月报区分记录与估计；新开的同题挑战保存随机序列，读档后可继续复现。
-
-- **v2.14.0**：季度御题以月末实际成果结算；修复月报漏项与否定圣旨误判；简明模式把奏报放在前面；军令明确费用与外镇调遣条件。
-
-- **v2.13.0**：长期行为会推荐仁政、归政或戎马三条中期帝业，带来阶段目标与六件路线专属奏报。
-- **v2.12.0**：战斗和城池易手会留下持续数月的地方故事，朝廷的善后选择同时改变民生与真实城池状态。
-- **v2.11.0**：每项三月御题由三位真实人物提出不同办法，旧事和关系影响态度，采纳路线会改变后续推进方式。
-- **v2.10.0**：每三个月只选择一个施政目标，让奏报、行动、人物与战事围绕同一条主线推进并统一结算。
-- **v2.9.0**：以“当前三件大事”收拢复杂局势，打通奏报、人物、派系、财政、军团、城池与民生的双向因果链。
-- **v2.8.0**：重整首页信息层级，加入行动分类、危机捷径、结果预览、六类奏报插图与手机版底部导航。
-- **v2.7.2**：常用行动新增筹措钱粮，以节流、催贡或借调补充国库，并承担对应的官心、民望或自主权代价。
-- **v2.7.1**：站酷小薇体、Noto Serif SC 与 Noto Sans SC 本地化，统一题名、史书正文和操作界面的字体表现。
-- **v2.7.0**：原创开场、朝议、行军与终局插图，全局中文字体层级和移动端阅读体验焕新。
-- **v2.6.1**：舆图升级为全屏工作台，加入大号州名、郡国治所、地形纹理、悬浮军情与情报抽屉。
-- **v2.6.0**：离线真实地理骨架、经纬度城池、山川标注与移动端地图交互。
-- **v2.5.0**：终局生成史家拟谥、五维评价、人物后记、争议与可导出的帝纪终评。
-- **v2.4.0**：每周提供固定局势与分享码，可挑战同一事件顺序并保存本机最佳成绩。
-- **v2.3.0**：新增五组四至六个月的固定事件短局，以勋章和无加成纪念物鼓励重复挑战。
-- **v2.2.0**：重要决定会形成限期承诺或延迟回响，后续关系能够兑现或化解旧事。
-- **v2.1.0**：默认简明御前，以裁决、行动、结算三步完成每个月，并直接预览关键后果。
-- **v2.0.0**：五个历史剧本组成连续大 campaign，前章以有限历史印记影响后章。
-- **v1.9.0**：自动整理关键转折、政治路线与历次终卷，支持导出史官复盘。
-- **v1.8.0**：民政、礼制、外交等重要选择会形成有期限的山河印记。
-- **v1.7.0**：人物记住影响关系的裁决，并可根据旧事提供御前问策。
-- **v1.6.0**：统一御前总览、动态建议、行动后果与分阶段新手指引。
-
-完整变化见 [CHANGELOG.md](CHANGELOG.md)，逐版本说明见 [patch-notes/](patch-notes/README.md)。
+<!-- CURRENT_VERSION_START -->
+**v2.30.0「和而有信」**
+战后议和分别征询两镇并实际停军；和平观察、遣使修好和后续守约重建信任。
+长期关系影响诸侯决策与外交终局，保留背盟记录及旧版已结束结局。
+[规则](docs/RULES_V230.md) · [验证](docs/VALIDATION_V230.md) · [固定种子对照](docs/BALANCE_V230.md)
+<!-- CURRENT_VERSION_END -->
 
 ## 开始游玩
 
-在线地址：<https://lv5accelerator-xy.github.io/xian-emperor-simulator/>
-
-本地运行无需安装依赖：
-
-```bash
-git clone https://github.com/lv5accelerator-xy/xian-emperor-simulator.git
-cd xian-emperor-simulator
-python -m http.server 8000
-```
-
-随后打开 <http://localhost:8000/>。直接双击根目录的 `index.html` 也可以运行游戏。
+无需安装依赖、无需构建，双击根目录的 `index.html` 即可运行。
+也可使用任意静态服务器，例如安装Python后执行 `python -m http.server 8000`，访问 http://localhost:8000/。
+游戏不调用付费AI API；数据保存在当前浏览器，不会自动上传。
 
 ## 存档与兼容
 
-- 游戏数据保存在当前浏览器的 `localStorage` 中，不会自动上传服务器。
-- 支持完整 JSON 存档导入与导出，也支持旧版单一核心存档。
-- 完整存档覆盖核心游戏、月报、天下、诏令、军略、军团、政议、音频、剧本、御前档案、战役演进、人物记忆、山河印记、史官档案、汉祚长卷、月度流程、旧事回响、短局、同题与帝纪终评。
-- 新系统使用独立存储键；旧存档加载时会自动补齐正式版字段。
-- 换设备前应先导出存档；清除网站数据会删除未导出的本地进度。
+- 支持完整JSON存档与旧版单一核心档导入，迁移保留旧结局及已有历史凭据。
+- 完整包按系统白名单导出；备份索引、字体/字号与地图引导偏好不随包导出。
+- 最近三个月与替换前备份可在“存档备份”查看；换设备或清理网站数据前先导出。
+- 存档及备份使用浏览器localStorage，容量和浏览器权限会影响保存。
 
 ## 项目结构
 
-```text
-xian-emperor-simulator/
-├─ index.html                 # 游戏入口与模块加载顺序
-├─ styles.css                 # 全局基础样式
-├─ assets/images/illustrations # 本地 WebP 历史场景插图
-├─ assets/fonts/              # 本地 WOFF2 字体与 OFL 许可证
-├─ src/visual-refresh.css     # v2.7.x 字体与插图适配
-├─ src/ui-refresh-v280.*      # v2.8.0 信息减负与手机导航
-├─ src/causal-court.*         # v2.9.0 跨系统因果与三件大事
-├─ src/quarterly-agenda.*     # v2.10.0 三月施政主线
-├─ src/council-advice.*       # v2.11.0 人物对策与路线响应
-├─ src/regional-echoes.*      # v2.12.0 战后地方故事与后报
-├─ src/imperial-paths.*       # v2.13.0 自适应中期帝业与专属奏报
-├─ scripts/                   # 字体子集等维护脚本
-├─ src/                       # 游戏数据、系统模块与模块样式
-│  └─ portraits/             # 原创人物立绘数据
-├─ assets/audio/bgm/          # 场景音乐与未启用备选曲
-├─ docs/                      # 设计、部署与 AI 接入文档
-├─ patch-notes/               # 每个正式版本的独立说明
-├─ history/                   # 可独立运行的历史版本 ZIP
-├─ tests/                     # 进度、地图、战役与发布回归测试
-├─ CHANGELOG.md               # 累计版本记录
-├─ .nojekyll                  # GitHub Pages 静态发布标记
-└─ .github/workflows/         # 自动版本检查
-```
+| 路径 | 内容 |
+| --- | --- |
+| index.html、styles.css | 入口、经典脚本加载顺序与基础样式 |
+| src/ | 数据、系统、模块样式与内嵌人物立绘 |
+| assets/ | 本地字体、场景图、音乐与第三方许可附件 |
+| scripts/、tests/ | Node.js维护脚本及自动发现的回归测试 |
+| docs/、docs/archive/ | 当前规则、维护说明与历史版本文档 |
+| CHANGELOG.md、patch-notes/ | 完整版本记录与逐版说明 |
+| history/ | 历史ZIP，尚未删除或迁出Git历史 |
+| .github/ | 发布检查与协作配置 |
 
 ## 测试
 
-测试只需要 Node.js：
+维护测试使用Node.js 24，不是游玩前提。
 
-```bash
-node tests/progression-regression.js
-node tests/grand-map-regression.js
-node tests/campaign-evolution-regression.js
-node tests/legacy-systems-regression.js
-node tests/post-v2-systems-regression.js
-node tests/causal-court-regression.js
-node tests/quarterly-agenda-regression.js
-node tests/council-advice-regression.js
-node tests/regional-echoes-regression.js
-node tests/imperial-paths-regression.js
-node tests/gameplay-feedback-regression.js
-node tests/settlement-replay-regression.js
-```
-
-发布检查还需要设置当前预期版本：
-
-```bash
-EXPECTED_VERSION=2.26.0 node tests/release-regression.js
-```
-
-GitHub Actions 会额外检查脚本语法、音频资源、圣旨目标顺序、军团计算、页面资源引用和独立版本说明。
-
-## 部署
-
-GitHub Pages 从 `main` 分支根目录直接发布。每次正式更新应同步修改游戏版本、资源缓存参数、`CHANGELOG.md`、对应 Patch Note 和发布检查中的预期版本。详细步骤见 [部署说明](docs/DEPLOY_GITHUB_PAGES.md)。
-
-## 相关文档
-
-- [文档索引](docs/README.md)
-- [游戏设计文档](docs/GAME_DESIGN.md)
-- [GitHub Pages 部署说明](docs/DEPLOY_GITHUB_PAGES.md)
-- [后续 AI 接入边界](docs/AI_INTEGRATION.md)
-- [山河舆图数据说明](docs/MAP_DATA.md)
-- [场景音乐清单](assets/audio/bgm/README.md)
-
-## 地图、音乐与授权
-
-项目许可证待所有者选择，见[LICENSE](LICENSE)；逐项来源、署名、许可及待决策项见[CREDITS.md](CREDITS.md)。
-
-海岸线轮廓改编自公有领域的[Natural Earth 1:110m数据](https://www.naturalearthdata.com/)；历史势力边界和山川标注属于游戏化近似。
-
-霞鹜文楷、站酷小薇体、Noto字体的本地子集与随附OFL文本见[字体说明](assets/fonts/README.md)。Noto Serif SC产物与附件署名存在不一致，已列TODO。五首运行音乐、三首备选曲及其他素材的来源缺项不能视为可自由再分发。
-
-### v2.24.0 完整验证
+### 完整验证
 
 ```bash
 node scripts/check.cjs
-node scripts/balance-paired.cjs
-node scripts/normal-playthrough.cjs
-# 安装 Playwright 或设置 PLAYWRIGHT_MODULE 为现有安装路径。Windows 默认使用 Edge。
-node scripts/browser-consistency.cjs
-node scripts/browser-ui.cjs
+node scripts/check.cjs --regression-only
+node scripts/check-doc-links.cjs
 ```
 
-检查器自动发现全部行为回归，日志写入仓库相邻的 validation/；浏览器使用隔离上下文与临时本地服务器，不读取个人浏览器存档。非 Windows 可设置 BROWSER_CHANNEL=chromium（需先安装相应浏览器）。配对测试每组固定 24 种子，BALANCE_SOURCE 可指向审核基准 checkout；原始结果写入仓库相邻的 balance-after.json。完整恢复保留快照内所有系统；仅核心导入会标记历史缺失并重建本局，详见迁移说明。
+统一检查自动发现 `src/**/*.js` 语法与全部 `tests/*-regression.js`，无需维护手工测试列表。
+日志默认写入仓库相邻的validation/；可用VALIDATION_OUTPUT指定目录。
+单独运行发布测试时，预期版本应对应 `src/data.js`；手工覆盖写作 `EXPECTED_VERSION=<当前版本>`，须替换占位值。
+浏览器检查另需Playwright与浏览器，可设置PLAYWRIGHT_MODULE指向现有安装；不影响游戏运行。
+
+## 部署
+
+GitHub Pages从main根目录直接发布，没有构建步骤。
+每次更新应先验证，再核对发布记录与普通网址；流程见[部署说明](docs/DEPLOY_GITHUB_PAGES.md)。
+
+## 相关文档
+
+- [文档索引](docs/README.md)与[完整更新记录](CHANGELOG.md)
+- [游戏设计](docs/GAME_DESIGN.md)与[独立版本说明](patch-notes/README.md)
+- [仓库盘点](docs/AUDIT_2026-11.md)与[AI接入边界](docs/AI_INTEGRATION.md)
+
+## 授权
+
+项目许可证待所有者选择，见[LICENSE](LICENSE)；逐项素材及待确认项见[CREDITS.md](CREDITS.md)。
+Natural Earth原始轮廓的仓内公有领域说明见[地图数据](docs/MAP_DATA.md)，历史边界为游戏化近似。
+本地字体及OFL附件见[字体说明](assets/fonts/README.md)；Noto Serif SC署名对应关系待核对。
+音乐、立绘等仍有授权缺项，不能由公开可见或“原创”字样推定再分发许可。
