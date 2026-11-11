@@ -1,0 +1,24 @@
+name: 史实考据
+description: 提出人物、时间、地理与历史表述的依据
+title: "[考据] "
+body:
+  - type: input
+    id: location
+    attributes:
+      label: 剧本、年月与原文位置
+    validations:
+      required: true
+  - type: textarea
+    id: original
+    attributes:
+      label: 当前表述与建议
+      description: 请区分史实错误和为玩法作的近似。
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: 史料与出处
+      description: 请列书名、卷次、页码或公开链接，避免只给无出处结论。
+    validations:
+      required: true

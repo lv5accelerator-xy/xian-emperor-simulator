@@ -72,7 +72,7 @@ node scripts/check-doc-links.cjs
 ## 部署
 
 GitHub Pages从main根目录直接发布，没有构建步骤。
-每次更新应先验证，再核对发布记录与普通网址；流程见[部署说明](docs/DEPLOY_GITHUB_PAGES.md)。
+发布元数据可用scripts/bump-version.cjs同步，先使用--dry-run审查；每次更新应先验证，再核对发布记录与普通网址；流程见[部署说明](docs/DEPLOY_GITHUB_PAGES.md)。
 
 ## 相关文档
 

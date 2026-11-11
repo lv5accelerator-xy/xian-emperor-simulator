@@ -55,3 +55,9 @@
 - [VALIDATION_V229.md](archive/VALIDATION_V229.md)
 
 [累计更新](../CHANGELOG.md) · [素材授权](../CREDITS.md) · [项目许可证占位](../LICENSE)
+
+## 协作与发布维护
+
+- [历史包迁移及版本工具](RELEASE_MIGRATION.md)
+- [手写版本盘点](VERSION_INVENTORY.md)
+- [参与维护](../CONTRIBUTING.md)

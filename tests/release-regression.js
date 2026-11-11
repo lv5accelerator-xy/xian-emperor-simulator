@@ -83,7 +83,7 @@ function loadStrategyApi() {
   return context.window.XianStrategyNetwork;
 }
 
-const expectedVersion = process.env.EXPECTED_VERSION || "2.30.0";
+const expectedVersion = process.env.EXPECTED_VERSION || require("../scripts/read-version.cjs").readVersion(root);
 const releaseResources = ["diplomatic-relations.js","diplomatic-endings.js","strategy-network-data.js","alliance-diplomacy.js","lord-intentions.js","strategy-network.css","character-availability.js","scenario-220-story.js","scenario-220-story.css","character-memory.js","decree-helper.js","consequence-echoes.js","action-plans.js","army-system.js","campaign-evolution.js","causal-court.js","command-center.js","council-advice.js","court-politics.js","decree-confirmation.js","decree-world.js","dynasty-saga.js","edict-rules.js","final-verdict.js","game.js","grand-map.js","historian.js","imperial-paths.js","imperial-progress.js","monthly-report.js","quarterly-agenda.js","regional-echoes.js","same-challenge.js","save-backups.js","short-challenges.js","short-score.js","strategy-network.js","ui-refresh-v280.js","world-system.js","reading-settings.js","short-challenges.css","monthly-safety.css","monthly-report.css","reading-settings.css","data.js","monthly-safety.js","monthly-flow.js","short-review.js"];
 for (const resource of releaseResources) assert.ok(read("index.html").includes(`src/${resource}?v=${expectedVersion}`), `changed resource ${resource} needs a fresh cache version`);
 assert.ok(read("index.html").indexOf("src/diplomatic-endings.js") < read("index.html").indexOf("src/game.js"), "the common diplomatic gate must be available before core initialization");
