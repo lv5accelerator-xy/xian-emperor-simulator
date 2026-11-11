@@ -1,6 +1,15 @@
 /* 天子蒙尘 v2.12.0：山河回响 */
 (() => {
   "use strict";
+
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
   const VERSION = "2.12.0";
   const STORAGE_KEY = "xian_emperor_regional_echoes_v2120";
   const CITY_NAMES = Object.fromEntries((window.XIAN_STRATEGY_DATA?.cities || []).map(item => [item.id, item.name]));
@@ -26,7 +35,7 @@
       return next;
     } catch (_) { return blankState(); }
   }
-  function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {} render(); }
+  function saveState() { try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (_) {} render(); }
   function coreState() { return window.XianEmperorGame?.getState?.() || null; }
   function strategyState() { return window.XianStrategyNetwork?.getState?.() || null; }
 

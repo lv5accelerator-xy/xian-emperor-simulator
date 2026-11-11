@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STORE_KEY = "xian_emperor_short_challenges_v230";
   const CHALLENGES = [
@@ -328,7 +337,7 @@
   function medalName(id) { return ({ gold: "金章", silver: "银章", bronze: "铜章", none: "未获章" })[id] || "未获章"; }
   function defaultStore() { return { version: 1, active: null, results: [], best: {}, rewards: [], customDefinitions: {} }; }
   function loadStore() { try { const value = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); return { ...defaultStore(), ...(value || {}), results: Array.isArray(value?.results) ? value.results : [], best: value?.best || {}, rewards: Array.isArray(value?.rewards) ? value.rewards : [], customDefinitions: value?.customDefinitions || {} }; } catch (_) { return defaultStore(); } }
-  function saveStore() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (error) { console.warn("短局挑战保存失败", error); } }
+  function saveStore() { try { storageWrite("setItem", STORE_KEY, JSON.stringify(store)); } catch (error) { console.warn("短局挑战保存失败", error); } }
   function readCore() { try { const value = JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
   function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]); }
 

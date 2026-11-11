@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STORE_KEY = "xian_emperor_progression_v100";
   const DATA = window.XIAN_IMPERIAL_PROGRESS_DATA || { paths: [], arcs: [], themes: [] };
@@ -94,7 +103,7 @@
   }
 
   function saveProgress() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); }
+    try { storageWrite("setItem", STORE_KEY, JSON.stringify(progress)); }
     catch (error) { console.warn("御前进程保存失败", error); }
   }
 

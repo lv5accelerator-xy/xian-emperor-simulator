@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const STRATEGY_KEY = "xian_emperor_strategy_network_v040";
   const ARMY_KEY = "xian_emperor_armies_v050";
   const PROGRESSION_KEY = "xian_emperor_progression_v100";
@@ -303,7 +312,7 @@
   }
 
   function finishGuide(shell) {
-    localStorage.setItem(GUIDE_KEY, "seen");
+    storageWrite("setItem", GUIDE_KEY, "seen");
     shell.querySelector("[data-map-guide]")?.remove();
     state.guideStep = 0;
   }

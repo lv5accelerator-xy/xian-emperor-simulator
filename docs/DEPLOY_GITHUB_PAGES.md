@@ -5,7 +5,7 @@
 解压后进入：
 
 ```text
-xian-emperor-simulator-v2.0.0
+xian-emperor-simulator（仓库根目录）
 ```
 
 确认里面直接有：
@@ -104,3 +104,7 @@ src/game.js
 
 玩家可以用顶部“导出”生成完整 JSON 存档包，再在另一台设备使用“导入”。v1.0.0 以来的完整存档会连同军团、政议、御前方略和收藏一起迁移。
 
+
+## 维护工具
+
+产品版本以src/data.js为准。发布前先执行scripts/bump-version.cjs的--dry-run审查同步计划，再按已确认的说明更新；该工具不会修改规则版本、schema或存储键。完整操作与历史包处理见[发布迁移说明](RELEASE_MIGRATION.md)。

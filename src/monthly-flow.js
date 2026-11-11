@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STORE_KEY = "xian_emperor_monthly_flow_v210";
   const STAT_NAMES = {
@@ -196,7 +205,7 @@
   function queueRefresh() { setTimeout(refresh, 20); }
   function defaultStore() { return { version: 1, mode: "simple", lastDecision: null }; }
   function loadStore() { try { return { ...defaultStore(), ...(JSON.parse(localStorage.getItem(STORE_KEY) || "null") || {}) }; } catch (_) { return defaultStore(); } }
-  function saveStore() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (error) { console.warn("月度流程设置保存失败", error); } }
+  function saveStore() { try { storageWrite("setItem", STORE_KEY, JSON.stringify(store)); } catch (error) { console.warn("月度流程设置保存失败", error); } }
   function readCore() { try { const value = window.XianEmperorGame?.getState?.() || JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
   function escapeHtml(value) { return window.XianCommandCenter?.escapeHtml?.(value) || String(value ?? ""); }
 

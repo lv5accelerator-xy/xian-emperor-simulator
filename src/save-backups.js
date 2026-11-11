@@ -1,6 +1,15 @@
 /* 天子蒙尘 v2.19.0：完整留档、恢复对比与单份导出。 */
 (() => {
   "use strict";
+
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STORE_KEY = "xian_emperor_save_backups_v2180";
   const api = () => window.XianEmperorGame;
@@ -17,7 +26,7 @@
     if (!value || !Array.isArray(value.months)) throw new Error("Invalid backup index");
     return { version: 1, months: value.months.slice(0, 3), replacement: value.replacement || null };
   }
-  function writeStore(store) { localStorage.setItem(STORE_KEY, JSON.stringify(store)); problem = ""; }
+  function writeStore(store) { storageWrite("setItem", STORE_KEY, JSON.stringify(store)); problem = ""; }
   function fail() {
     problem = "备份未能保存：请检查浏览器存储空间或先导出完整存档。";
     api().notify(problem, "error");

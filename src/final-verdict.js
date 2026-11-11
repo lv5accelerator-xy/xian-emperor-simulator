@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STORE_KEY = "xian_emperor_final_verdict_v250";
   const MAX_VERDICTS = 24;
@@ -216,7 +225,7 @@
   function scenarioById(id) { return window.GAME_DATA?.scenarios?.find(item => item.id === id); }
   function defaultStore() { return { version: 1, verdicts: [] }; }
   function loadStore() { try { const value = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); return { ...defaultStore(), ...(value || {}), verdicts: Array.isArray(value?.verdicts) ? value.verdicts : [] }; } catch (_) { return defaultStore(); } }
-  function saveStore() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (error) { console.warn("帝纪终评保存失败", error); } }
+  function saveStore() { try { storageWrite("setItem", STORE_KEY, JSON.stringify(store)); } catch (error) { console.warn("帝纪终评保存失败", error); } }
   function readCore() { try { const value = JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
   function escapeHtml(value) { return window.XianCommandCenter?.escapeHtml?.(value) || String(value ?? ""); }
 

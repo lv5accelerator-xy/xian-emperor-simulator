@@ -1,0 +1,38 @@
+name: 平衡反馈
+description: 反馈具体剧本、路线和种子下的体验
+title: "[平衡] "
+body:
+  - type: input
+    id: scenario
+    attributes:
+      label: 剧本、难度与版本
+    validations:
+      required: true
+  - type: input
+    id: route
+    attributes:
+      label: 路线或策略
+      description: 请填写御前方略、帝业或实际采用的行动策略。
+    validations:
+      required: true
+  - type: input
+    id: seed
+    attributes:
+      label: 种子或分享码
+      description: 没有种子时请注明，并附完整存档。
+    validations:
+      required: true
+  - type: input
+    id: month
+    attributes:
+      label: 游戏月份
+      description: 请同时填写第几个月和游戏年月。
+    validations:
+      required: true
+  - type: textarea
+    id: observations
+    attributes:
+      label: 具体行动、投入和结果
+      description: 请保留失败尝试，说明期望和实际的差异。
+    validations:
+      required: true

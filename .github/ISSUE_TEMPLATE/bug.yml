@@ -1,0 +1,29 @@
+name: 故障报告
+description: 提交可复现的界面、存档或运行问题
+title: "[故障] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: 游戏版本与浏览器
+      description: 请填写游戏页脚版本、浏览器版本和设备。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 从开局或导入开始，逐步描述点击和输入。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望结果与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 截图、报错与存档
+      description: 可附去除个人内容的完整JSON；不要上传令牌、密码或私人信息。

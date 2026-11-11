@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STORE_KEY = "xian_emperor_dynasty_saga_v200";
   const CHAPTERS = ["zhongping_189", "xingping_195", "jianan_196", "jianan_200", "yankang_220"];
@@ -289,7 +298,7 @@
   function readCore() { try { const value = JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
   function defaultProfile() { return { version: 1, active: false, currentIndex: 0, chapters: [], legacies: [], chapterGameIds: [], pendingScenarioId: null, startedAt: null, completedAt: null, finalScore: 0, finalTitle: "" }; }
   function loadProfile() { try { const value = JSON.parse(localStorage.getItem(STORE_KEY) || "null"); return { ...defaultProfile(), ...(value || {}), chapters: Array.isArray(value?.chapters) ? value.chapters : [], legacies: Array.isArray(value?.legacies) ? value.legacies : [], chapterGameIds: Array.isArray(value?.chapterGameIds) ? value.chapterGameIds : [] }; } catch (_) { return defaultProfile(); } }
-  function saveProfile() { try { localStorage.setItem(STORE_KEY, JSON.stringify(profile)); } catch (error) { console.warn("汉祚长卷保存失败", error); } }
+  function saveProfile() { try { storageWrite("setItem", STORE_KEY, JSON.stringify(profile)); } catch (error) { console.warn("汉祚长卷保存失败", error); } }
   function escapeHtml(value) { return window.XianCommandCenter?.escapeHtml?.(value) || String(value ?? ""); }
 
   window.XianDynastySaga = Object.freeze({

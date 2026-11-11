@@ -6,7 +6,18 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const DATA = window.GAME_DATA;
+  const SAVE_SCHEMA_VERSION = 1;
+  let lastImportedSchema = null;
   const SAVE_KEY = "xian_emperor_simulator_v01";
   const SCENARIO_RECORDS_KEY = "xian_emperor_scenario_records_v070";
   const PORTABLE_STORAGE_KEYS = [
@@ -67,10 +78,10 @@
       sync(window.XianImperialProgress);
       sync(window.XianImperialPaths);
       state.updatedAt = new Date().toISOString();
-      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      storageWrite("setItem", SAVE_KEY, JSON.stringify(state));
       document.dispatchEvent(new CustomEvent("xian:core-saved", { detail: { turn: state.turn, createdAt: state.createdAt, kind } }));
       // Synchronous listeners may add receipts, but cannot publish a partial core.
-      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      storageWrite("setItem", SAVE_KEY, JSON.stringify(state));
       if (before === gameplay()) { settled = true; break; }
       }
       if (!settled) throw new Error("Gameplay commit did not converge; refusing an incomplete snapshot.");
@@ -2172,7 +2183,8 @@
       if (raw !== null) stores[key] = JSON.parse(raw);
     }
     if (!validateSave(stores[SAVE_KEY])) return null;
-    return { format: "xian-emperor-full-save", version: DATA.version, exportedAt: new Date().toISOString(), stores };
+    return Object.defineProperty({ format: "xian-emperor-full-save", version: DATA.version, exportedAt: new Date().toISOString(), stores },
+      "saveSchemaVersion", { value: SAVE_SCHEMA_VERSION, enumerable: true, writable: false });
   }
 
   function restoreFullSave(bundle) {
@@ -2183,6 +2195,8 @@
     const previous = new Map();
     let importing = false;
     try {
+      // Observe the header only; existing validation and migration decisions remain unchanged.
+      lastImportedSchema = Object.freeze({ present: Object.prototype.hasOwnProperty.call(bundle, "saveSchemaVersion"), value: bundle.saveSchemaVersion ?? null });
       const shortStore = bundle.stores["xian_emperor_short_challenges_v230"], gameId = bundle.stores[SAVE_KEY].createdAt;
       const importedShort = shortStore?.active?.gameCreatedAt === gameId || (Array.isArray(shortStore?.results) && shortStore.results.some(item => item.gameCreatedAt === gameId && !item.archivedByCoreImport));
       const restored = migrateSave(bundle.stores[SAVE_KEY], importedShort);
@@ -2195,8 +2209,8 @@
       window.__xianFullSaveWriting = true;
       // Core last: storage watchers cannot combine the new core with an old world.
       for (const key of [...PORTABLE_STORAGE_KEYS.filter(key => key !== SAVE_KEY), SAVE_KEY]) {
-        if (values.get(key) == null) localStorage.removeItem(key);
-        else localStorage.setItem(key, values.get(key));
+        if (values.get(key) == null) storageWrite("removeItem", key);
+        else storageWrite("setItem", key, values.get(key));
       }
       window.__xianFullSaveWriting = false;
       state = restored;
@@ -2207,7 +2221,7 @@
       if (importing) {
         window.__xianFullSaveWriting = true;
         for (const [key, raw] of previous) {
-          try { if (raw === null) localStorage.removeItem(key); else localStorage.setItem(key, raw); }
+          try { if (raw === null) storageWrite("removeItem", key); else storageWrite("setItem", key, raw); }
           catch (rollbackError) { console.error("存档回滚失败", rollbackError); }
         }
       }
@@ -2316,7 +2330,7 @@
       confirmText: "确认删除",
       onConfirm: () => {
         if (window.XianSaveBackups?.captureBeforeReplacement?.("重开前") === false) return;
-        localStorage.removeItem(SAVE_KEY);
+        storageWrite("removeItem", SAVE_KEY);
         state = null;
         closeModal();
         el["game-shell"].classList.add("hidden");
@@ -2430,7 +2444,7 @@
       lastEnding: state.ending?.title || "未结算",
       updatedAt: new Date().toISOString(),
     };
-    try { localStorage.setItem(SCENARIO_RECORDS_KEY, JSON.stringify(records)); } catch (error) { console.warn("剧本史册保存失败", error); }
+    try { storageWrite("setItem", SCENARIO_RECORDS_KEY, JSON.stringify(records)); } catch (error) { console.warn("剧本史册保存失败", error); }
     state.challengeRecorded = true;
     return records[scenario.id];
   }
@@ -2582,6 +2596,7 @@
     openActionComparison,
     getActionPlans: gameState => gameState || state ? window.XianActionPlans.list(gameState || state) : [],
     captureFullSave,
+    getSaveSchemaInfo: () => Object.freeze({ saveSchemaVersion: SAVE_SCHEMA_VERSION, lastImported: lastImportedSchema }),
     downloadFullSave,
     restoreFullSave,
     planLegacyImport,

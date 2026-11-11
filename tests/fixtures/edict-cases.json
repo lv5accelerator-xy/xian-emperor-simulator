@@ -1,0 +1,1701 @@
+{
+  "context": {
+    "version": "2.30.0",
+    "scenario": "jianan_196",
+    "difficulty": "standard",
+    "seed": 42424242,
+    "turn": 1,
+    "mode": "Read-only analysis/preview; desired fields are human semantic expectations, not rule changes."
+  },
+  "sourceHashes": {
+    "src/edict-rules.js": "54ed3acb612e4e533c7e9cd0fb44a3263a9635899590e1746b61fe3eba7c76b1",
+    "src/strategy-network.js": "4e4273fc0ac73a4e1e8534ae33284b95c6aabacfb2bdda8adbf6b2c45aeac4bf",
+    "src/strategy-network-data.js": "d342894e0260fc423eba580dca4cef06bfeb302f5f7042f02cc5f880029053b6",
+    "src/character-availability.js": "f03cda8e7a980c180e6ba08dbab2557a1f2da36fcfa947fa57dd53ccee1a3fd4"
+  },
+  "cases": [
+    {
+      "id": "N01",
+      "group": "否定与语境",
+      "text": "不得曹操出兵邺城",
+      "note": "直接否定军令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不得曹操出兵邺城"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "N02",
+      "group": "否定与语境",
+      "text": "不许赈济灾民",
+      "note": "直接否定赈济",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不许赈济灾民"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "N03",
+      "group": "否定与语境",
+      "text": "不要减赋",
+      "note": "直接否定减赋",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不要减赋"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "N04",
+      "group": "否定与语境",
+      "text": "毋联络董承",
+      "note": "直接否定联络",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "毋联络董承"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "N05",
+      "group": "否定与语境",
+      "text": "停止输粮邺城",
+      "note": "停止后不应转正向输粮",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "停止输粮邺城"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "N06",
+      "group": "否定与语境",
+      "text": "暂停任命曹操",
+      "note": "暂缓任官",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "暂停任命曹操"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "N07",
+      "group": "否定与语境",
+      "text": "拒绝与袁绍结盟",
+      "note": "拒绝盟约",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "拒绝与袁绍结盟"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "N08",
+      "group": "否定与语境",
+      "text": "不再进贡袁绍",
+      "note": "停止贡赋",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不再进贡袁绍"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "N09",
+      "group": "否定与语境",
+      "text": "不应出兵邺城",
+      "note": "不应属于否定语义",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "不应出兵邺城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": [
+        "hasEffectiveOrder"
+      ]
+    },
+    {
+      "id": "N10",
+      "group": "否定与语境",
+      "text": "不宜讨伐袁绍",
+      "note": "不宜不能自动变成征讨",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [
+          "yuan_shao"
+        ],
+        "targetDisposition": {
+          "yuan_shao": "punitive"
+        },
+        "effectiveText": "不宜讨伐袁绍",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": [
+        "hasEffectiveOrder"
+      ]
+    },
+    {
+      "id": "N11",
+      "group": "否定与语境",
+      "text": "不得不赈济灾民",
+      "note": "双重否定表达必须赈济",
+      "desired": {
+        "hasEffectiveOrder": true
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不得不赈济灾民"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": [
+        "hasEffectiveOrder"
+      ]
+    },
+    {
+      "id": "N12",
+      "group": "否定与语境",
+      "text": "未必需要出兵邺城",
+      "note": "不确定建议不应直接视为肯定命令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "未必需要出兵邺城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": [
+        "hasEffectiveOrder"
+      ]
+    },
+    {
+      "id": "N13",
+      "group": "否定与语境",
+      "text": "曹操并非要出兵邺城",
+      "note": "并非是否定",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [
+          "cao_cao"
+        ],
+        "targetDisposition": {
+          "cao_cao": "positive"
+        },
+        "effectiveText": "曹操并非要出兵邺城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": [
+        "hasEffectiveOrder"
+      ]
+    },
+    {
+      "id": "N14",
+      "group": "否定与语境",
+      "text": "勿忘赈济灾民",
+      "note": "勿忘表示提醒执行",
+      "desired": {
+        "hasEffectiveOrder": true
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "勿忘赈济灾民"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": [
+        "hasEffectiveOrder"
+      ]
+    },
+    {
+      "id": "N15",
+      "group": "否定与语境",
+      "text": "闻曹操欲出兵邺城，暂不下诏",
+      "note": "转述加不下诏不应作为朕的正向军令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [
+          "cao_cao"
+        ],
+        "targetDisposition": {
+          "cao_cao": "positive"
+        },
+        "effectiveText": "闻曹操欲出兵邺城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": [
+        "hasEffectiveOrder"
+      ]
+    },
+    {
+      "id": "N16",
+      "group": "否定与语境",
+      "text": "传言董承密令联络袁绍，并非朕意",
+      "note": "传闻/引语不应自动成为执行命令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "observed": {
+        "categories": [
+          "secret"
+        ],
+        "targets": [
+          "dong_cheng",
+          "yuan_shao"
+        ],
+        "targetDisposition": {
+          "dong_cheng": "positive",
+          "yuan_shao": "positive"
+        },
+        "effectiveText": "传言董承密令联络袁绍",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      },
+      "differences": [
+        "hasEffectiveOrder"
+      ]
+    },
+    {
+      "id": "M01",
+      "group": "多目标与多政务",
+      "text": "令袁绍与刘表结盟",
+      "note": "两方盟约",
+      "desired": {
+        "blocked": false
+      },
+      "observed": {
+        "categories": [
+          "diplomacy"
+        ],
+        "targets": [
+          "yuan_shao",
+          "liu_biao"
+        ],
+        "targetDisposition": {
+          "yuan_shao": "positive",
+          "liu_biao": "positive"
+        },
+        "effectiveText": "令袁绍与刘表结盟",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M02",
+      "group": "多目标与多政务",
+      "text": "令袁绍与刘表及孙策结盟",
+      "note": "三方盟约上限",
+      "desired": {
+        "blocked": false
+      },
+      "observed": {
+        "categories": [
+          "diplomacy"
+        ],
+        "targets": [
+          "yuan_shao",
+          "liu_biao",
+          "sun_ce"
+        ],
+        "targetDisposition": {
+          "yuan_shao": "positive",
+          "liu_biao": "positive",
+          "sun_ce": "positive"
+        },
+        "effectiveText": "令袁绍与刘表及孙策结盟",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M03",
+      "group": "多目标与多政务",
+      "text": "令曹操与袁绍刘表孙策结盟",
+      "note": "超过三方应要求拆分",
+      "desired": {
+        "blocked": true
+      },
+      "observed": {
+        "categories": [
+          "diplomacy"
+        ],
+        "targets": [
+          "cao_cao",
+          "yuan_shao",
+          "liu_biao",
+          "sun_ce"
+        ],
+        "targetDisposition": {
+          "cao_cao": "positive",
+          "yuan_shao": "positive",
+          "liu_biao": "positive",
+          "sun_ce": "positive"
+        },
+        "effectiveText": "令曹操与袁绍刘表孙策结盟",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [
+          "共同盟约最多列明三方。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "共同盟约最多列明三方。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M04",
+      "group": "多目标与多政务",
+      "text": "褒奖荀彧，问罪董承",
+      "note": "分句中褒贬对象混合",
+      "desired": {
+        "blocked": true
+      },
+      "observed": {
+        "categories": [
+          "investigation",
+          "appease"
+        ],
+        "targets": [
+          "dong_cheng",
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "dong_cheng": "punitive",
+          "xun_yu": "positive"
+        },
+        "effectiveText": "褒奖荀彧；问罪董承",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [
+          "褒奖与问罪对象请分开拟旨，避免承办对象混淆。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "褒奖与问罪对象请分开拟旨，避免承办对象混淆。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M05",
+      "group": "多目标与多政务",
+      "text": "褒奖荀彧并问罪董承",
+      "note": "同句褒贬对象也应区分",
+      "desired": {
+        "blocked": true
+      },
+      "observed": {
+        "categories": [
+          "investigation",
+          "appease"
+        ],
+        "targets": [
+          "dong_cheng",
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "dong_cheng": "punitive",
+          "xun_yu": "punitive"
+        },
+        "effectiveText": "褒奖荀彧并问罪董承",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      },
+      "differences": [
+        "blocked"
+      ]
+    },
+    {
+      "id": "M06",
+      "group": "多目标与多政务",
+      "text": "令曹操攻取邺城，令袁绍坚守邺城",
+      "note": "进攻与防守不能合成一份军令",
+      "desired": {
+        "blocked": true
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [
+          "cao_cao",
+          "yuan_shao"
+        ],
+        "targetDisposition": {
+          "cao_cao": "positive",
+          "yuan_shao": "positive"
+        },
+        "effectiveText": "令曹操攻取邺城；令袁绍坚守邺城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [
+          "一份圣旨只指定一种军略行动，请将进攻、补给或停战分开下达。"
+        ],
+        "blocked": true,
+        "cityOrder": [
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "一份圣旨只指定一种军略行动，请将进攻、补给或停战分开下达。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M07",
+      "group": "多目标与多政务",
+      "text": "任命荀彧，赈济灾民，整军备战",
+      "note": "三类政务要求拆分",
+      "desired": {
+        "blocked": true
+      },
+      "observed": {
+        "categories": [
+          "relief",
+          "military",
+          "appointment"
+        ],
+        "targets": [
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "xun_yu": "positive"
+        },
+        "effectiveText": "任命荀彧；赈济灾民；整军备战",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [
+          "一份圣旨最多办理两类政务，请拆成多次行动。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "一份圣旨最多办理两类政务，请拆成多次行动。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M08",
+      "group": "多目标与多政务",
+      "text": "祭祀宗庙，赈济灾民",
+      "note": "两类政务允许复核",
+      "desired": {
+        "blocked": false
+      },
+      "observed": {
+        "categories": [
+          "relief",
+          "ritual"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "祭祀宗庙；赈济灾民",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 10
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M09",
+      "group": "多目标与多政务",
+      "text": "罢免荀彧，加封董承",
+      "note": "罢免与加封对象分开处理",
+      "desired": {
+        "blocked": true
+      },
+      "observed": {
+        "categories": [
+          "appointment"
+        ],
+        "targets": [
+          "dong_cheng",
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "dong_cheng": "positive",
+          "xun_yu": "punitive"
+        },
+        "effectiveText": "罢免荀彧；加封董承",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [
+          "褒奖与问罪对象请分开拟旨，避免承办对象混淆。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "褒奖与问罪对象请分开拟旨，避免承办对象混淆。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M10",
+      "group": "多目标与多政务",
+      "text": "让荀彧与董承共同彻查吏治",
+      "note": "同一正向调查两对象",
+      "desired": {
+        "blocked": false
+      },
+      "observed": {
+        "categories": [
+          "investigation"
+        ],
+        "targets": [
+          "dong_cheng",
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "dong_cheng": "positive",
+          "xun_yu": "positive"
+        },
+        "effectiveText": "让荀彧与董承共同彻查吏治",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M11",
+      "group": "多目标与多政务",
+      "text": "命袁绍与刘表议和",
+      "note": "两对象议和识别为外交",
+      "desired": {
+        "categories": [
+          "diplomacy"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "diplomacy"
+        ],
+        "targets": [
+          "yuan_shao",
+          "liu_biao"
+        ],
+        "targetDisposition": {
+          "yuan_shao": "positive",
+          "liu_biao": "positive"
+        },
+        "effectiveText": "命袁绍与刘表议和",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M12",
+      "group": "多目标与多政务",
+      "text": "安抚曹操袁绍刘表三人",
+      "note": "非盟约最多两个人物",
+      "desired": {
+        "blocked": true
+      },
+      "observed": {
+        "categories": [
+          "appease"
+        ],
+        "targets": [
+          "cao_cao",
+          "yuan_shao",
+          "liu_biao"
+        ],
+        "targetDisposition": {
+          "cao_cao": "positive",
+          "yuan_shao": "positive",
+          "liu_biao": "positive"
+        },
+        "effectiveText": "安抚曹操袁绍刘表三人",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [
+          "一份圣旨最多明确处分两名人物，请将其他对象分开办理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "一份圣旨最多明确处分两名人物，请将其他对象分开办理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M13",
+      "group": "多目标与多政务",
+      "text": "令曹操整军，勿令袁绍出兵",
+      "note": "否定分句不能把第二人加入正向目标",
+      "desired": {
+        "targets": [
+          "cao_cao"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [
+          "cao_cao"
+        ],
+        "targetDisposition": {
+          "cao_cao": "positive"
+        },
+        "effectiveText": "令曹操整军",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [
+          "勿令袁绍出兵"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M14",
+      "group": "多目标与多政务",
+      "text": "加封荀彧与董承",
+      "note": "人物目标采用配置顺序，非城池路线顺序",
+      "desired": {
+        "targets": [
+          "dong_cheng",
+          "xun_yu"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "appointment"
+        ],
+        "targets": [
+          "dong_cheng",
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "dong_cheng": "positive",
+          "xun_yu": "positive"
+        },
+        "effectiveText": "加封荀彧与董承",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 2
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M15",
+      "group": "多目标与多政务",
+      "text": "与袁绍刘表结盟，共讨曹操，合攻许都",
+      "note": "盟约后共同目标不能误算第四参与者",
+      "desired": {
+        "categories": [
+          "diplomacy"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "diplomacy"
+        ],
+        "targets": [
+          "yuan_shao",
+          "liu_biao"
+        ],
+        "targetDisposition": {
+          "yuan_shao": "positive",
+          "liu_biao": "positive"
+        },
+        "effectiveText": "与袁绍刘表结盟；共讨曹操；合攻许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "M16",
+      "group": "多目标与多政务",
+      "text": "赈济灾民；减赋；彻查吏治",
+      "note": "中文分号的三类政务",
+      "desired": {
+        "blocked": true
+      },
+      "observed": {
+        "categories": [
+          "relief",
+          "tax",
+          "investigation"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "赈济灾民；减赋；彻查吏治",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [
+          "一份圣旨最多办理两类政务，请拆成多次行动。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "一份圣旨最多办理两类政务，请拆成多次行动。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C01",
+      "group": "城池顺序",
+      "text": "从邺城向许都输粮",
+      "note": "正向文本起终点",
+      "desired": {
+        "cityOrder": [
+          "ye",
+          "xudu"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "从邺城向许都输粮",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "ye",
+          "xudu"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C02",
+      "group": "城池顺序",
+      "text": "从许都向邺城输粮",
+      "note": "反向文本起终点",
+      "desired": {
+        "cityOrder": [
+          "xudu",
+          "ye"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "从许都向邺城输粮",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu",
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C03",
+      "group": "城池顺序",
+      "text": "从长安向洛阳进兵",
+      "note": "长安先出现",
+      "desired": {
+        "cityOrder": [
+          "changan",
+          "luoyang"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "从长安向洛阳进兵",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "changan",
+          "luoyang"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C04",
+      "group": "城池顺序",
+      "text": "从洛阳向长安进兵",
+      "note": "洛阳先出现",
+      "desired": {
+        "cityOrder": [
+          "luoyang",
+          "changan"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "从洛阳向长安进兵",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "luoyang",
+          "changan"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C05",
+      "group": "城池顺序",
+      "text": "从襄阳向宛城驰援",
+      "note": "地名长短别名去重",
+      "desired": {
+        "cityOrder": [
+          "xiangyang",
+          "wan"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "从襄阳向宛城驰援",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xiangyang",
+          "wan"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C06",
+      "group": "城池顺序",
+      "text": "从宛城向襄阳驰援",
+      "note": "反向顺序",
+      "desired": {
+        "cityOrder": [
+          "wan",
+          "xiangyang"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "从宛城向襄阳驰援",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "wan",
+          "xiangyang"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C07",
+      "group": "城池顺序",
+      "text": "从吴郡向寿春运粮",
+      "note": "江东两城",
+      "desired": {
+        "cityOrder": [
+          "wujun",
+          "shouchun"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "从吴郡向寿春运粮",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "wujun",
+          "shouchun"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C08",
+      "group": "城池顺序",
+      "text": "从寿春向吴郡运粮",
+      "note": "反向江东两城",
+      "desired": {
+        "cityOrder": [
+          "shouchun",
+          "wujun"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "从寿春向吴郡运粮",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "shouchun",
+          "wujun"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C09",
+      "group": "城池顺序",
+      "text": "自西京至东都输粮",
+      "note": "别名和主名同样保持顺序",
+      "desired": {
+        "cityOrder": [
+          "changan",
+          "luoyang"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "自西京至东都输粮",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "changan",
+          "luoyang"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C10",
+      "group": "城池顺序",
+      "text": "自太原至魏郡出兵",
+      "note": "别名顺序",
+      "desired": {
+        "cityOrder": [
+          "jinyang",
+          "ye"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "自太原至魏郡出兵",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "jinyang",
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C11",
+      "group": "城池顺序",
+      "text": "令许都输粮至邺城，许县再补给",
+      "note": "许都/许县相同城池只保留首现",
+      "desired": {
+        "cityOrder": [
+          "xudu",
+          "ye"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "令许都输粮至邺城；许县再补给",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu",
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C12",
+      "group": "城池顺序",
+      "text": "攻许都，再从邺城出发",
+      "note": "语义先给目标后给起点；当前首现法不能理解倒装",
+      "desired": {
+        "cityOrder": [
+          "ye",
+          "xudu"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu",
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      },
+      "differences": [
+        "cityOrder"
+      ]
+    },
+    {
+      "id": "C13",
+      "group": "城池顺序",
+      "text": "向洛阳进兵，起点是长安",
+      "note": "目标先述的倒装路线",
+      "desired": {
+        "cityOrder": [
+          "changan",
+          "luoyang"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "向洛阳进兵",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "luoyang",
+          "changan"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": [
+        "cityOrder"
+      ]
+    },
+    {
+      "id": "C14",
+      "group": "城池顺序",
+      "text": "不得从邺城向许都出兵",
+      "note": "否定整句不能留下正向城池",
+      "desired": {
+        "cityOrder": []
+      },
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不得从邺城向许都出兵"
+        ],
+        "warnings": [
+          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      },
+      "differences": []
+    },
+    {
+      "id": "C15",
+      "group": "城池顺序",
+      "text": "不应从许都向邺城出兵",
+      "note": "不应否定语义下不应生成路线",
+      "desired": {
+        "cityOrder": []
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "不应从许都向邺城出兵",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu",
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": [
+        "cityOrder"
+      ]
+    },
+    {
+      "id": "C16",
+      "group": "城池顺序",
+      "text": "从武威经长安向洛阳输粮",
+      "note": "三地首现顺序；不声称引擎强制经由中间点",
+      "desired": {
+        "cityOrder": [
+          "wuwei",
+          "changan",
+          "luoyang"
+        ]
+      },
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "从武威经长安向洛阳输粮",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "wuwei",
+          "changan",
+          "luoyang"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      },
+      "differences": []
+    }
+  ]
+}

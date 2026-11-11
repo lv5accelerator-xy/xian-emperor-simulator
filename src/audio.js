@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const KEY = "xian_emperor_audio_v023";
   const OLD_KEY = "xian_emperor_audio_v022";
   const SRC = window.XIAN_AUDIO_DATA || {};
@@ -88,7 +97,7 @@
 
   function saveSettings() {
     try {
-      localStorage.setItem(KEY, JSON.stringify(settings));
+      storageWrite("setItem", KEY, JSON.stringify(settings));
     } catch (_) {}
   }
 

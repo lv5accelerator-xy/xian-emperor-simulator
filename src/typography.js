@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const STORAGE_KEY = "xian_font_mode_v1";
   const root = document.documentElement;
   const normalize = value => value === "clear" ? "clear" : "classic";
@@ -30,7 +39,7 @@
     mode = normalize(value);
     root.dataset.fontMode = mode;
     if (persist) {
-      try { localStorage.setItem(STORAGE_KEY, mode); } catch (_) { /* The current page can still switch fonts. */ }
+      try { storageWrite("setItem", STORAGE_KEY, mode); } catch (_) { /* The current page can still switch fonts. */ }
     }
     renderControls();
   }

@@ -2,6 +2,15 @@
 (() => {
   "use strict";
 
+  // Preserve storage watchers and the original error path while making failures visible.
+  function storageWrite(method, ...args) {
+    try { return localStorage[method](...args); }
+    catch (error) {
+      try { window.XianStorageFeedback?.report?.(error); } catch (_) { /* Keep the original failure. */ }
+      throw error;
+    }
+  }
+
   const CORE_KEY = "xian_emperor_simulator_v01";
   const STORAGE_KEY = "xian_emperor_court_politics_v060";
   const VERSION = "0.6.0";
@@ -253,7 +262,7 @@
   function attitudeLabel(support,tension) { return tension >= 70 ? "冲突将起" : support >= 70 ? "鼎力相助" : support >= 48 ? "谨慎观望" : "渐行渐远"; }
   function petitionTemplate(item) { return PETITIONS.find(template => template.id === item?.templateId); }
   function loadState() { return safeParse(localStorage.getItem(STORAGE_KEY)); }
-  function saveState() { if (!state) return; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (error) { console.warn("政议系统保存失败", error); } }
+  function saveState() { if (!state) return; try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (error) { console.warn("政议系统保存失败", error); } }
   function isValidCore(core) { return Boolean(core && typeof core === "object" && Number.isFinite(core.turn) && core.stats && core.hidden); }
   function safeParse(raw) { try { return raw ? JSON.parse(raw) : null; } catch (_) { return null; } }
   function clamp(value,min,max) { return Math.min(max,Math.max(min,Number(value)||0)); }
