@@ -63,3 +63,5 @@
 - [参与维护](../CONTRIBUTING.md)
 
 - [存档与存储架构评估](SAVE_ARCHITECTURE.md)：全键清单、导入兼容、容量风险与迁移候选方案。
+
+- [模块重构评估](MODULE_REFACTOR_PLAN.md)：加载顺序、全局依赖、双击运行取舍和独立回退步骤（仅方案）。
