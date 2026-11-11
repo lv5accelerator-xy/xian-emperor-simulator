@@ -23,18 +23,22 @@ const server = http.createServer((req, res) => {
     res.setHeader("Content-Type", ({ ".html": "text/html; charset=utf-8", ".js": "application/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".woff2": "font/woff2" })[path.extname(file)] || "application/octet-stream"); res.end(data);
   });
 });
-const results = [];
+const widths=(process.env.COUNCIL_BROWSER_WIDTHS||"1366,390").split(",").map(Number);
+const results = process.env.COUNCIL_BROWSER_APPEND==="1"&&fs.existsSync(path.join(out,"summary.json"))?JSON.parse(fs.readFileSync(path.join(out,"summary.json"),"utf8")).filter(r=>!widths.includes(r.width)):[];
 (async () => {
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   const channel = process.env.COUNCIL_BROWSER_CHANNEL || "chrome";
   const browser = await chromium.launch({ channel, headless: true, args: ["--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows"] });
-  try { for (const width of (process.env.COUNCIL_BROWSER_WIDTHS || "1366,390").split(",").map(Number)) {
+  try { for (const width of widths) {
     const page = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "reduce" }), errors = [], httpFailures = [];
     page.setDefaultTimeout(30000); page.setDefaultNavigationTimeout(30000); page.on("pageerror", e => errors.push(String(e))); page.on("dialog", d => d.accept());
     page.on("response", r => { if (r.status() >= 400 && !r.url().endsWith("favicon.ico")) httpFailures.push({ url: r.url(), status: r.status() }); });
     const core = () => page.evaluate(() => window.XianEmperorGame.getState());
     const strategy = () => page.evaluate(() => window.XianStrategyNetwork.getState());
     const army = () => page.evaluate(() => window.XianArmySystem.getState());
+    // Capture the actual compositor directly; headless Windows may stop the
+    // animation frames that Playwright's screenshot stability wait depends on.
+    const shot=async file=>{await page.evaluate(()=>document.fonts.ready);const cdp=await page.context().newCDPSession(page);try{const result=await cdp.send("Page.captureScreenshot",{format:"png",fromSurface:true,captureBeyondViewport:false});fs.writeFileSync(file,Buffer.from(result.data,"base64"));}finally{await cdp.detach();}};
     // Use real pointer input with an explicit hit test. Some desktop browser
     // sessions stop animation frames after navigation; pointer input remains
     // available and must still respect overlays and disabled controls.
@@ -84,9 +88,9 @@ const results = [];
       await openRelations();const before=await core();await tap(page.locator("[data-relations-action='peace']"));assert.match(await page.locator("#modal-body").innerText(),/2\/2镇愿承接/);await tap(page.locator("#modal-cancel"));assert.deepEqual((await core()).random,before.random);assert.equal((await core()).totalActions,before.totalActions);
       await tap(page.locator("[data-relations-action='peace']"));await tap(page.locator("#modal-confirm"));
       assert.equal((await core()).actionPoints,initial.actionPoints-1);assert.equal((await core()).stats.treasury,initial.stats.treasury-2);assert.equal((await army()).armies.yuan_main.task,"idle");assert.deepEqual((await army()).militaryFacts,oldFacts);
-      assert.equal((await strategy()).diplomaticRelations.treaties[0].status,"active");await tap(page.locator(".relations-desk summary"));await page.screenshot({path:path.join(out,`peace-confirmed-${width}.png`)});
+      assert.equal((await strategy()).diplomaticRelations.treaties[0].status,"active");await tap(page.locator(".relations-desk summary"));await shot(path.join(out,`peace-confirmed-${width}.png`));
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await tap(page.locator("#strategy-network-close"));
-      await reading();await reading();assert.equal(await page.evaluate(()=>document.documentElement.dataset.readingSize),"largest");await openRelations();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await page.screenshot({path:path.join(out,`relations-largest-${width}.png`)});await tap(page.locator("#strategy-network-close"));await reading();
+      await reading();await reading();assert.equal(await page.evaluate(()=>document.documentElement.dataset.readingSize),"largest");await openRelations();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await shot(path.join(out,`relations-largest-${width}.png`));await tap(page.locator("#strategy-network-close"));await reading();
       const peaceExport=await exportFile("peace");await importFile(peaceExport);assert.equal((await strategy()).diplomaticRelations.treaties[0].status,"active");
       const monthly=[];
       while(!(await core()).ended){await choose();const turn=(await core()).turn;
@@ -97,14 +101,14 @@ const results = [];
         await endMonth();monthly.push({turn,after:(await core()).turn,ended:(await core()).ended});
       }
       const ended=await core(),snapshot=ended.diplomaticOutcome;assert.equal(ended.ending.title,"帝国调停者");assert.equal(snapshot.counts.repairedBreaches,1);assert.equal(snapshot.counts.unresolvedCourtBreaches,0);assert.equal(snapshot.counts.courtBreaches,1);assert.equal(snapshot.counts.peaceSettlements,1);assert.equal(snapshot.counts.reconciliationMissions,1);
-      await page.screenshot({path:path.join(out,`repaired-ending-${width}.png`)});const chronicle=await download(page.locator("#ending-export"),"chronicle-repaired");assert.match(chronicle,/修好使节获承接1次/);
-      await tap(page.locator(".final-verdict-card button"));const verdict=await download(page.locator("[data-verdict-export]").first(),"verdict-repaired");assert.match(verdict,/修好使节获承接1次/);await page.screenshot({path:path.join(out,`verdict-repaired-${width}.png`)});await tap(page.locator("#command-center-overlay [data-command-close]"));
+      await shot(path.join(out,`repaired-ending-${width}.png`));const chronicle=await download(page.locator("#ending-export"),"chronicle-repaired");assert.match(chronicle,/修好使节获承接1次/);
+      await tap(page.locator(".final-verdict-card button"));const verdict=await download(page.locator("[data-verdict-export]").first(),"verdict-repaired");assert.match(verdict,/修好使节获承接1次/);await shot(path.join(out,`verdict-repaired-${width}.png`));await tap(page.locator("#command-center-overlay [data-command-close]"));
       const endedFile=await exportFile("repaired-ended");await importFile(endedFile);assert.deepEqual((await core()).diplomaticOutcome,snapshot);await page.reload({waitUntil:"domcontentloaded"});await skipTutorial();await tap(page.locator("#continue-game-btn"));await skipTutorial();assert.deepEqual((await core()).diplomaticOutcome,snapshot);
-      await leaveEnding();await importFile(refusalFile);const refusalBefore=await core(),war=(await army()).armies.yuan_main.currentOrderId;await openRelations();await tap(page.locator("[data-relations-action='peace']"));assert.match(await page.locator("#modal-body").innerText(),/0\/2镇愿承接/);await tap(page.locator("#modal-confirm"));assert.equal((await core()).actionPoints,refusalBefore.actionPoints-1);assert.equal((await core()).stats.treasury,refusalBefore.stats.treasury-2);assert.equal((await army()).armies.yuan_main.currentOrderId,war);assert.equal((await strategy()).diplomaticRelations.treaties.length,0);await page.screenshot({path:path.join(out,`refusal-${width}.png`)});await tap(page.locator("#strategy-network-close"));
-      await importFile(legacyFile);const legacy=JSON.parse(fs.readFileSync(legacyFile,"utf8")).stores[CORE];assert.equal((await core()).ending.title,legacy.ending.title);assert.equal((await core()).ending.text,legacy.ending.text);assert.deepEqual((await core()).diplomaticOutcome,legacy.diplomaticOutcome);await page.screenshot({path:path.join(out,`actual-legacy-v229-${width}.png`)});
+      await leaveEnding();await importFile(refusalFile);const refusalBefore=await core(),war=(await army()).armies.yuan_main.currentOrderId;await openRelations();await tap(page.locator("[data-relations-action='peace']"));assert.match(await page.locator("#modal-body").innerText(),/0\/2镇愿承接/);await tap(page.locator("#modal-confirm"));assert.equal((await core()).actionPoints,refusalBefore.actionPoints-1);assert.equal((await core()).stats.treasury,refusalBefore.stats.treasury-2);assert.equal((await army()).armies.yuan_main.currentOrderId,war);assert.equal((await strategy()).diplomaticRelations.treaties.length,0);await shot(path.join(out,`refusal-${width}.png`));await tap(page.locator("#strategy-network-close"));
+      await importFile(legacyFile);const legacy=JSON.parse(fs.readFileSync(legacyFile,"utf8")).stores[CORE];assert.equal((await core()).ending.title,legacy.ending.title);assert.equal((await core()).ending.text,legacy.ending.text);assert.deepEqual((await core()).diplomaticOutcome,legacy.diplomaticOutcome);await shot(path.join(out,`actual-legacy-v229-${width}.png`));
       assert.deepEqual(errors,[]);assert.deepEqual(httpFailures,[]);results.push({channel,width,actualMonthEnds:monthly,controlledRecovery:true,ending:ended.ending.title,counts:snapshot.counts,readOnlyCancel:true,acceptedPeaceStopsActualOrder:true,refusalCostsWithoutStopping:true,largestFontNoOverflow:true,nativeFullExportImport:true,nativeChronicleAndVerdictExport:true,intermediateReload:true,frozenConclusion:true,actualV229EndingPreserved:true,pageErrors:errors,httpFailures});
       fs.writeFileSync(path.join(out,"summary.json"),JSON.stringify(results,null,2));console.log(`PASS relationship browser ${width}`);
-    }catch(error){console.error(error);await page.screenshot({path:path.join(out,`failure-${width}.png`),timeout:10000});throw error;}finally{await page.close();}
+    }catch(error){console.error(error);await shot(path.join(out,`failure-${width}.png`));throw error;}finally{await page.close();}
   }
   fs.writeFileSync(path.join(out,"summary.json"),JSON.stringify(results,null,2));console.log(JSON.stringify(results));
   }finally{await browser.close();server.close();}

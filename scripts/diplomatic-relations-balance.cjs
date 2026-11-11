@@ -24,9 +24,9 @@ function driveAlliances(h,policy,memory,trace,failures){
       const targets=data.cities.filter(c=>pair.every(l=>!model.allied(l.id,s.cities[c.id].controller,s,core().turn)))
         .map(c=>({c,d:units.reduce((n,a)=>n+api.findRoutePath(a.cityId,c.id).length,0)})).sort((a,b)=>a.d-b.d||a.c.id.localeCompare(b.c.id));
       if(targets.length){const city=targets[0].c,text=`令${pair.map(l=>label(l.id)).join("与")}结盟，共讨${label(s.cities[city.id].controller)}，合攻${city.name}`,before=core(),preview=h.api.previewEdict(text);
-        memory.lastOffer=before.turn;h.edict(text);const after=core();cost+=after.totalActions>before.totalActions?Number(preview.cost||0):0;
+        memory.lastOffer=before.turn;h.edict(text);const after=core();cost+=after.totalActions>before.totalActions?Number(preview.treasuryCost||0):0;
         const offered=strategy().promises.find(p=>p.type==="alliance"&&p.createdTurn===before.turn);
-        trace.push({turn:before.turn,kind:"alliance-offer",text,ok:after.totalActions>before.totalActions,cost:preview.cost,status:offered?.status||"not-created",consents:offered?.contract?.receipts});
+        trace.push({turn:before.turn,kind:"alliance-offer",text,ok:after.totalActions>before.totalActions,cost:preview.treasuryCost,status:offered?.status||"not-created",consents:offered?.contract?.receipts});
         if(after.totalActions===before.totalActions)failures.push({turn:before.turn,kind:"alliance-offer",reason:preview.reason||"actual edict rejected"});
       }
     }
@@ -67,11 +67,11 @@ function driveRepair(h,memory,trace,failures){
   if(!view.ok)failures.push({turn:core().turn,kind:`postwar-${kind}`,reason:view.message});
  }else if(core().turn-(memory.lastNegotiation||-10)>=4){
   const text=`令${parties.map(label).join("与")}停战`,before=core(),view=h.api.previewEdict(text);h.edict(text);memory.lastNegotiation=before.turn;
-  const ok=core().totalActions>before.totalActions;trace.push({turn:before.turn,kind:"legacy-ceasefire",text,ok,cost:ok?view.cost:0});return ok?Number(view.cost||0):0;
+  const ok=core().totalActions>before.totalActions;trace.push({turn:before.turn,kind:"legacy-ceasefire",text,ok,cost:ok?view.treasuryCost:0});return ok?Number(view.treasuryCost||0):0;
  }
  if(core().actionPoints&&core().turn-memory.lastOffer>=4&&!s().promises.some(p=>h.window.XianAllianceDiplomacy.active(p,core().turn))){
   const text=`令${parties.map(label).join("与")}结盟`,before=core(),view=h.api.previewEdict(text);h.edict(text);memory.lastOffer=before.turn;
-  const ok=core().totalActions>before.totalActions;trace.push({turn:before.turn,kind:"postwar-realliance",ok,status:s().promises.find(p=>p.createdTurn===before.turn&&p.type==="alliance")?.status,cost:ok?view.cost:0});return ok?Number(view.cost||0):0;
+  const ok=core().totalActions>before.totalActions;trace.push({turn:before.turn,kind:"postwar-realliance",ok,status:s().promises.find(p=>p.createdTurn===before.turn&&p.type==="alliance")?.status,cost:ok?view.treasuryCost:0});return ok?Number(view.treasuryCost||0):0;
  }
  return 0;
 }
