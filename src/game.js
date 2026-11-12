@@ -325,7 +325,7 @@
     el["faction-list"].innerHTML = DATA.factions
       .map(
         (faction) => `
-          <button class="faction-row" type="button" data-faction-id="${faction.id}">
+          <button class="faction-row" type="button" data-faction-id="${escapeHtml(faction.id)}">
             <span class="faction-dot" style="--faction-color:${faction.color}"></span>
             <span class="faction-copy">
               <strong>${faction.name}</strong>
@@ -346,15 +346,15 @@
         <span>当前建议</span><strong>裁决奏报后生成</strong><small>系统会根据国库、宫禁与警戒推荐一项行动。</small>
       </button><div class="action-advice-tools"><button type="button" data-action-compare="" hidden>比较方案</button><details data-action-advice-details="" hidden><summary>详细依据</summary><p></p></details></div></div>
       <div class="action-category-tabs" role="tablist" aria-label="常用行动分类">
-        ${ACTION_CATEGORIES.map(category => `<button type="button" role="tab" data-action-category-tab="${category.id}" aria-selected="false"><i>${category.icon}</i><span>${category.name}</span></button>`).join("")}
+        ${ACTION_CATEGORIES.map(category => `<button type="button" role="tab" data-action-category-tab="${escapeHtml(category.id)}" aria-selected="false"><i>${category.icon}</i><span>${category.name}</span></button>`).join("")}
       </div>
       <div class="action-category-groups">
         ${ACTION_CATEGORIES.map(category => `
-          <section class="action-category-group" data-action-category-group="${category.id}" aria-label="${category.name}行动">
+          <section class="action-category-group" data-action-category-group="${escapeHtml(category.id)}" aria-label="${category.name}行动">
             <header><strong>${category.name}</strong><small>${category.note}</small></header>
             <div class="action-category-grid">
               ${commonActions.filter(action => action.category === category.id).map(action => `
-                <button class="action-button" type="button" data-action-id="${action.id}">
+                <button class="action-button" type="button" data-action-id="${escapeHtml(action.id)}">
                   <span class="action-seal">${action.icon}</span>
                   <span><strong>${action.name}</strong><small>${action.description}</small></span>
                 </button>`).join("")}
@@ -617,13 +617,13 @@
         const value = state.stats[key];
         const status = getStatStatus(key, value);
         return `
-          <article class="stat-card ${status.className}" title="${meta.description}" data-stat-key="${key}">
+          <article class="stat-card ${escapeHtml(status.className ?? "")}" title="${escapeHtml(meta.description)}" data-stat-key="${escapeHtml(key)}">
             <div class="stat-heading">
               <span class="stat-seal">${meta.icon}</span>
               <span>${meta.name}</span>
               <strong>${Math.round(value)}</strong>
             </div>
-            <div class="stat-track" role="progressbar" aria-label="${meta.name}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(
+            <div class="stat-track" role="progressbar" aria-label="${escapeHtml(meta.name)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(
           value
         )}">
               <span style="width:${clamp(value, 0, 100)}%"></span>
@@ -650,7 +650,7 @@
 
   function renderStatRemedy(key, value) {
     const remedy = getStatRemedy(key, value);
-    return remedy ? `<button type="button" data-stat-remedy="${remedy.actionId}" title="前往常用行动处理${DATA.statMeta[key]?.name || key}">${remedy.label}<span aria-hidden="true">→</span></button>` : "";
+    return remedy ? `<button type="button" data-stat-remedy="${escapeHtml(remedy.actionId)}" title="前往常用行动处理${DATA.statMeta[key]?.name || key}">${remedy.label}<span aria-hidden="true">→</span></button>` : "";
   }
 
   function goToStatRemedy(actionId) {
@@ -733,7 +733,7 @@
         const faction = DATA.factions.find((item) => item.id === character.faction);
         const relation = state.relations[character.id] ?? 50;
         return `
-          <button class="character-card" type="button" data-character-id="${character.id}">
+          <button class="character-card" type="button" data-character-id="${escapeHtml(character.id)}">
             <span class="portrait-mark" style="--portrait-color:${faction?.color || "#777"}">${character.initials}</span>
             <span class="character-copy">
               <strong>${character.name}</strong>
@@ -1070,7 +1070,7 @@
         <p class="modal-note">召见用途随政治身份变化：旧臣争官心、掌权集团换安全、外镇争制衡；同月国家收益共用次数，人物关系单独计次。</p>
         <label class="field-label">召见对象</label>
         <select id="modal-character-select" class="modal-select">
-          ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
+          ${people.map((p) => `<option value="${escapeHtml(p.id)}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">召见方式</label>
         <div class="option-cards">
@@ -1104,7 +1104,7 @@
         <p class="modal-note">官爵是汉廷仍可支配的稀缺政治资源。过度封赏会使官爵贬值。</p>
         <label class="field-label">对象</label>
         <select id="modal-character-select" class="modal-select">
-          ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
+          ${people.map((p) => `<option value="${escapeHtml(p.id)}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">方式</label>
         <select id="modal-appointment-type" class="modal-select">
@@ -1144,7 +1144,7 @@
         <p class="modal-note danger-note">密令可以改变格局，也最容易导致宫廷灾难。泄密风险会在每月结算时接受检验。</p>
         <label class="field-label">联络对象</label>
         <select id="modal-character-select" class="modal-select">
-          ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
+          ${people.map((p) => `<option value="${escapeHtml(p.id)}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">密令目标</label>
         <select id="modal-secret-type" class="modal-select">
@@ -1304,7 +1304,7 @@
         <p class="modal-note">以诏书、官爵或使者建立外部制衡。曹氏通常会关注此类往来。</p>
         <label class="field-label">外镇对象</label>
         <select id="modal-character-select" class="modal-select">
-          ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
+          ${people.map((p) => `<option value="${escapeHtml(p.id)}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">交涉方式</label>
         <div class="option-cards">

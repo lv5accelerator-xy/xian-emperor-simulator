@@ -622,7 +622,7 @@
       ? report.operations
           .map(
             (operation, index) => `
-              <article class="monthly-addon-operation ${operation.statusClass}">
+              <article class="monthly-addon-operation ${escapeHtml(operation.statusClass ?? "")}">
                 <div class="monthly-addon-operation-head">
                   <span>${String(index + 1).padStart(2, "0")}</span>
                   <div>
@@ -686,7 +686,7 @@
         <details class="monthly-report-details"><summary>处分与执行评估 · ${report.operations.length} 项</summary>
         <p class="monthly-addon-note">圣旨采用已记录的执行评估；其他政务明确标为估计，估计不代表已经全部落实。</p>
         <div class="monthly-addon-summary">
-          <div class="${report.overall.className}">
+          <div class="${escapeHtml(report.overall.className ?? "")}">
             <span>综合奉行度</span>
             <strong>${executionLabel(report)}</strong>
             <small>${escapeHtml(report.overall.label)}</small>

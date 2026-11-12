@@ -282,7 +282,7 @@
 
   function renderCard(item, disabled) {
     const best = store.best[item.id];
-    return `<article class="short-card"><header><div><span>${item.duration}个月</span><strong>${escapeHtml(item.name)}</strong></div>${best ? `<b class="${best.medal}">${medalName(best.medal)}</b>` : ""}</header><p>${escapeHtml(item.subtitle)}</p><div>${item.goals.map(goal => `<small>${escapeHtml(goal.label)}</small>`).join("")}</div><footer><span>纪念物：${escapeHtml(item.reward)}</span><button type="button" data-short-start="${item.id}" ${disabled ? "disabled" : ""}>开始短局</button></footer></article>`;
+    return `<article class="short-card"><header><div><span>${item.duration}个月</span><strong>${escapeHtml(item.name)}</strong></div>${best ? `<b class="${best.medal}">${medalName(best.medal)}</b>` : ""}</header><p>${escapeHtml(item.subtitle)}</p><div>${item.goals.map(goal => `<small>${escapeHtml(goal.label)}</small>`).join("")}</div><footer><span>纪念物：${escapeHtml(item.reward)}</span><button type="button" data-short-start="${escapeHtml(item.id)}" ${disabled ? "disabled" : ""}>开始短局</button></footer></article>`;
   }
 
   function mountTab(root) {

@@ -200,7 +200,7 @@
   function renderOption(echo, option) {
     const preview = previewResolution(echo, option.id);
     const reason = preview?.budget?.ok === false ? ` ${preview.budget.reason}` : "";
-    return `<button type="button" data-echo-id="${esc(echo.id)}" data-echo-option="${option.id}"><strong>${esc(option.label)}</strong><small>${esc(option.note + reason)}</small></button>`;
+    return `<button type="button" data-echo-id="${esc(echo.id)}" data-echo-option="${esc(option.id)}"><strong>${esc(option.label)}</strong><small>${esc(option.note + reason)}</small></button>`;
   }
 
   function showBudgetFailure(budget) {

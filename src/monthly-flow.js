@@ -110,7 +110,7 @@
   function stepButton(index, label, complete, current, target) {
     const stateClass = complete ? "complete" : current === index ? "current" : "";
     const shortLabel = { event: "裁决", actions: "行动", end: "月末" }[target];
-    return `<button type="button" class="${stateClass}" data-flow-jump="${target}" aria-label="${label}${complete ? "，已完成" : current === index ? "，当前步骤" : ""}"${!complete && current === index ? ' aria-current="step"' : ""}><i aria-hidden="true">${complete ? "✓" : index}</i><span class="monthly-step-label">${label}</span><span class="monthly-step-short" aria-hidden="true">${shortLabel}</span></button>`;
+    return `<button type="button" class="${stateClass}" data-flow-jump="${escapeHtml(target)}" aria-label="${label}${complete ? "，已完成" : current === index ? "，当前步骤" : ""}"${!complete && current === index ? ' aria-current="step"' : ""}><i aria-hidden="true">${complete ? "✓" : index}</i><span class="monthly-step-label">${label}</span><span class="monthly-step-short" aria-hidden="true">${shortLabel}</span></button>`;
   }
 
   function flowPrompt(core, event) {
@@ -164,7 +164,7 @@
         <article class="${steps.current === 3 ? "active" : ""}"><b>三</b><div><strong>月末结算</strong><p>系统会自动结算财政、民生、警戒和长期印记。</p></div></article>
       </div>
       <section class="monthly-tab-risks"><h3>若不处理，最值得留意</h3>${warnings.slice(0, 2).map(item => `<article class="${escapeHtml(item.level ?? "")}"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.text)}</p></article>`).join("")}</section>
-      <div class="monthly-tab-actions"><button type="button" data-monthly-mode>${store.mode === "simple" ? "切换完整朝局" : "切换简明御前"}</button><button type="button" data-monthly-jump="${steps.current === 1 ? "event" : steps.current === 2 ? "actions" : "end"}">前往当前步骤</button></div>`;
+      <div class="monthly-tab-actions"><button type="button" data-monthly-mode>${store.mode === "simple" ? "切换完整朝局" : "切换简明御前"}</button><button type="button" data-monthly-jump="${escapeHtml(steps.current === 1 ? "event" : steps.current === 2 ? "actions" : "end")}">前往当前步骤</button></div>`;
   }
 
   function mountTab(root) {

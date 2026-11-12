@@ -41,8 +41,8 @@
     panel = document.querySelector(".decree-panel"); input = document.getElementById("decree-input");
     if (!panel || !input) return;
     const policy = document.getElementById("decree-policy");
-    policy.innerHTML = POLICIES.map(item => `<option value="${item.id}">${item.name}</option>`).join("");
-    document.getElementById("decree-goal").innerHTML = GOALS.map(item => `<option value="${item.id}">${item.name}</option>`).join("");
+    policy.innerHTML = POLICIES.map(item => `<option value="${escapeHtml(item.id)}">${item.name}</option>`).join("");
+    document.getElementById("decree-goal").innerHTML = GOALS.map(item => `<option value="${escapeHtml(item.id)}">${item.name}</option>`).join("");
     policy.addEventListener("change", updateTargets);
     updateTargets();
     document.getElementById("decree-helper-open")?.addEventListener("click", open);

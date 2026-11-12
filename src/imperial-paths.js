@@ -187,7 +187,7 @@
     if (!core || !state.unlocked) { slot.innerHTML = ""; return; }
     if (!state.active) {
       const scored = scorePaths(core, quarterlyState(), councilState());
-      slot.innerHTML = `<section class="imperial-path-offers"><header><div><span>帝业殊途</span><strong>前两季已经写出你的倾向</strong></div><small>选定后不可更改</small></header><p>系统只做推荐，不替陛下决定。三条路使用现有国势、御题与战果，不增加新资源。</p><div>${scored.map((path, index) => `<button type="button" data-path-id="${path.id}"><span>${index === 0 ? "最顺当前局势" : "亦可改弦"} · 适配 ${path.score}</span><strong><i>${path.seal}</i>${esc(path.title)}</strong><p>${esc(path.summary)}</p><small>${esc(path.reason)}</small><b>定此帝业 →</b></button>`).join("")}</div></section>`;
+      slot.innerHTML = `<section class="imperial-path-offers"><header><div><span>帝业殊途</span><strong>前两季已经写出你的倾向</strong></div><small>选定后不可更改</small></header><p>系统只做推荐，不替陛下决定。三条路使用现有国势、御题与战果，不增加新资源。</p><div>${scored.map((path, index) => `<button type="button" data-path-id="${esc(path.id)}"><span>${index === 0 ? "最顺当前局势" : "亦可改弦"} · 适配 ${path.score}</span><strong><i>${path.seal}</i>${esc(path.title)}</strong><p>${esc(path.summary)}</p><small>${esc(path.reason)}</small><b>定此帝业 →</b></button>`).join("")}</div></section>`;
       slot.querySelectorAll("[data-path-id]").forEach(button => button.addEventListener("click", () => choosePath(button.dataset.pathId)));
       return;
     }
