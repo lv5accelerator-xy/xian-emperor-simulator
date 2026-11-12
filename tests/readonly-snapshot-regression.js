@@ -31,3 +31,23 @@ for (const person of cast.allCharacters()) {
 assert.equal(cast.getCharacter("no_such_person"), null);
 assert.equal(cast.isAvailable("no_such_person", core), false);
 console.log("readonly-snapshot-regression passed");
+
+// 备份索引的解析缓存以存储原文为键：外部改写后必须读到新内容，损坏时仍按原路径报错。
+{
+  const KEY = "xian_emperor_save_backups_v2180", h = harness(); h.loadMechanics(); h.load("save-backups");
+  h.api.startNewGame("standard", "jianan_196", { randomSeed: 7 });
+  const backups = h.window.XianSaveBackups;
+  assert.equal(backups.captureBeforeReplacement("甲"), true);
+  assert.equal(backups.captureBeforeReplacement("乙"), true, "缓存命中后仍能正常留档");
+  assert.equal(JSON.parse(h.localStorage.getItem(KEY)).replacement.label, "乙");
+  const emptied = JSON.parse(h.localStorage.getItem(KEY)); emptied.months = []; emptied.replacement = null;
+  h.localStorage.setItem(KEY, JSON.stringify(emptied));
+  assert.equal(backups.captureBeforeReplacement("丙"), true);
+  const after = JSON.parse(h.localStorage.getItem(KEY));
+  assert.equal(after.replacement.label, "丙"); assert.equal(after.months.length, 0, "外部清空后不得用旧缓存复活月度备份");
+  const entries = backups.getEntries(); entries[0].bundle.stores = null;
+  assert.ok(backups.getEntries()[0].bundle.stores, "列表返回独立副本");
+  h.localStorage.setItem(KEY, "{broken");
+  assert.equal(backups.captureBeforeReplacement("丁"), false, "索引损坏时仍报告失败");
+}
+console.log("backup-index-cache checks passed");
