@@ -461,3 +461,40 @@ jobs:
 
       - name: Run all behavior and release regressions
         run: node scripts/check.cjs --regression-only
+
+  browser:
+    # 真实浏览器回归。脚本默认使用维护者本机的 Edge/Chrome；此处改用 Playwright 自带的 Chromium。
+    # browser-diplomatic-relations 需要外部提供的旧版完整存档，browser-alliance-coalition 在自带 Chromium 下尚未通过，均暂不纳入。
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        script:
+          - browser-ui
+          - browser-modal-focus
+          - browser-consistency
+          - browser-story
+          - browser-ceasefire
+          - browser-lord-command
+          - browser-parallel-council
+          - browser-diplomatic-endings
+    env:
+      BROWSER_CHANNEL: chromium
+      COUNCIL_BROWSER_CHANNEL: chromium
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # 仅供CI使用的测试依赖，装在仓库之外；游戏本身仍无任何构建或安装步骤。
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" --no-save playwright@1.63.0
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/pw/node_modules/playwright" >> "$GITHUB_ENV"
+
+      - name: Run ${{ matrix.script }}
+        run: node scripts/${{ matrix.script }}.cjs

@@ -7,7 +7,7 @@ const fixtureRun=fixture(({s,intent})=>{s.cities.jinyang.controller="cao_cao";in
 const fixturePath=path.join(out,"controlled-peace-full-save.json");fs.writeFileSync(fixturePath,JSON.stringify(fixtureRun.api.captureFullSave()));
 const server=http.createServer((req,res)=>{const file=path.resolve(root,"."+decodeURIComponent(new URL(req.url,"http://localhost").pathname).replace(/\/$/,"/index.html"));if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return;}fs.readFile(file,(error,data)=>{if(error){res.writeHead(404).end();return;}res.setHeader("Content-Type",({".html":"text/html; charset=utf-8",".js":"application/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".woff2":"font/woff2"})[path.extname(file)]||"application/octet-stream");res.end(data);});});
 const results=[];
-(async()=>{await new Promise(r=>server.listen(0,"127.0.0.1",r));const browser=await chromium.launch({channel:"msedge",headless:true});try{
+(async()=>{await new Promise(r=>server.listen(0,"127.0.0.1",r));const browser=await chromium.launch({channel:process.env.BROWSER_CHANNEL||"msedge",headless:true});try{
 for(const width of [1366,390]){
  const page=await browser.newPage({viewport:{width,height:900}}),errors=[],httpFailures=[];page.setDefaultTimeout(45000);page.on("pageerror",e=>errors.push(String(e)));page.on("response",r=>{if(r.status()>=400&&!r.url().endsWith("favicon.ico"))httpFailures.push({url:r.url(),status:r.status()});});page.on("dialog",d=>d.accept());console.log(`START viewport ${width}`);
  const core=()=>page.evaluate(()=>window.XianEmperorGame.getState()),strategy=()=>page.evaluate(()=>window.XianStrategyNetwork.getState());
