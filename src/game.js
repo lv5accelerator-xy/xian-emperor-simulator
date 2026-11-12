@@ -2587,6 +2587,18 @@
     return true;
   }
 
+  function deepFreeze(value) {
+    if (value && typeof value === "object" && !Object.isFrozen(value)) { Object.freeze(value); for (const key of Object.keys(value)) deepFreeze(value[key]); }
+    return value;
+  }
+  let peekRawCache = null, peekSnapshotCache = null;
+  function peekState() {
+    if (!state) return null;
+    const raw = JSON.stringify(state);
+    if (raw !== peekRawCache) { peekSnapshotCache = deepFreeze(JSON.parse(raw)); peekRawCache = raw; }
+    return peekSnapshotCache;
+  }
+
   window.XianEmperorGame = Object.freeze({
     commit,
     getDeadline,
@@ -2624,5 +2636,7 @@
     getRandomKey,
     updateCausality,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
+    // 与 getState 内容相同，但返回冻结的共享快照；只读调用方用它避免每次深拷贝整个核心状态。
+    peekState,
   });
 })();

@@ -51,3 +51,19 @@ console.log("readonly-snapshot-regression passed");
   assert.equal(backups.captureBeforeReplacement("丁"), false, "索引损坏时仍报告失败");
 }
 console.log("backup-index-cache checks passed");
+
+// 核心状态的只读快照：内容与 getState 一致、冻结、随状态更新；getState 仍是独立可变副本。
+{
+  const h = harness(); h.api.startNewGame("standard", "jianan_196", { randomSeed: 11 });
+  const peek = h.api.peekState();
+  assert.deepEqual(plain(peek), plain(h.api.getState()));
+  assert.equal(h.api.peekState(), peek, "状态未变时复用同一快照");
+  assert.ok(Object.isFrozen(peek) && Object.isFrozen(peek.stats) && Object.isFrozen(peek.reports));
+  assert.throws(() => { "use strict"; peek.stats.treasury = 999; }, TypeError, "误写快照应立即报错");
+  const copy = h.api.getState(); copy.stats.treasury = -1;
+  assert.notEqual(h.api.getState().stats.treasury, -1, "getState 的副本与核心状态互不影响");
+  h.decide(0);
+  assert.notEqual(h.api.peekState(), peek, "裁决后生成新快照");
+  assert.deepEqual(plain(h.api.peekState()), plain(h.api.getState()));
+}
+console.log("core-peek checks passed");

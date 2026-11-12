@@ -63,7 +63,7 @@
   function blankState() { return { version: 1, gameCreatedAt: null, cycle: 0, agendaId: null, chosen: null, processed: [], history: [] }; }
   function loadState() { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); return { ...blankState(), ...(value || {}) }; } catch (_) { return blankState(); } }
   function saveState() { try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (_) {} render(); }
-  function coreState() { return window.XianEmperorGame?.getState?.() || null; }
+  function coreState() { return (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || null; }
   function agendaState() { return window.XianQuarterlyAgenda?.getState?.() || null; }
 
   function sync() {

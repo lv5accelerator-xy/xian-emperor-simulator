@@ -206,7 +206,7 @@
   function defaultStore() { return { version: 1, mode: "simple", lastDecision: null }; }
   function loadStore() { try { return { ...defaultStore(), ...(JSON.parse(localStorage.getItem(STORE_KEY) || "null") || {}) }; } catch (_) { return defaultStore(); } }
   function saveStore() { try { storageWrite("setItem", STORE_KEY, JSON.stringify(store)); } catch (error) { console.warn("月度流程设置保存失败", error); } }
-  function readCore() { try { const value = window.XianEmperorGame?.getState?.() || JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
+  function readCore() { try { const value = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || JSON.parse(localStorage.getItem(CORE_KEY) || "null"); return value?.stats ? value : null; } catch (_) { return null; } }
   function escapeHtml(value) { return window.XianCommandCenter?.escapeHtml?.(value) || String(value ?? ""); }
 
   window.XianMonthlyFlow = Object.freeze({

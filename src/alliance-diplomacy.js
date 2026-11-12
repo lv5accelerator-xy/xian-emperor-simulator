@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const cap = n => Math.max(0, Math.min(100, n));
-  const name = id => window.XianCharacterAvailability?.faction?.(id, window.XianEmperorGame?.getState?.())?.name || window.XIAN_STRATEGY_DATA?.lords.find(l => l.id === id)?.name || id;
+  const name = id => window.XianCharacterAvailability?.faction?.(id, (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.())?.name || window.XIAN_STRATEGY_DATA?.lords.find(l => l.id === id)?.name || id;
   const affirmative = text => window.XianEdictRules?.affirmativeText?.(text) ?? text;
   const explicit = text => /结盟|盟约|会盟|同盟|联盟/.test(affirmative(text));
   const formal = p => p?.type === "alliance" && p.contract?.treatyType === "alliance" && p.contract.version === 1;

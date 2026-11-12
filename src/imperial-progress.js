@@ -494,7 +494,7 @@
   }
 
   function actionBudget(effects = {}) {
-    const current = window.XianEmperorGame?.getState?.() || core;
+    const current = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || core;
     const cost = Math.max(0, -Number(effects?.treasury || 0));
     const shortfall = Math.max(0, cost - Number(current?.stats?.treasury || 0));
     return window.XianEmperorGame?.canAffordEffects?.(effects || {}) || { cost, shortfall, ok: Boolean(current && !current.ended && !shortfall),

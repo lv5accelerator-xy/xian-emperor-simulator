@@ -36,7 +36,7 @@
     });
     document.addEventListener("xian:commit-completed", () => ensureCurrentMonthSnapshot());
     document.getElementById("ending-audit-btn")?.addEventListener("click", () => {
-      const settlement = window.XianEmperorGame.getState()?.lastSettlement;
+      const settlement = (window.XianEmperorGame.peekState || window.XianEmperorGame.getState)()?.lastSettlement;
       if (!settlement) return showAddonToast("本存档尚无结算对账记录。", "warning");
       window.XianEmperorGame.openUtilityModal({ title: "终月结算对账", body: window.XianMonthlySafety.renderSettlement(settlement),
         confirmText: "关闭", cancelHidden: true, wide: true, onConfirm: window.XianEmperorGame.closeUtilityModal });

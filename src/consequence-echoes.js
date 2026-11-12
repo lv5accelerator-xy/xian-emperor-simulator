@@ -45,7 +45,7 @@
 
   function recordDecision(detail) {
     if (detail.storyManaged) return;
-    const core = window.XianEmperorGame?.getState?.() || readCore();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || readCore();
     if (!core || detail.createdAt !== core.createdAt) return;
     const relations = Object.entries(detail.relations || {}).filter(([, value]) => Number(value));
     const dominant = [...relations].sort((a, b) => Math.abs(Number(b[1])) - Math.abs(Number(a[1])))[0];

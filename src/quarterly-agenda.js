@@ -116,7 +116,7 @@
     if (notify) document.dispatchEvent(new CustomEvent("xian:quarterly-agenda-updated", { detail: getState() }));
   }
 
-  function coreState() { return window.XianEmperorGame?.getState?.() || null; }
+  function coreState() { return (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || null; }
   function deadline(core) {
     return Number(window.XianEmperorGame?.getDeadline?.(core) || window.XianShortChallenges?.getActiveStatus?.(core)?.duration || core?.maxTurns || 0);
   }

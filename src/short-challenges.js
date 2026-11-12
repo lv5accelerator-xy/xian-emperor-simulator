@@ -70,7 +70,7 @@
     if (store.active?.gameCreatedAt && store.active.gameCreatedAt !== event.detail.createdAt) { store.active = null; saveStore(); }
   });
   document.addEventListener("xian:game-entered", () => {
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (core?.ended) recordResult({ state: core });
     else trackProgress();
   });
@@ -98,7 +98,7 @@
   function start(id) {
     const definition = challengeById(id);
     if (!definition || window.XianDynastySaga?.isActive?.()) return false;
-    const current = window.XianEmperorGame?.getState?.();
+    const current = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (current && !current.ended && typeof window.confirm === "function" && !window.confirm("开始短局会覆盖当前单局存档，完整导出后仍可恢复。确定继续吗？")) return false;
     if (window.XianSaveBackups?.prepareReplacement?.("开始新短局前") === false) return false;
     const previousStore = JSON.parse(JSON.stringify(store));
@@ -106,7 +106,7 @@
     saveStore();
     syncStartSelectors(definition);
     if (window.XianEmperorGame?.startNewGame?.("standard", definition.scenarioId, { deadline: definition.duration, setup: definition.setup }) === false) { store = previousStore; saveStore(); return false; }
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (!core) { store.active = null; saveStore(); return false; }
     store.active.gameCreatedAt = core.createdAt;
     saveStore();
@@ -122,7 +122,7 @@
   function startCustom(config) {
     if (!config?.id || !config.scenarioId || !Array.isArray(config.sequence)) return false;
     const custom = { ...config, kind: config.kind || "weekly" };
-    const current = window.XianEmperorGame?.getState?.();
+    const current = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (current && !current.ended && typeof window.confirm === "function" && !window.confirm("开始同题挑战会覆盖当前单局存档，确定继续吗？")) return false;
     if (window.XianSaveBackups?.prepareReplacement?.("开始同题挑战前") === false) return false;
     const previousStore = JSON.parse(JSON.stringify(store));
@@ -131,7 +131,7 @@
     saveStore();
     syncStartSelectors(custom);
     if (window.XianEmperorGame?.startNewGame?.(custom.difficulty || "standard", custom.scenarioId, { randomSeed: custom.randomSeed, deadline: custom.duration, setup: custom.setup }) === false) { store = previousStore; saveStore(); return false; }
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (!core) return false;
     store.active.gameCreatedAt = core.createdAt;
     saveStore();
@@ -145,7 +145,7 @@
   }
 
   function beginReview() {
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (!core || !store.active || !window.XianShortReview) return;
     store.active.reviewLog = window.XianShortReview.createLog(core, true);
     store.active.comparisonIdentity = window.XianSameChallenge?.identity(activeDefinition(), core) || null;
@@ -154,7 +154,7 @@
   }
 
   function trackProgress(settled = false) {
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     const active = store.active;
     if (!window.XianShortReview || !core || !active?.gameCreatedAt || active.gameCreatedAt !== core.createdAt) return;
     const before = JSON.stringify(active.reviewLog);
@@ -174,7 +174,7 @@
 
   function checkChallengeEnd() {
     if (finishing || !store.active) return;
-    const core = window.XianEmperorGame?.getState?.() || readCore();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || readCore();
     const definition = activeDefinition();
     if (!core || core.ended || !definition || core.createdAt !== store.active.gameCreatedAt || Number(core.turn) < Number(definition.duration)) return;
     finishing = true;

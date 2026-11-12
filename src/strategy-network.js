@@ -419,7 +419,7 @@
 
   function detectLordTargets(text) {
     const effective = window.XianEdictRules?.affirmativeText(text) ?? String(text || "");
-    if (window.XianCharacterAvailability?.diplomaticTargets) return window.XianCharacterAvailability.diplomaticTargets(effective, window.XianEmperorGame?.getState?.() || coreState);
+    if (window.XianCharacterAvailability?.diplomaticTargets) return window.XianCharacterAvailability.diplomaticTargets(effective, (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState);
     return orderedMatches(effective, DATA.lords);
   }
 
@@ -709,7 +709,7 @@
     contract.lastDeliveryTurn = turn;
     const payerCityId = contract.payerCityId || DATA.lords.find(item => item.id === promise.lordId)?.seatCity;
     const city = state.cities[payerCityId], policy = state.strategies[promise.lordId];
-    const live = window.XianEmperorGame?.getState?.() || core;
+    const live = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || core;
     const controlsPayer = city?.controller === contract.responsible;
     const amount = controlsPayer && policy?.trust >= 30 && policy?.readiness >= 20 ? Math.max(0, Math.min(3, contract.quantity - contract.delivered, Math.floor(city?.supply || 0), 100 - Number(live.stats.treasury))) : 0;
     if (amount) {
@@ -718,7 +718,7 @@
       const paid = window.XianEmperorGame?.applyExternalPackage?.({ receiptId: id, causal: false, deferCommit: true, effects: { treasury: amount }, report: { title: "贡赋实收", text: `${strategyName(promise.lordId)}自${cityDef(payerCityId)?.name || payerCityId}解送钱粮 ${amount}，计入国库。`, type: "diplomacy" } });
       if (paid && paid.applied !== false) {
         pendingCoreCommit = true;
-        const after = Number(window.XianEmperorGame?.getState?.()?.stats.treasury ?? before + amount), actual = Math.max(0, Math.min(amount, after - before));
+        const after = Number((window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.()?.stats.treasury ?? before + amount), actual = Math.max(0, Math.min(amount, after - before));
         city.supply -= actual; contract.delivered += actual;
         contract.receipts.push({ id, turn, sourceCityId: payerCityId, payer: contract.responsible, beneficiary: contract.beneficiary, resource: "treasury", amount: actual, before, after, sourceSupplySpent: actual });
       }
@@ -841,7 +841,7 @@
   }
 
   function previewDiplomaticAction(kind,parties) {
-    const core=window.XianEmperorGame?.getState?.(),model=window.XianDiplomaticRelations;
+    const core=(window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.(),model=window.XianDiplomaticRelations;
     if(!core || !model)return {ok:false,message:"外交档案尚未载入。"};
     const result=model.preview(kind,parties,state,armySnapshot(),core,window.XianWorldSystem?.getState?.()||{});
     if(!result.ok)return result;
@@ -853,18 +853,18 @@
 
   function performDiplomaticAction(kind,parties) {
     const view=previewDiplomaticAction(kind,parties);if(!view.ok)return false;
-    const core=window.XianEmperorGame.getState(),id=`diplomatic-action:${core.createdAt}:${core.turn}:${kind}:${view.pairId}`;
+    const core=(window.XianEmperorGame.peekState || window.XianEmperorGame.getState)(),id=`diplomatic-action:${core.createdAt}:${core.turn}:${kind}:${view.pairId}`;
     const d=state.diplomaticRelations;d.requests=d.requests.filter(r=>r.id!==id);
     d.requests.push({id,kind,parties:view.parties,pairId:view.pairId,turn:core.turn,gameCreatedAt:core.createdAt,operationSequence:core.operationSequence+1,
       offer:JSON.parse(JSON.stringify(view)),initialFactIds:(armySnapshot().militaryFacts||[]).map(f=>f.id),sourceConflictIds:d.hostilities.filter(f=>[f.attackerOwner,f.defenderOwner].sort().join("~")===view.pairId).map(f=>f.id),resolved:false});saveState();
     const applied=window.XianEmperorGame.performExternalAction({receiptId:id,actionId:"diplomatic-relations",causal:false,title:kind==="peace"?"外交·战后议和":"外交·遣使修好",
       text:view.message,chronicle:`天子为${view.parties.map(controllerName).join("与")}遣使${kind==="peace"?"议和":"修好"}，双方分别答复。`,effects:{treasury:-view.treasuryCost}});
-    if(!applied&&!window.XianEmperorGame.getState().appliedReceipts.includes(id)){state.diplomaticRelations.requests=state.diplomaticRelations.requests.filter(r=>r.id!==id);saveState();}
+    if(!applied&&!(window.XianEmperorGame.peekState || window.XianEmperorGame.getState)().appliedReceipts.includes(id)){state.diplomaticRelations.requests=state.diplomaticRelations.requests.filter(r=>r.id!==id);saveState();}
     return applied===true;
   }
 
   function resolvePendingLordCommands() {
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (!state.commandChain || !core || core.createdAt !== state.gameCreatedAt || core.ended || window.__xianFullSaveImporting) return;
     const pending = [...state.commandChain.intents, ...(state.allianceDiplomacy?.plans || []).map(p => ({ ...p, coalition: true }))].sort((a,b) => {
       const first = core.appliedReceipts.indexOf(a.intervention?.receiptId), second = core.appliedReceipts.indexOf(b.intervention?.receiptId);
@@ -882,7 +882,7 @@
   }
 
   function reconcileLordCommands() {
-    const model = window.XianLordIntentions, core = window.XianEmperorGame?.getState?.(), armies = armySnapshot();
+    const model = window.XianLordIntentions, core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.(), armies = armySnapshot();
     if (!model || !core || !armies || armies.gameCreatedAt !== state.gameCreatedAt || core.createdAt !== state.gameCreatedAt || window.__xianFullSaveImporting) return;
     const chain = state.commandChain = model.ledger(state.commandChain, core);
     model.reconcile(chain, armies, state, core);
@@ -893,7 +893,7 @@
   }
 
   function previewLordIntervention(intentId, kind, acknowledgeBreach = false) {
-    const core = window.XianEmperorGame?.getState?.(), intent = state?.commandChain?.intents.find(i => i.id === intentId);
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.(), intent = state?.commandChain?.intents.find(i => i.id === intentId);
     if (!["coordinate", "restrain"].includes(kind) || !core || intent?.intervention) return { ok: false, message: "本次军议已干预或不存在。" };
     const result = window.XianArmySystem?.previewLordIntent?.(intentId, kind, acknowledgeBreach);
     if (!result?.ok) return result || { ok: false, message: "尚未载入军籍。" };
@@ -904,7 +904,7 @@
   }
 
   function previewCoalitionIntervention(planId, kind) {
-    const core = window.XianEmperorGame?.getState?.(), plan = state?.allianceDiplomacy?.plans.find(p => p.id === planId);
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.(), plan = state?.allianceDiplomacy?.plans.find(p => p.id === planId);
     if (!["coordinate", "restrain"].includes(kind) || !core || !plan || plan.intervention) return { ok: false, message: "共同军议已干预或不存在。" };
     const result = window.XianArmySystem?.previewCoalitionPlan?.(planId, kind);
     if (!result?.ok) return result || { ok: false, message: "尚未载入军籍。" };
@@ -922,7 +922,7 @@
     const applied = window.XianEmperorGame.performExternalAction({ receiptId, actionId: "lord-command", causal: false,
       title: `联军·${kind === "coordinate" ? "协调" : "劝止"}`, text: preview.message,
       chronicle: `天子${kind === "coordinate" ? "协调" : "劝止"}诸侯共同军议。`, effects: { treasury: -preview.treasuryCost } });
-    if (!applied && !window.XianEmperorGame.getState().appliedReceipts.includes(receiptId)) { delete plan.intervention; saveState(); }
+    if (!applied && !(window.XianEmperorGame.peekState || window.XianEmperorGame.getState)().appliedReceipts.includes(receiptId)) { delete plan.intervention; saveState(); }
     return applied === true;
   }
 
@@ -937,7 +937,7 @@
     const applied = window.XianEmperorGame.performExternalAction({ receiptId, actionId: "lord-command", causal: false,
       title: `军议·${kind === "coordinate" ? "协调" : "劝止"}`, text: `${intent.ownerName}拟${orderLabel(intent.task)}${intent.targetName}；${preview.message}`,
       chronicle: `天子${kind === "coordinate" ? "协调" : "劝止"}${intent.ownerName}军议。`, effects: { treasury: -preview.treasuryCost } });
-    if (!applied && !window.XianEmperorGame.getState().appliedReceipts.includes(receiptId)) { delete intent.intervention; saveState(); }
+    if (!applied && !(window.XianEmperorGame.peekState || window.XianEmperorGame.getState)().appliedReceipts.includes(receiptId)) { delete intent.intervention; saveState(); }
     return applied === true;
   }
 
@@ -1304,7 +1304,7 @@
     return String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
   }
 
-  function previewHostilities(text, core = window.XianEmperorGame?.getState?.() || coreState) {
+  function previewHostilities(text, core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState) {
     if (!state || !isValidCore(core) || choosePrimaryOrder(detectOrders(text)) !== "attack") return [];
     const owners = detectLordTargets(text), targetCityId = detectCityTargets(text).at(-1);
     const targetOwner = state.cities[targetCityId]?.controller;
@@ -1330,7 +1330,7 @@
     reconcilePromises,
     previewHostilities,
     previewContracts: (text, execution = 65) => {
-      const core = window.XianEmperorGame?.getState?.() || coreState;
+      const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
       if (!isValidCore(core)) return [];
       const lords = detectLordTargets(text), cities = detectCityTargets(text);
       const contracts = detectPromises(text).filter(type => ["tribute", "military_aid", "ceasefire"].includes(type)).flatMap(type => (type === "ceasefire" ? lords.slice(0, 1) : lords).map(lord => ({ type, ...buildContract(type, lord, lords, cities, text, core) })));

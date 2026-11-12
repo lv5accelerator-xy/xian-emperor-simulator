@@ -36,7 +36,7 @@
     } catch (_) { return blankState(); }
   }
   function saveState() { try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (_) {} render(); }
-  function coreState() { return window.XianEmperorGame?.getState?.() || null; }
+  function coreState() { return (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || null; }
   function strategyState() { return window.XianStrategyNetwork?.getState?.() || null; }
 
   function sync() {

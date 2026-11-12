@@ -200,7 +200,7 @@
   }
 
   function evaluateStage() {
-    const live = window.XianEmperorGame?.getState?.();
+    const live = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     // Initialization can inspect a stored core before the player loads it.
     // Do not claim a reward until its live recipient can actually receive it.
     if (!live || live.createdAt !== core?.createdAt || live.ended) return;
@@ -220,7 +220,7 @@
         chronicle: `朝廷完成战役阶段“${stage.title}”。`,
       });
     } finally { window.__xianEvolutionRefreshOnly = false; }
-    core = window.XianEmperorGame?.getState?.() || core;
+    core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || core;
   }
 
   function seasonForMonth(month) {
@@ -350,7 +350,7 @@
       chronicle: `天子遣${character.name}${role.name}，目标为${targetName}。`,
     });
     if (!accepted) return notify("请先裁决本月奏报，并确认仍有行动次数。", "warning");
-    core = window.XianEmperorGame?.getState?.() || core;
+    core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || core;
     state.assignments.unshift({ id: `assignment-${Date.now()}`, characterId, characterName: character.name, roleId, roleName: role.name, targetId, targetName, startTurn: core.turn, endTurn: core.turn + role.duration, progressTurns: 0, status: "active" });
     state.log.unshift({ turn: core.turn, text: `${character.name}受命${role.name}。` });
     saveState();

@@ -134,7 +134,7 @@
     if (!petition || !template || !response || state.resolutionReceipts[id]) return false;
     const budget = window.XianEmperorGame?.canAffordEffects?.(response.effects);
     if (!budget?.ok) { showBudgetFailure(budget); return false; }
-    state.resolutionReceipts[id] = { turn: window.XianEmperorGame.getState().turn, responseId, cost: budget.cost };
+    state.resolutionReceipts[id] = { turn: (window.XianEmperorGame.peekState || window.XianEmperorGame.getState)().turn, responseId, cost: budget.cost };
     const faction = state.factions[template.faction];
     faction.support = response.supportAfter;
     faction.tension = response.tensionAfter;

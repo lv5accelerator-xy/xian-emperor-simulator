@@ -316,7 +316,7 @@
       respond("refused", "没有可执行的完整军团");
       return;
     }
-    const access = options.autonomous ? { allowed: true } : getCommandAccess(army, window.XianEmperorGame?.getState?.() || coreState, readStrategyState());
+    const access = options.autonomous ? { allowed: true } : getCommandAccess(army, (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState, readStrategyState());
     if (!access.allowed) {
       army.lastChange = access.message;
       addLog(turn, "warning", `${armyName(army)}未承接军令：${access.message}`);
@@ -396,7 +396,7 @@
     return order;
   }
 
-  function getCommandAccess(army, core = window.XianEmperorGame?.getState?.() || coreState, strategy = readStrategyState()) {
+  function getCommandAccess(army, core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState, strategy = readStrategyState()) {
     if (!army || !core) return { allowed: false, message: "尚未载入军籍。" };
     if (army.owner === "court") return { allowed: true, mode: "direct", message: "汉廷直属，可直接下令。" };
     const trust = Number(strategy?.strategies?.[army.owner]?.trust ?? 50);
@@ -416,7 +416,7 @@
     if (!army || army.status === "destroyed") return { ok: false, message: "该军团已经失去建制。" };
     if (!city) return { ok: false, message: "没有找到目标城池。" };
     if (!allowedTasks.includes(task)) return { ok: false, message: "该军令暂不支持从舆图下达。" };
-    const currentCore = window.XianEmperorGame?.getState?.() || coreState;
+    const currentCore = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const access = getCommandAccess(army, currentCore);
     if (!access.allowed) return { ok: false, message: access.message };
     const actionCost = 1;
@@ -1429,7 +1429,7 @@
   }
 
   function setSiegeStance(cityId, stance) {
-    if ((window.XianEmperorGame?.getState?.() || coreState)?.ended) return false;
+    if (((window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState)?.ended) return false;
     const siege = state?.sieges?.[cityId];
     if (!siege || siege.status !== "active" || !["assault", "blockade", "persuade"].includes(stance)) return false;
     siege.stance = stance;
@@ -1524,7 +1524,7 @@
   function resolvePostwarJudgment(judgmentId, decision) {
     const judgment = state?.pendingJudgments?.find(item => item.id === judgmentId && item.status === "pending");
     if (!judgment) return false;
-    const currentCore = window.XianEmperorGame?.getState?.() || coreState;
+    const currentCore = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     if (currentCore?.ended || !window.XianEmperorGame?.applyExternalPackage) return false;
     const result = getJudgmentDecision(decision, judgment, currentCore);
     if (!result) return false;
@@ -1988,7 +1988,7 @@
   }
 
   function previewLordIntent(intentId, kind, acknowledgeBreach = false) {
-    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const strategy = readStrategyState(), core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const intent = strategy?.commandChain?.intents?.find(i => i.id === intentId);
     if (!intent || intent.source !== "autonomous" || intent.status !== "proposed" || intent.turn !== core?.turn || core.ended) return { ok: false, message: "军议已结算或不属本月。" };
     const army = state?.armies?.[intent.armyId];
@@ -2001,7 +2001,7 @@
   }
 
   function previewCoalitionPlan(planId, kind) {
-    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const strategy = readStrategyState(), core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const plan = strategy?.allianceDiplomacy?.plans.find(p => p.id === planId), pact = strategy?.promises.find(p => p.id === plan?.pactId);
     if (!plan || plan.turn !== core?.turn || core.ended || !window.XianAllianceDiplomacy.active(pact, core.turn)
       || !plan.members.some(m => m.status === "proposed")) return { ok: false, message: "共同军议已结算或盟约已结束。" };
@@ -2015,7 +2015,7 @@
   }
 
   function resolveCoalitionPlan(planId, kind) {
-    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const strategy = readStrategyState(), core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const plan = strategy?.allianceDiplomacy?.plans.find(p => p.id === planId), pact = strategy?.promises.find(p => p.id === plan?.pactId);
     if (!plan || plan.turn !== core?.turn || core.ended || !window.XianAllianceDiplomacy.active(pact, core.turn)) return false;
     if (kind !== "autonomous" && (!plan.intervention || plan.intervention.kind !== kind || !core.appliedReceipts?.includes(plan.intervention.receiptId))) return false;
@@ -2035,7 +2035,7 @@
   }
 
   function resolveLordIntent(intentId, kind) {
-    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const strategy = readStrategyState(), core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const intent = strategy?.commandChain?.intents?.find(i => i.id === intentId);
     if (!intent || intent.source !== "autonomous" || intent.status !== "proposed" || intent.turn !== core?.turn || core.ended) return false;
     if (kind !== "autonomous" && (!intent.intervention || intent.intervention.kind !== kind || !core.appliedReceipts?.includes(intent.intervention.receiptId))) return false;
@@ -2066,7 +2066,7 @@
       if (!state || !coreState || coreState.ended || !promise?.contract) return false;
       const existing = state.orders.find(item => item.sourcePromiseId === promise.id);
       if (existing) return existing;
-      const core = window.XianEmperorGame?.getState?.() || coreState;
+      const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
       if (core.turn > promise.deadlineTurn) return false;
       const issued = state.orders.find(item => !promise.contract.initialOrderIds.includes(item.id) && !item.sourcePromiseId && item.owner === promise.lordId && item.targetCityId === promise.contract.targetCityId && item.turn >= promise.createdTurn && ["support", "defend"].includes(item.task));
       if (issued) { issued.sourcePromiseId = promise.id; saveState(); return issued; }
