@@ -113,7 +113,8 @@
 
   function saveState() {
     if (!state) return;
-    try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); }
+    // 内容与存储中完全相同时不重写。
+    try { const raw = JSON.stringify(state); if (localStorage.getItem(STORAGE_KEY) !== raw) storageWrite("setItem", STORAGE_KEY, raw); }
     catch (error) { console.warn("军团系统保存失败", error); }
   }
 

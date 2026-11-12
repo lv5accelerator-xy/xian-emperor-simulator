@@ -133,7 +133,8 @@
 
   function saveState() {
     if (!state) return;
-    try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (error) { console.warn("军略网络保存失败", error); }
+    // 内容与存储中完全相同时不重写：对账类调用多数并不改动状态，却会整份重写上百KB。
+    try { const raw = JSON.stringify(state); if (localStorage.getItem(STORAGE_KEY) !== raw) storageWrite("setItem", STORAGE_KEY, raw); } catch (error) { console.warn("军略网络保存失败", error); }
   }
 
   function createState(core) {
