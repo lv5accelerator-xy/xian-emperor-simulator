@@ -154,7 +154,7 @@
     const character = characterById(item.characterId);
     const pending = item.status === "pending";
     const condition = item.type === "promise" ? `${STAT_NAMES[item.statKey] || item.statKey}≥${item.statTarget}，${character?.name || "相关人物"}关系≥${item.relationTarget}` : `预计第 ${item.dueTurn} 月出现后续`;
-    return `<article class="echo-record ${item.status}"><header><div><span>${item.type === "promise" ? "御前承诺" : "因果回响"}</span><strong>${escapeHtml(item.eventTitle)}</strong></div><b>${pending ? `第 ${Math.max(0, item.dueTurn - Number(core.turn || 0))} 月后` : item.status === "fulfilled" ? "已兑现" : "已失信"}</b></header><p>“${escapeHtml(item.choiceLabel)}”</p><small>${escapeHtml(pending ? condition : item.outcome || "此事已经落定。")}</small></article>`;
+    return `<article class="echo-record ${escapeHtml(item.status ?? "")}"><header><div><span>${item.type === "promise" ? "御前承诺" : "因果回响"}</span><strong>${escapeHtml(item.eventTitle)}</strong></div><b>${pending ? `第 ${Math.max(0, item.dueTurn - Number(core.turn || 0))} 月后` : item.status === "fulfilled" ? "已兑现" : "已失信"}</b></header><p>“${escapeHtml(item.choiceLabel)}”</p><small>${escapeHtml(pending ? condition : item.outcome || "此事已经落定。")}</small></article>`;
   }
 
   function trimAndSave() { store.records = store.records.slice(0, MAX_RECORDS); saveStore(); }

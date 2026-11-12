@@ -409,7 +409,7 @@
         ${stepCard("二", "使用御前行动", Number(core.actionPoints || 0) <= 0, "actions")}
         ${stepCard("三", "结束本月", false, "end")}
       </div>
-      <section class="command-section"><h3>只需注意这些风险</h3><div class="command-warning-list">${warnings.map(item => `<article class="${item.level}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text)}</span></article>`).join("")}</div></section>`;
+      <section class="command-section"><h3>只需注意这些风险</h3><div class="command-warning-list">${warnings.map(item => `<article class="${escapeHtml(item.level ?? "")}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text)}</span></article>`).join("")}</div></section>`;
   }
 
   function renderGuideTab() {

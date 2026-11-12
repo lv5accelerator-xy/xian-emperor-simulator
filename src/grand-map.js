@@ -150,7 +150,7 @@
   function renderGeographyLabels() {
     return (GEO.labels || []).map(item => {
       const [x, y] = GEO.project?.(item.point) || [0, 0];
-      return `<text class="geography-label ${item.kind || "region"}" x="${x}" y="${y}">${escapeHtml(item.text)}</text>`;
+      return `<text class="geography-label ${escapeHtml(item.kind || "region")}" x="${x}" y="${y}">${escapeHtml(item.text)}</text>`;
     }).join("");
   }
 

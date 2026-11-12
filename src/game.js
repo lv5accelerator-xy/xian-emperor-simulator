@@ -870,7 +870,7 @@
       .slice(0, MAX_REPORTS)
       .map(
         (report) => `
-          <article class="report-item ${report.type}">
+          <article class="report-item ${escapeHtml(report.type ?? "")}">
             <div>
               <strong>${escapeHtml(report.title)}</strong>
               <time>${escapeHtml(report.date)}</time>

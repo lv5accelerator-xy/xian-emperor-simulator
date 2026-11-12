@@ -617,7 +617,7 @@
     if (!list) return;
     if (chip) chip.textContent = calculateCourtReach(lastCoreState);
     const entries = worldState?.worldLog?.slice(0, 4) || [];
-    list.innerHTML = entries.length ? entries.map((entry) => `<button class="world-brief-item ${entry.type}" type="button" data-world-entry-region="${entry.regionId || ""}"><span>${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><strong>${escapeHtml(entry.date)}</strong><p>${escapeHtml(entry.text)}</p></button>`).join("") : '<p class="empty-state">开启新局后，尚书台会汇总各地急递。</p>';
+    list.innerHTML = entries.length ? entries.map((entry) => `<button class="world-brief-item ${escapeHtml(entry.type ?? "")}" type="button" data-world-entry-region="${entry.regionId || ""}"><span>${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><strong>${escapeHtml(entry.date)}</strong><p>${escapeHtml(entry.text)}</p></button>`).join("") : '<p class="empty-state">开启新局后，尚书台会汇总各地急递。</p>';
     list.querySelectorAll("[data-world-entry-region]").forEach((button) => button.addEventListener("click", () => openOverlay("world", { regionId: button.dataset.worldEntryRegion })));
   }
 
@@ -741,13 +741,13 @@
   function renderRegionTile(region, runtime) {
     const owner = runtime?.controller || region.controller;
     const controller = { ...(DATA.controllers[owner] || DATA.controllers.fragmented), ...(window.XianCharacterAvailability ? { name: window.XianCharacterAvailability.faction(owner, lastCoreState).name } : {}) };
-    return `<button class="map-region ${region.area}${overlayState.regionId === region.id ? " selected" : ""}" type="button" data-region-id="${region.id}" style="--controller:${controller.color};--controller-text:${controller.text}"><span class="region-short">${region.short}</span><strong>${region.name}</strong><small>${controller.name}</small><i title="地区稳定">稳 ${Math.round(runtime?.stability ?? region.stability)}</i></button>`;
+    return `<button class="map-region ${escapeHtml(region.area ?? "")}${overlayState.regionId === region.id ? " selected" : ""}" type="button" data-region-id="${region.id}" style="--controller:${controller.color};--controller-text:${controller.text}"><span class="region-short">${region.short}</span><strong>${region.name}</strong><small>${controller.name}</small><i title="地区稳定">稳 ${Math.round(runtime?.stability ?? region.stability)}</i></button>`;
   }
 
   function renderWorldLogEntry(entry) {
     const lord = DATA.lords.find((item) => item.id === entry.lordId);
     const region = DATA.regions.find((item) => item.id === entry.regionId);
-    return `<article class="world-log-entry ${entry.type}"><span class="world-log-icon">${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><div><div><strong>${escapeHtml(entry.lordName || lord?.name || (entry.lordId === "court" ? "汉廷" : "天下"))}</strong><time>${escapeHtml(entry.date)}</time></div><p>${escapeHtml(entry.text)}</p><small>${escapeHtml(region?.name || "全国")} · ${entry.mode === "historical-anchor" ? "历史锚点" : entry.type === "military" ? "动向推演；出兵与战果须查诸侯军议及军团回执" : "本局推演"}</small></div></article>`;
+    return `<article class="world-log-entry ${escapeHtml(entry.type ?? "")}"><span class="world-log-icon">${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><div><div><strong>${escapeHtml(entry.lordName || lord?.name || (entry.lordId === "court" ? "汉廷" : "天下"))}</strong><time>${escapeHtml(entry.date)}</time></div><p>${escapeHtml(entry.text)}</p><small>${escapeHtml(region?.name || "全国")} · ${entry.mode === "historical-anchor" ? "历史锚点" : entry.type === "military" ? "动向推演；出兵与战果须查诸侯军议及军团回执" : "本局推演"}</small></div></article>`;
   }
 
   function renderLordCard(lord) {

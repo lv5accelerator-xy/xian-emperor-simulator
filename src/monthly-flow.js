@@ -163,7 +163,7 @@
         <article class="${steps.acted ? "done" : steps.resolved ? "active" : ""}"><b>二</b><div><strong>安排一事</strong><p>${steps.acted ? `已使用 ${2 - Number(core.actionPoints || 0)} 次行动。` : "行动是可选的；不行动会转化为小幅守成收益。"}</p></div></article>
         <article class="${steps.current === 3 ? "active" : ""}"><b>三</b><div><strong>月末结算</strong><p>系统会自动结算财政、民生、警戒和长期印记。</p></div></article>
       </div>
-      <section class="monthly-tab-risks"><h3>若不处理，最值得留意</h3>${warnings.slice(0, 2).map(item => `<article class="${item.level}"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.text)}</p></article>`).join("")}</section>
+      <section class="monthly-tab-risks"><h3>若不处理，最值得留意</h3>${warnings.slice(0, 2).map(item => `<article class="${escapeHtml(item.level ?? "")}"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.text)}</p></article>`).join("")}</section>
       <div class="monthly-tab-actions"><button type="button" data-monthly-mode>${store.mode === "simple" ? "切换完整朝局" : "切换简明御前"}</button><button type="button" data-monthly-jump="${steps.current === 1 ? "event" : steps.current === 2 ? "actions" : "end"}">前往当前步骤</button></div>`;
   }
 

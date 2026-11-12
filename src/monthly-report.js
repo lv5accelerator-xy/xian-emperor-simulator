@@ -659,7 +659,7 @@
     const hiddenHtml = report.hiddenTrends
       .map(
         (item) => `
-          <span class="monthly-addon-trend ${item.tone}">
+          <span class="monthly-addon-trend ${escapeHtml(item.tone ?? "")}">
             ${escapeHtml(item.name)}：${escapeHtml(item.direction)}
           </span>
         `
