@@ -1387,7 +1387,7 @@
 
   function captureCity(siege, army, turn, reason) {
     if (siege.status === "captured" || state.conquests.some(item => item.id === `conquest-${siege.id}`)) return;
-    const strategy = readStrategyState();
+    const strategy = loadStrategyState();
     const city = strategy?.cities?.[siege.cityId];
     if (!city || siege.status !== "active" || !validSiegeArmy(siege, army) || !areHostile(army.owner, city.controller)) return;
     const previousOwner = city.controller;
@@ -1534,7 +1534,7 @@
       if (content) { let warning = content.querySelector("[data-army-budget-warning]"); if (!warning) { warning = document.createElement("p"); warning.dataset.armyBudgetWarning = "true"; content.prepend(warning); } warning.textContent = budget.reason || `国库不足，尚缺${budget.shortfall}。待决事项已保留。`; }
       return false;
     }
-    const strategy = readStrategyState();
+    const strategy = loadStrategyState();
     const city = strategy?.cities?.[judgment.cityId];
     if (!city) return false;
     const captive = state.captives.find(item => item.id === judgment.captiveId);
@@ -1677,7 +1677,7 @@
   }
 
   function adjustStrategyRoute(routeId, delta, note) {
-    const strategy = readStrategyState();
+    const strategy = loadStrategyState();
     const route = strategy?.routes?.[routeId];
     if (!route) return;
     route.supply = clamp(route.supply + Number(delta.supply || 0), 0, 100);
@@ -1690,7 +1690,7 @@
   }
 
   function adjustStrategyCity(cityId, delta, note) {
-    const strategy = readStrategyState();
+    const strategy = loadStrategyState();
     const city = strategy?.cities?.[cityId];
     if (!city) return;
     city.defense = clamp(city.defense + Number(delta.defense || 0), 0, 100);
@@ -1705,8 +1705,25 @@
     strategyDirty = true;
   }
 
+  // 只读快照：原文未变时复用上次解析结果。冻结是为了让误写立刻报错，而不是悄悄污染缓存。
+  // 读-改-写策略存储的函数必须用这份可变副本。
+  function loadStrategyState() { return safeParse(localStorage.getItem(STRATEGY_KEY)); }
+  let strategyRawCache = null, strategySnapshotCache = null;
   function readStrategyState() {
-    return safeParse(localStorage.getItem(STRATEGY_KEY));
+    const raw = localStorage.getItem(STRATEGY_KEY);
+    if (raw !== strategyRawCache) { strategySnapshotCache = deepFreeze(safeParse(raw)); strategyRawCache = raw; }
+    return strategySnapshotCache;
+  }
+  function deepFreeze(value) {
+    if (value && typeof value === "object" && !Object.isFrozen(value)) { Object.freeze(value); for (const key of Object.keys(value)) deepFreeze(value[key]); }
+    return value;
+  }
+  let peekRawCache = null, peekSnapshotCache = null;
+  function peekState() {
+    if (!state) return null;
+    const raw = JSON.stringify(state);
+    if (raw !== peekRawCache) { peekSnapshotCache = deepFreeze(JSON.parse(raw)); peekRawCache = raw; }
+    return peekSnapshotCache;
   }
 
   function signalStrategyRefresh(rawCore) {
@@ -2081,6 +2098,8 @@
     applyCampaignAssignment,
     applyCausalEffects,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
+    // 与 getState 内容相同，但返回冻结的共享快照，供只读调用方避免重复解析。
+    peekState,
     open: openOverlay,
   });
 })();

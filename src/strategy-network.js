@@ -113,6 +113,20 @@
     try { return JSON.parse(raw); } catch (_) { return null; }
   }
 
+  // 军团状态的只读快照；军团模块未提供 peekState 时退回深拷贝。
+  function armySnapshot() { const army = window.XianArmySystem; return army?.peekState ? army.peekState() : army?.getState?.(); }
+  function deepFreeze(value) {
+    if (value && typeof value === "object" && !Object.isFrozen(value)) { Object.freeze(value); for (const key of Object.keys(value)) deepFreeze(value[key]); }
+    return value;
+  }
+  let peekRawCache = null, peekSnapshotCache = null;
+  function peekState() {
+    if (!state) return null;
+    const raw = JSON.stringify(state);
+    if (raw !== peekRawCache) { peekSnapshotCache = deepFreeze(JSON.parse(raw)); peekRawCache = raw; }
+    return peekSnapshotCache;
+  }
+
   function loadState() {
     return safeParse(localStorage.getItem(STORAGE_KEY));
   }
@@ -267,7 +281,7 @@
       promise.contract.initialOrderIds ||= [];
       promise.contract.initialBattleIds ||= [];
       if (promise.type === "ceasefire" && promise.contract.version !== 2) {
-        const armies = window.XianArmySystem?.getState?.() || {};
+        const armies = armySnapshot() || {};
         promise.contract.version = 2;
         promise.contract.initialFactIds = (armies.militaryFacts || []).map(item => item.id);
         promise.contract.initialConquestIds = (armies.conquests || []).map(item => item.id);
@@ -278,7 +292,7 @@
       promise.contract.initialFactIds ||= [];
       promise.contract.initialConquestIds ||= [];
     });
-    window.XianAllianceDiplomacy.migrate(migrated, core, window.XianArmySystem?.getState?.() || safeParse(localStorage.getItem("xian_emperor_armies_v050")));
+    window.XianAllianceDiplomacy.migrate(migrated, core, armySnapshot() || safeParse(localStorage.getItem("xian_emperor_armies_v050")));
     return migrated;
   }
 
@@ -525,7 +539,7 @@
 
   function createPromises(types, lordIds, cityIds, routeIds, execution, text, core, report) {
     if (window.XianAllianceDiplomacy.explicit(text)) {
-      const p = window.XianAllianceDiplomacy.create(text, core, state, window.XianArmySystem?.getState?.() || {}, execution, report);
+      const p = window.XianAllianceDiplomacy.create(text, core, state, armySnapshot() || {}, execution, report);
       if (p) state.promises.unshift(p);
     }
     if (!types.length || !lordIds.length) return;
@@ -658,7 +672,7 @@
 
   function buildContract(type, lordId, parties, cityIds, text, core) {
     if (!["tribute", "military_aid", "ceasefire"].includes(type)) return null;
-    const army = window.XianArmySystem?.getState?.() || {};
+    const army = armySnapshot() || {};
     const quantity = clamp(Number(text.match(/(?:贡赋|进贡|朝贡|输贡|纳贡)[^\d]{0,6}(\d+)/)?.[1] || 6), 1, 30);
     return { version: type === "ceasefire" ? 2 : 1, responsible: lordId, beneficiary: "court", quantity: type === "tribute" ? quantity : null,
       payerCityId: DATA.lords.find(item => item.id === lordId)?.seatCity || null,
@@ -726,14 +740,14 @@
     if (latest?.gameCreatedAt === coreState.createdAt) state = migrateState(latest, coreState);
     if (coreState.ended) { reconcileLordCommands(); reconcileAllianceState(); saveState(); renderAll(); return; }
     resolvePendingLordCommands();
-    let armies = window.XianArmySystem?.getState?.() || {};
+    let armies = armySnapshot() || {};
     for (const promise of state.promises) {
       if (promise.status !== "active" || !promise.contract) continue;
       const contract = promise.contract;
       if (promise.type === "military_aid") {
         if (!contract.armyId && coreState.turn <= promise.deadlineTurn) {
           window.XianArmySystem?.acceptPromiseMission?.(promise);
-          armies = window.XianArmySystem?.getState?.() || armies;
+          armies = armySnapshot() || armies;
           const acceptedStrategy = loadState();
           if (acceptedStrategy?.gameCreatedAt === state.gameCreatedAt) { state.cities = acceptedStrategy.cities; state.routes = acceptedStrategy.routes; }
           const order = (armies.orders || []).find(item => item.sourcePromiseId === promise.id && item.owner === promise.lordId && item.targetCityId === contract.targetCityId && item.turn >= promise.createdTurn && ["support", "defend"].includes(item.task));
@@ -796,20 +810,20 @@
   }
 
   function reconcileAllianceState() {
-    const closedAlliances = window.XianAllianceDiplomacy.reconcile(state, window.XianArmySystem?.getState?.() || {}, coreState);
+    const closedAlliances = window.XianAllianceDiplomacy.reconcile(state, armySnapshot() || {}, coreState);
     saveState();
     for (const id of closedAlliances) window.XianArmySystem?.releaseAllianceOrders?.(id, "盟约已结束，解除尚未完成的共同任务");
     if (closedAlliances.length) {
       reconcileLordCommands();
-      window.XianAllianceDiplomacy.reconcile(state, window.XianArmySystem?.getState?.() || {}, coreState);
+      window.XianAllianceDiplomacy.reconcile(state, armySnapshot() || {}, coreState);
     }
-    window.XianDiplomaticEndings?.reconcile(state, window.XianArmySystem?.getState?.() || {}, coreState);
+    window.XianDiplomaticEndings?.reconcile(state, armySnapshot() || {}, coreState);
     reconcileDiplomaticRelations(coreState);
-    window.XianAllianceDiplomacy.propose(state, window.XianArmySystem?.getState?.() || {}, coreState);
+    window.XianAllianceDiplomacy.propose(state, armySnapshot() || {}, coreState);
   }
 
   function reconcileDiplomaticRelations(core) {
-    const model=window.XianDiplomaticRelations,armies=window.XianArmySystem?.getState?.();
+    const model=window.XianDiplomaticRelations,armies=armySnapshot();
     if (!model || !core || core.ended || state?.gameCreatedAt!==core.createdAt || window.__xianFullSaveImporting) return;
     model.ledger(state,core);
     if (armies?.gameCreatedAt!==core.createdAt) return;
@@ -828,7 +842,7 @@
   function previewDiplomaticAction(kind,parties) {
     const core=window.XianEmperorGame?.getState?.(),model=window.XianDiplomaticRelations;
     if(!core || !model)return {ok:false,message:"外交档案尚未载入。"};
-    const result=model.preview(kind,parties,state,window.XianArmySystem?.getState?.(),core,window.XianWorldSystem?.getState?.()||{});
+    const result=model.preview(kind,parties,state,armySnapshot(),core,window.XianWorldSystem?.getState?.()||{});
     if(!result.ok)return result;
     if(!core.eventResolved||core.ended||core.actionPoints<1||Number(core.monthlySettledTurn||0)>=core.turn)return {ok:false,message:"先裁决本月奏报，并保留1次行动。"};
     if(core.stats.treasury<result.treasuryCost)return {ok:false,message:"国库不足，议和或修好需国库2。"};
@@ -841,7 +855,7 @@
     const core=window.XianEmperorGame.getState(),id=`diplomatic-action:${core.createdAt}:${core.turn}:${kind}:${view.pairId}`;
     const d=state.diplomaticRelations;d.requests=d.requests.filter(r=>r.id!==id);
     d.requests.push({id,kind,parties:view.parties,pairId:view.pairId,turn:core.turn,gameCreatedAt:core.createdAt,operationSequence:core.operationSequence+1,
-      offer:JSON.parse(JSON.stringify(view)),initialFactIds:(window.XianArmySystem.getState().militaryFacts||[]).map(f=>f.id),sourceConflictIds:d.hostilities.filter(f=>[f.attackerOwner,f.defenderOwner].sort().join("~")===view.pairId).map(f=>f.id),resolved:false});saveState();
+      offer:JSON.parse(JSON.stringify(view)),initialFactIds:(armySnapshot().militaryFacts||[]).map(f=>f.id),sourceConflictIds:d.hostilities.filter(f=>[f.attackerOwner,f.defenderOwner].sort().join("~")===view.pairId).map(f=>f.id),resolved:false});saveState();
     const applied=window.XianEmperorGame.performExternalAction({receiptId:id,actionId:"diplomatic-relations",causal:false,title:kind==="peace"?"外交·战后议和":"外交·遣使修好",
       text:view.message,chronicle:`天子为${view.parties.map(controllerName).join("与")}遣使${kind==="peace"?"议和":"修好"}，双方分别答复。`,effects:{treasury:-view.treasuryCost}});
     if(!applied&&!window.XianEmperorGame.getState().appliedReceipts.includes(id)){state.diplomaticRelations.requests=state.diplomaticRelations.requests.filter(r=>r.id!==id);saveState();}
@@ -867,7 +881,7 @@
   }
 
   function reconcileLordCommands() {
-    const model = window.XianLordIntentions, core = window.XianEmperorGame?.getState?.(), armies = window.XianArmySystem?.getState?.();
+    const model = window.XianLordIntentions, core = window.XianEmperorGame?.getState?.(), armies = armySnapshot();
     if (!model || !core || !armies || armies.gameCreatedAt !== state.gameCreatedAt || core.createdAt !== state.gameCreatedAt || window.__xianFullSaveImporting) return;
     const chain = state.commandChain = model.ledger(state.commandChain, core);
     model.reconcile(chain, armies, state, core);
@@ -1167,7 +1181,7 @@
 
   function renderCouncilLedger() {
     const chain = state.commandChain;
-    const conflicts = window.XianArmySystem?.getState?.()?.commandConflicts || [];
+    const conflicts = armySnapshot()?.commandConflicts || [];
     const reactions = chain.reactions || [], incidents = chain.incidents || [], outcomes = chain.promiseOutcomes || [];
     const kinds = { "army-busy": "军团争令", replacement: "明确换令", "target-competition": "同城争夺", "road-meeting": "军路遭遇", "siege-command": "友军协战" };
     return `<details class="council-ledger"><summary>军令冲突 ${conflicts.length} · 外交回应 ${reactions.length} · 实际军事事件 ${incidents.length}</summary><p>提示本身不交战、不改城防，也不处罚。冲突只在实际请求或军团行动后入档；停战、援军及第三方回应沿同一事实追溯。</p><h4>军令复核</h4>${[...conflicts].reverse().slice(0,8).map(c=>`<article><strong>第${c.turn}月 · ${escapeHtml(kinds[c.kind] || "军令复核")}</strong><p>${escapeHtml((c.armyNames || []).join(" ↔ "))}${c.routeName || c.cityName ? ` · ${escapeHtml(c.routeName || c.cityName)}` : ""}：${escapeHtml(c.reason)}</p><small>${c.decision === "refused" ? "新请求未执行" : c.decision === "replaced" ? "旧任务已撤换" : c.decision === "occupied" ? `${escapeHtml(c.victorName)}实际占领` : c.decision === "closed" ? "相关军令已停止，未记录占领" : c.decision === "fighting" ? "已有实战，尚无占领凭据" : c.decision === "contested" ? "尚须真实交战决定" : c.decision === "support" ? "仅主攻军推进围城" : `${c.factIds?.length || 0}项真实战斗凭据`}</small></article>`).join("") || "<p>尚无实际冲突。</p>"}<h4>外交连锁</h4>${[...reactions].reverse().slice(0,8).map(r=>`<article><strong>第${r.turn}月 · ${escapeHtml(r.actorName)}护援警讯</strong><p>${escapeHtml(r.attackerName)} → ${escapeHtml(r.protectedName)}；${escapeHtml(r.text)}</p><p>${r.requestedTrustDelta ? `朝廷背书的敌对行动触发援方警惕：援方对朝廷信任实际 ${r.trustDelta}；同一军令、援方与受援方只处理一次` : "诸侯自主行动：记录援方警惕，不扣朝廷信任"}。</p><small>${chain.intents.filter(i=>(i.reactionIds || []).includes(r.id)).length}项后续军议已引用此回应；援军是否完成仍按原军令核验</small></article>`).join("") || "<p>尚无符合实际援约及接令凭据的第三方回应，普通停战不视为同盟。</p>"}<h4>原约结算</h4>${outcomes.slice(-8).reverse().map(o=>`<article><strong>第${o.turn}月 · ${escapeHtml(o.actorName)} · ${escapeHtml(o.label || "外交承诺")}</strong><p>${escapeHtml(promiseStatus(o.status))}，信任实际 ${o.trustDelta}；${escapeHtml(o.reason)}</p><small>关联${o.conflictIds.length}项军令冲突、${o.sourceFactIds.length}项军事事实；沿用原约结算，不另加同一处罚</small></article>`).join("") || "<p>尚无新结算凭据。</p>"}<h4>最近实际事件</h4>${incidents.slice(-6).reverse().map(i=>`<p>第${i.turn}月 · ${escapeHtml(i.attackerName)} → ${escapeHtml(i.defenderName)}：${i.routeId ? "军路交战" : ({"hostile-order":"敌对军令",battle:"野战","siege-start":"建立包围","siege-progress":"围城推进",occupation:"军事占领"}[i.kind] || "军事行动")}，关联${i.intentIds.length}项军议、${i.promiseIds.length}项原约后果。</p>`).join("") || "<p>尚无军事事实。</p>"}</details>`;
@@ -1201,7 +1215,7 @@
   function renderAlliances() {
     const d = state.allianceDiplomacy, pacts = state.promises.filter(window.XianAllianceDiplomacy.formal);
     const plans = d.plans.filter(p=>p.turn===coreState?.turn || p.orderIds.length).slice(-6).reverse();
-    const facts = window.XianArmySystem?.getState?.()?.militaryFacts || [];
+    const facts = armySnapshot()?.militaryFacts || [];
     const cards = plans.map(plan => {
       const current = plan.turn === coreState?.turn && !plan.intervention && plan.members.some(m=>m.status==="proposed");
       const coordinate = current ? previewCoalitionIntervention(plan.id,"coordinate") : {}, restrain = current ? previewCoalitionIntervention(plan.id,"restrain") : {};
@@ -1293,7 +1307,7 @@
     if (!state || !isValidCore(core) || choosePrimaryOrder(detectOrders(text)) !== "attack") return [];
     const owners = detectLordTargets(text), targetCityId = detectCityTargets(text).at(-1);
     const targetOwner = state.cities[targetCityId]?.controller;
-    const fieldOwners = Object.values(window.XianArmySystem?.getState?.()?.armies || {}).filter(army => army.cityId === targetCityId
+    const fieldOwners = Object.values(armySnapshot()?.armies || {}).filter(army => army.cityId === targetCityId
       && army.troops >= 500 && !["destroyed", "routing", "marching"].includes(army.status)).map(army => army.owner);
     return [...state.promises,...(window.XianDiplomaticRelations?.protectedTreaties(state)||[])].filter(promise => (promise.type === "ceasefire" || promise.type === "postwar_peace" || window.XianAllianceDiplomacy.formal(promise)) && promise.status === "active"
       && core.turn <= promise.deadlineTurn
@@ -1319,7 +1333,7 @@
       if (!isValidCore(core)) return [];
       const lords = detectLordTargets(text), cities = detectCityTargets(text);
       const contracts = detectPromises(text).filter(type => ["tribute", "military_aid", "ceasefire"].includes(type)).flatMap(type => (type === "ceasefire" ? lords.slice(0, 1) : lords).map(lord => ({ type, ...buildContract(type, lord, lords, cities, text, core) })));
-      const alliance = window.XianAllianceDiplomacy.offer(text, core, state, window.XianArmySystem?.getState?.() || {}, execution);
+      const alliance = window.XianAllianceDiplomacy.offer(text, core, state, armySnapshot() || {}, execution);
       return alliance ? [...contracts, alliance] : contracts;
     },
     syncFromCore: raw => processCoreSave(raw),
@@ -1337,6 +1351,7 @@
     extractEdictText,
     applyCampaignEffects,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
+    peekState,
     open: openOverlay,
   });
 })();

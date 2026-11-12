@@ -177,19 +177,19 @@
 
   function stages() { return DATA.scenarioStages[core?.scenarioId] || []; }
   function currentStage() { return stages()[Math.min(Number(state?.currentStage || 0), stages().length - 1)] || null; }
-  function strategyState() { return window.XianStrategyNetwork?.getState?.() || safeParse(localStorage.getItem("xian_emperor_strategy_network_v040")) || {}; }
+  function strategyState() { return window.XianStrategyNetwork?.peekState?.() || window.XianStrategyNetwork?.getState?.() || safeParse(localStorage.getItem("xian_emperor_strategy_network_v040")) || {}; }
   function armyState() { return window.XianArmySystem?.getState?.() || safeParse(localStorage.getItem("xian_emperor_armies_v050")) || {}; }
 
   function objectiveValue(goal, context = {}) {
     const c = context.core || core || {};
-    const s = context.strategy || strategyState();
     const e = context.evolution || state || {};
     if (goal.type === "statMin" || goal.type === "statMax") return Number(c.stats?.[goal.key] || 0);
     if (goal.type === "hiddenMin" || goal.type === "hiddenMax") return Number(c.hidden?.[goal.key] || 0);
     if (goal.type === "turnMin") return Number(c.turn || 0);
     if (goal.type === "edictMin") return Number(c.edictsIssued || 0);
-    if (goal.type === "routeSupplyMin") return Number(s.routes?.[goal.key]?.supply || 0);
-    if (goal.type === "cityDefenseMin") return Number(s.cities?.[goal.key]?.defense || 0);
+    // 只有路线与城防目标需要策略网络快照；其余目标不必深拷贝整个策略状态。
+    if (goal.type === "routeSupplyMin") return Number((context.strategy || strategyState()).routes?.[goal.key]?.supply || 0);
+    if (goal.type === "cityDefenseMin") return Number((context.strategy || strategyState()).cities?.[goal.key]?.defense || 0);
     if (goal.type === "assignmentCount") return Number(e.assignmentsCompleted || 0);
     return 0;
   }
