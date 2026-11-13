@@ -39,16 +39,37 @@ const results = [];
     const tap = async target => {
       await target.waitFor({ state: "visible" });
       await target.evaluate(node => node.scrollIntoView({ block: "center", inline: "center", behavior: "instant" }));
-      const point = await target.evaluate(node => {
+      // 地图缩放、面板展开等动画期间元素仍在移动；先等位置连续两帧不变，再取可点击的坐标，否则点击会落空。
+      const locate = () => target.evaluate(async node => {
         if (node.disabled) return null;
-        const r = node.getBoundingClientRect();
-        for (const fy of [.5, .25, .75]) for (const fx of [.5, .25, .75]) {
-          const x = r.x + r.width * fx, y = r.y + r.height * fy, hit = document.elementFromPoint(x, y);
-          if (hit && (hit === node || node.contains(hit))) return { x, y };
+        const probe = () => {
+          const r = node.getBoundingClientRect();
+          for (const fy of [.5, .25, .75]) for (const fx of [.5, .25, .75]) {
+            const x = r.x + r.width * fx, y = r.y + r.height * fy, hit = document.elementFromPoint(x, y);
+            if (hit && (hit === node || node.contains(hit))) return { x, y };
+          }
+          return null;
+        };
+        const deadline = performance.now() + 3000;
+        let last = "", steady = 0;
+        while (performance.now() < deadline) {
+          const r = node.getBoundingClientRect(), key = `${r.x}|${r.y}|${r.width}|${r.height}`;
+          steady = key === last ? steady + 1 : 0; last = key;
+          if (steady >= 2) { const found = probe(); if (found) return found; }
+          await new Promise(resolve => requestAnimationFrame(() => resolve()));
         }
-        return null;
+        return probe();
       });
+      let point = await locate();
       assert.ok(point, `visible control must receive pointer input: ${target}`);
+      // 以真实指针命中为准：刚滚动过的容器里，浏览器的输入命中可能还停在滚动前的位置。
+      // 先把指针移过去，确认悬停的确是目标再点击；否则重新定位。
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await page.mouse.move(point.x, point.y);
+        if (await target.evaluate(node => node.matches(":hover"))) break;
+        await page.waitForTimeout(50);
+        point = await locate() || point;
+      }
       await page.mouse.click(point.x, point.y);
     };
     const skipTutorial = async () => { await page.waitForTimeout(700); for (const selector of ["#tutorial-skip", ".tutorial-dialog footer [data-tutorial-move='skip']"]) if (await page.locator(selector).first().isVisible()) await tap(page.locator(selector).first()); };

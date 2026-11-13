@@ -5,6 +5,8 @@ const { alliedFixture, seal, treatyText } = require("../tests/alliance-coalition
 
 const { STRATEGY } = require("../tests/lord-command-chain-regression");
 const { harness } = require("../tests/helpers/game-harness");
+// 缓存参数随发布号变化，不在脚本里写死。
+const releaseVersion = require("./read-version.cjs").readVersion(path.resolve(__dirname, ".."));
 const root = path.resolve(__dirname, ".."), out = process.env.COUNCIL_BROWSER_OUTPUT || path.resolve(root, "../browser-alliance-coalition");
 fs.mkdirSync(out, { recursive: true });
 const legacyStrategyTable=fs.readFileSync(path.join(root,"src/strategy-network-data.js"),"utf8").replace("同盟|联盟","同盟");
@@ -45,17 +47,38 @@ const results = [];
     const tap = async target => {
       await target.waitFor({ state: "visible" });
       await target.evaluate((node,width) => { const v=node.closest("[data-grand-viewport]"); if(v && width!==390){const r=node.getBoundingClientRect(),b=v.getBoundingClientRect();v.scrollTo({left:v.scrollLeft+r.x+r.width/2-b.x-b.width*.4,top:v.scrollTop+r.y+r.height/2-b.y-b.height*.45,behavior:"instant"});}else node.scrollIntoView({block:"center",inline:"center",behavior:"instant"});},width);
-      const point = await target.evaluate(node => {
+      // 地图缩放、面板展开等动画期间元素仍在移动；先等位置连续两帧不变，再取可点击的坐标，否则点击会落空。
+      const locate = () => target.evaluate(async node => {
         if (node.disabled) return null;
-        const r = node.getBoundingClientRect();
-        for (const fy of [.5, .25, .75]) for (const fx of [.5, .25, .75]) {
-          const x = r.x + r.width * fx, y = r.y + r.height * fy, hit = document.elementFromPoint(x, y);
-          if (hit && (hit === node || node.contains(hit))) return { x, y };
+        const probe = () => {
+          const r = node.getBoundingClientRect();
+          for (const fy of [.5, .25, .75]) for (const fx of [.5, .25, .75]) {
+            const x = r.x + r.width * fx, y = r.y + r.height * fy, hit = document.elementFromPoint(x, y);
+            if (hit && (hit === node || node.contains(hit))) return { x, y };
+          }
+          return null;
+        };
+        const deadline = performance.now() + 3000;
+        let last = "", steady = 0;
+        while (performance.now() < deadline) {
+          const r = node.getBoundingClientRect(), key = `${r.x}|${r.y}|${r.width}|${r.height}`;
+          steady = key === last ? steady + 1 : 0; last = key;
+          if (steady >= 2) { const found = probe(); if (found) return found; }
+          await new Promise(resolve => requestAnimationFrame(() => resolve()));
         }
-        return null;
+        return probe();
       });
+      let point = await locate();
       if(!point)console.log(await target.evaluate(n=>({disabled:n.disabled,rect:n.getBoundingClientRect().toJSON(),viewport:n.closest("[data-grand-viewport]")?.getBoundingClientRect().toJSON(),hit:document.elementFromPoint(n.getBoundingClientRect().x+5,n.getBoundingClientRect().y+5)?.className})));
       assert.ok(point, `visible control must receive pointer input: ${target}`);
+      // 以真实指针命中为准：刚滚动过的容器里，浏览器的输入命中可能还停在滚动前的位置。
+      // 先把指针移过去，确认悬停的确是目标再点击；否则重新定位。
+      for (let attempt = 0; attempt < 40; attempt++) {
+        await page.mouse.move(point.x, point.y);
+        if (await target.evaluate(node => node.matches(":hover"))) break;
+        await page.waitForTimeout(50);
+        point = await locate() || point;
+      }
       await page.mouse.click(point.x, point.y);
     };
     const skipTutorial = async () => { await page.waitForTimeout(700); for (const selector of ["#tutorial-skip", ".tutorial-dialog footer [data-tutorial-move='skip']"]) if (await page.locator(selector).first().isVisible()) await tap(page.locator(selector).first()); };
@@ -118,7 +141,7 @@ const results = [];
       await tap(page.locator("#strategy-network-close"));await importFile(current220File);assert.ok((await core()).year>=220);assert.ok((await page.locator(".alliance-brief").innerText()).includes(current220Names[0]));
       await openChain(false);await tap(page.locator("[data-strategy-tab='promises']"));const institutionalText=await page.locator(".promise-card").first().innerText();for(const name of current220Names)assert.ok(institutionalText.includes(name));assert.doesNotMatch(institutionalText,/袁绍|公孙瓒/);await page.screenshot({path:path.join(out,`institutional-alliance-220-${width}.png`)});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);assert.deepEqual(errors,[]);assert.deepEqual(httpFailures,[]);
-      assert.equal(staleStrategyCacheHits,0);assert.ok(strategyDataRequests.length>0);assert.ok(strategyDataRequests.every(url=>new URL(url).searchParams.get("v")==="2.30.0"));
+      assert.equal(staleStrategyCacheHits,0);assert.ok(strategyDataRequests.length>0);assert.ok(strategyDataRequests.every(url=>new URL(url).searchParams.get("v")===releaseVersion));
       results.push({channel,width,staleStrategyCacheHits,freshStrategyCacheUrl:true,allianceAliasPreview:true,current220Identities:true,actualInvitation:true,readOnlyPreview:true,twoActionBudget:true,individualOrders:true,singleSiegeTick:true,physicalContributions:true,actualMapBetrayal:true,refusal:true,actualFileExportImport:true,reload:true,pageErrors:errors,httpFailures});
       fs.writeFileSync(path.join(out,"summary.json"),JSON.stringify(results,null,2));console.log(`PASS alliance browser ${width}`);
     }catch(error){console.error(error);await page.screenshot({path:path.join(out,`failure-${width}.png`),timeout:10000});throw error;}finally{await page.close();}

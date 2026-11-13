@@ -464,7 +464,7 @@ jobs:
 
   browser:
     # 真实浏览器回归。脚本默认使用维护者本机的 Edge/Chrome；此处改用 Playwright 自带的 Chromium。
-    # browser-diplomatic-relations 需要外部提供的旧版完整存档，browser-alliance-coalition 在自带 Chromium 下尚未通过，均暂不纳入。
+    # browser-diplomatic-relations 需要外部提供的旧版完整存档，暂不纳入。
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -479,6 +479,7 @@ jobs:
           - browser-lord-command
           - browser-parallel-council
           - browser-diplomatic-endings
+          - browser-alliance-coalition
     env:
       BROWSER_CHANNEL: chromium
       COUNCIL_BROWSER_CHANNEL: chromium

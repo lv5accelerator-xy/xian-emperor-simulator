@@ -337,6 +337,11 @@
     return Math.max(viewport.clientWidth / WIDTH, viewport.clientHeight / HEIGHT);
   }
 
+  // 系统开启“减少动态效果”时不做平滑滚动：既是无障碍要求，也避免滚动途中点击落到别的图元上。
+  function scrollBehavior(smooth = true) {
+    return smooth && !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "smooth" : "auto";
+  }
+
   function centerMap(viewport, smooth = true) {
     if (!viewport) return;
     const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
@@ -344,7 +349,7 @@
     viewport.scrollTo?.({
       left: Math.max(0, focus[0] * scale - viewport.clientWidth * .52),
       top: Math.max(0, focus[1] * scale - viewport.clientHeight * .48),
-      behavior: smooth ? "smooth" : "auto",
+      behavior: scrollBehavior(smooth),
     });
   }
 
@@ -382,7 +387,7 @@
     const pos = CITY_POSITIONS[id];
     if (viewport && pos) {
       const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
-      viewport.scrollTo?.({ left: Math.max(0, pos[0] * scale - viewport.clientWidth / 2), top: Math.max(0, pos[1] * scale - viewport.clientHeight / 2), behavior: "smooth" });
+      viewport.scrollTo?.({ left: Math.max(0, pos[0] * scale - viewport.clientWidth / 2), top: Math.max(0, pos[1] * scale - viewport.clientHeight / 2), behavior: scrollBehavior() });
     }
     inspectCity(shell, id, onRegion);
   }
@@ -395,7 +400,7 @@
     const viewport = shell.querySelector("[data-grand-viewport]");
     if (viewport && from && to) {
       const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
-      viewport.scrollTo?.({ left: Math.max(0, ((from[0] + to[0]) / 2) * scale - viewport.clientWidth / 2), top: Math.max(0, ((from[1] + to[1]) / 2) * scale - viewport.clientHeight / 2), behavior: "smooth" });
+      viewport.scrollTo?.({ left: Math.max(0, ((from[0] + to[0]) / 2) * scale - viewport.clientWidth / 2), top: Math.max(0, ((from[1] + to[1]) / 2) * scale - viewport.clientHeight / 2), behavior: scrollBehavior() });
     }
     inspectRoute(shell, id);
   }
