@@ -2221,6 +2221,8 @@
   }
 
   function loadGame(silent = false) {
+    // 读取中途失败时退回原先的局面，不把界面留在半载入的状态。
+    const previous = state;
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return false;
@@ -2235,13 +2237,20 @@
       return true;
     } catch (error) {
       console.error(error);
-      showToast("存档损坏或版本不兼容。", "error");
+      state = previous;
+      showToast("存档损坏或版本不兼容。可在“存档备份”中恢复最近的完整备份。", "error");
       return false;
     }
   }
 
+  // 只拒绝必然无法运行的形状（渲染奏报、史书时会直接抛错）；字段缺失仍交给 migrateSave 补齐，不因此拒收旧档。
   function validateSave(save) {
-    return Boolean(save && typeof save === "object" && save.stats && save.hidden && Array.isArray(save.chronicle));
+    const record = value => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+    return record(save) && record(save.stats) && record(save.hidden)
+      && Array.isArray(save.chronicle) && save.chronicle.every(record)
+      && (save.reports === undefined || (Array.isArray(save.reports) && save.reports.every(record)))
+      && (save.relations == null || record(save.relations))
+      && (save.turn === undefined || Number.isFinite(Number(save.turn)));
   }
 
   function migrateSave(save, importedShort = null) {
