@@ -1,7 +1,7 @@
 /* 天子蒙尘 v2.22.0 · 汉墨入廷。现代开源楷体，不冒称历史书家字库。 */
 @font-face {
   font-family: "Xian WenKai";
-  src: url("../assets/fonts/wenkai-game-regular.woff2?v=2.22.0") format("woff2");
+  src: url("../assets/fonts/wenkai-game-regular.woff2?v=2.30.3") format("woff2");
   font-style: normal;
   font-weight: 100 500;
   font-display: swap;
@@ -11,7 +11,7 @@
 
 @font-face {
   font-family: "Xian WenKai";
-  src: url("../assets/fonts/wenkai-game-medium.woff2?v=2.22.0") format("woff2");
+  src: url("../assets/fonts/wenkai-game-medium.woff2?v=2.30.3") format("woff2");
   font-style: normal;
   font-weight: 600 900;
   font-display: swap;
