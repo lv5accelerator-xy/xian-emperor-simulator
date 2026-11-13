@@ -113,7 +113,8 @@
 
   function saveState() {
     if (!state) return;
-    try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); }
+    // 内容与存储中完全相同时不重写。
+    try { const raw = JSON.stringify(state); if (localStorage.getItem(STORAGE_KEY) !== raw) storageWrite("setItem", STORAGE_KEY, raw); }
     catch (error) { console.warn("军团系统保存失败", error); }
   }
 
@@ -315,7 +316,7 @@
       respond("refused", "没有可执行的完整军团");
       return;
     }
-    const access = options.autonomous ? { allowed: true } : getCommandAccess(army, window.XianEmperorGame?.getState?.() || coreState, readStrategyState());
+    const access = options.autonomous ? { allowed: true } : getCommandAccess(army, (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState, readStrategyState());
     if (!access.allowed) {
       army.lastChange = access.message;
       addLog(turn, "warning", `${armyName(army)}未承接军令：${access.message}`);
@@ -395,7 +396,7 @@
     return order;
   }
 
-  function getCommandAccess(army, core = window.XianEmperorGame?.getState?.() || coreState, strategy = readStrategyState()) {
+  function getCommandAccess(army, core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState, strategy = readStrategyState()) {
     if (!army || !core) return { allowed: false, message: "尚未载入军籍。" };
     if (army.owner === "court") return { allowed: true, mode: "direct", message: "汉廷直属，可直接下令。" };
     const trust = Number(strategy?.strategies?.[army.owner]?.trust ?? 50);
@@ -415,7 +416,7 @@
     if (!army || army.status === "destroyed") return { ok: false, message: "该军团已经失去建制。" };
     if (!city) return { ok: false, message: "没有找到目标城池。" };
     if (!allowedTasks.includes(task)) return { ok: false, message: "该军令暂不支持从舆图下达。" };
-    const currentCore = window.XianEmperorGame?.getState?.() || coreState;
+    const currentCore = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const access = getCommandAccess(army, currentCore);
     if (!access.allowed) return { ok: false, message: access.message };
     const actionCost = 1;
@@ -1387,7 +1388,7 @@
 
   function captureCity(siege, army, turn, reason) {
     if (siege.status === "captured" || state.conquests.some(item => item.id === `conquest-${siege.id}`)) return;
-    const strategy = readStrategyState();
+    const strategy = loadStrategyState();
     const city = strategy?.cities?.[siege.cityId];
     if (!city || siege.status !== "active" || !validSiegeArmy(siege, army) || !areHostile(army.owner, city.controller)) return;
     const previousOwner = city.controller;
@@ -1428,7 +1429,7 @@
   }
 
   function setSiegeStance(cityId, stance) {
-    if ((window.XianEmperorGame?.getState?.() || coreState)?.ended) return false;
+    if (((window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState)?.ended) return false;
     const siege = state?.sieges?.[cityId];
     if (!siege || siege.status !== "active" || !["assault", "blockade", "persuade"].includes(stance)) return false;
     siege.stance = stance;
@@ -1523,7 +1524,7 @@
   function resolvePostwarJudgment(judgmentId, decision) {
     const judgment = state?.pendingJudgments?.find(item => item.id === judgmentId && item.status === "pending");
     if (!judgment) return false;
-    const currentCore = window.XianEmperorGame?.getState?.() || coreState;
+    const currentCore = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     if (currentCore?.ended || !window.XianEmperorGame?.applyExternalPackage) return false;
     const result = getJudgmentDecision(decision, judgment, currentCore);
     if (!result) return false;
@@ -1534,7 +1535,7 @@
       if (content) { let warning = content.querySelector("[data-army-budget-warning]"); if (!warning) { warning = document.createElement("p"); warning.dataset.armyBudgetWarning = "true"; content.prepend(warning); } warning.textContent = budget.reason || `国库不足，尚缺${budget.shortfall}。待决事项已保留。`; }
       return false;
     }
-    const strategy = readStrategyState();
+    const strategy = loadStrategyState();
     const city = strategy?.cities?.[judgment.cityId];
     if (!city) return false;
     const captive = state.captives.find(item => item.id === judgment.captiveId);
@@ -1677,7 +1678,7 @@
   }
 
   function adjustStrategyRoute(routeId, delta, note) {
-    const strategy = readStrategyState();
+    const strategy = loadStrategyState();
     const route = strategy?.routes?.[routeId];
     if (!route) return;
     route.supply = clamp(route.supply + Number(delta.supply || 0), 0, 100);
@@ -1690,7 +1691,7 @@
   }
 
   function adjustStrategyCity(cityId, delta, note) {
-    const strategy = readStrategyState();
+    const strategy = loadStrategyState();
     const city = strategy?.cities?.[cityId];
     if (!city) return;
     city.defense = clamp(city.defense + Number(delta.defense || 0), 0, 100);
@@ -1705,8 +1706,25 @@
     strategyDirty = true;
   }
 
+  // 只读快照：原文未变时复用上次解析结果。冻结是为了让误写立刻报错，而不是悄悄污染缓存。
+  // 读-改-写策略存储的函数必须用这份可变副本。
+  function loadStrategyState() { return safeParse(localStorage.getItem(STRATEGY_KEY)); }
+  let strategyRawCache = null, strategySnapshotCache = null;
   function readStrategyState() {
-    return safeParse(localStorage.getItem(STRATEGY_KEY));
+    const raw = localStorage.getItem(STRATEGY_KEY);
+    if (raw !== strategyRawCache) { strategySnapshotCache = deepFreeze(safeParse(raw)); strategyRawCache = raw; }
+    return strategySnapshotCache;
+  }
+  function deepFreeze(value) {
+    if (value && typeof value === "object" && !Object.isFrozen(value)) { Object.freeze(value); for (const key of Object.keys(value)) deepFreeze(value[key]); }
+    return value;
+  }
+  let peekRawCache = null, peekSnapshotCache = null;
+  function peekState() {
+    if (!state) return null;
+    const raw = JSON.stringify(state);
+    if (raw !== peekRawCache) { peekSnapshotCache = deepFreeze(JSON.parse(raw)); peekRawCache = raw; }
+    return peekSnapshotCache;
   }
 
   function signalStrategyRefresh(rawCore) {
@@ -1904,13 +1922,13 @@
 
   function renderArmyCard(army) {
     const routeText = army.routeIds.length ? army.routeIds.slice(army.routeIndex).map(routeName).join("；") : "无跨城行军路线";
-    return `<article class="army-card ${army.status} ${army.supply <= 25 ? "low-supply" : ""}"><div class="army-card-head"><div><span>${escapeHtml(ownerName(army.owner))}</span><strong>${escapeHtml(armyName(army))}</strong><small>主将 ${escapeHtml(commanderName(army.commander))}</small></div><b>${escapeHtml(statusLabel(army.status))}</b></div><div class="army-position"><span>${escapeHtml(cityName(army.cityId))}</span><i>→</i><span>${escapeHtml(cityName(army.targetCityId))}</span></div><div class="army-troops"><span>兵力</span><strong>${formatNumber(army.troops)}</strong><small>编制 ${formatNumber(army.maxTroops)}</small></div>${metric("士气", army.morale)}${metric("粮秣", army.supply)}${metric("训练", army.training)}${metric("疲劳", army.fatigue, true)}<p><strong>${escapeHtml(taskLabel(army.task))}</strong> · ${escapeHtml(routeText)}</p><small>${escapeHtml(army.lastChange)}</small></article>`;
+    return `<article class="army-card ${escapeHtml(army.status ?? "")} ${army.supply <= 25 ? "low-supply" : ""}"><div class="army-card-head"><div><span>${escapeHtml(ownerName(army.owner))}</span><strong>${escapeHtml(armyName(army))}</strong><small>主将 ${escapeHtml(commanderName(army.commander))}</small></div><b>${escapeHtml(statusLabel(army.status))}</b></div><div class="army-position"><span>${escapeHtml(cityName(army.cityId))}</span><i>→</i><span>${escapeHtml(cityName(army.targetCityId))}</span></div><div class="army-troops"><span>兵力</span><strong>${formatNumber(army.troops)}</strong><small>编制 ${formatNumber(army.maxTroops)}</small></div>${metric("士气", army.morale)}${metric("粮秣", army.supply)}${metric("训练", army.training)}${metric("疲劳", army.fatigue, true)}<p><strong>${escapeHtml(taskLabel(army.task))}</strong> · ${escapeHtml(routeText)}</p><small>${escapeHtml(army.lastChange)}</small></article>`;
   }
 
   function renderMovements() {
     const orders = [...state.orders].sort((a, b) => b.turn - a.turn).slice(0, MAX_ORDERS);
     const active = Object.values(state.armies).filter(army => ["marching", "routing", "engaged"].includes(army.status));
-    return `<section><div class="army-section-head"><div><span class="section-kicker">行军态势</span><h3>当前行动</h3></div><small>每月通过一段主要军路；缺粮或高军压会造成停滞与减员</small></div><div class="movement-list">${active.length ? active.map(army => `<article class="movement-card"><div><strong>${escapeHtml(armyName(army))}</strong><b>${escapeHtml(statusLabel(army.status))}</b></div><p>${escapeHtml(cityName(army.cityId))} → ${escapeHtml(cityName(army.targetCityId))}</p><div class="movement-route">${army.routeIds.length ? army.routeIds.map((id, index) => `<span class="${index < army.routeIndex ? "passed" : index === army.routeIndex ? "current" : ""}">${escapeHtml(routeName(id))}</span>`).join("") : "<span>已抵达目标区域</span>"}</div><small>预计还需 ${army.eta} 个月 · 粮秣 ${Math.round(army.supply)} · 士气 ${Math.round(army.morale)}</small></article>`).join("") : '<p class="empty-state">当前没有跨城行军的军团。</p>'}</div><div class="army-section-head order-history-head"><div><span class="section-kicker">诏令军务</span><h3>命令记录</h3></div></div><div class="army-order-list">${orders.length ? orders.map(order => `<article><div><strong>${escapeHtml(armyName(state.armies[order.armyId] || { id: order.armyId }))}</strong><b>${orderStatusLabel(order.status)}</b></div><p>${escapeHtml(cityName(order.originCityId))} → ${escapeHtml(cityName(order.targetCityId))} · ${escapeHtml(taskLabel(order.task))}</p><small>第 ${order.turn} 月 · 执行度 ${order.execution}% · ${escapeHtml(order.text)}</small></article>`).join("") : '<p class="empty-state">尚无军团命令。圣旨写明诸侯、城池和进攻或驰援等动作后，会在此建立军务记录。</p>'}</div></section>`;
+    return `<section><div class="army-section-head"><div><span class="section-kicker">行军态势</span><h3>当前行动</h3></div><small>每月通过一段主要军路；缺粮或高军压会造成停滞与减员</small></div><div class="movement-list">${active.length ? active.map(army => `<article class="movement-card"><div><strong>${escapeHtml(armyName(army))}</strong><b>${escapeHtml(statusLabel(army.status))}</b></div><p>${escapeHtml(cityName(army.cityId))} → ${escapeHtml(cityName(army.targetCityId))}</p><div class="movement-route">${army.routeIds.length ? army.routeIds.map((id, index) => `<span class="${index < army.routeIndex ? "passed" : index === army.routeIndex ? "current" : ""}">${escapeHtml(routeName(id))}</span>`).join("") : "<span>已抵达目标区域</span>"}</div><small>预计还需 ${army.eta} 个月 · 粮秣 ${Math.round(army.supply)} · 士气 ${Math.round(army.morale)}</small></article>`).join("") : '<p class="empty-state">当前没有跨城行军的军团。</p>'}</div><div class="army-section-head order-history-head"><div><span class="section-kicker">诏令军务</span><h3>命令记录</h3></div></div><div class="army-order-list">${orders.length ? orders.map(order => `<article><div><strong>${escapeHtml(armyName(state.armies[order.armyId] || { id: order.armyId }))}</strong><b>${escapeHtml(orderStatusLabel(order.status))}</b></div><p>${escapeHtml(cityName(order.originCityId))} → ${escapeHtml(cityName(order.targetCityId))} · ${escapeHtml(taskLabel(order.task))}</p><small>第 ${order.turn} 月 · 执行度 ${order.execution}% · ${escapeHtml(order.text)}</small></article>`).join("") : '<p class="empty-state">尚无军团命令。圣旨写明诸侯、城池和进攻或驰援等动作后，会在此建立军务记录。</p>'}</div></section>`;
   }
 
   function renderBattles() {
@@ -1970,7 +1988,7 @@
   }
 
   function previewLordIntent(intentId, kind, acknowledgeBreach = false) {
-    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const strategy = readStrategyState(), core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const intent = strategy?.commandChain?.intents?.find(i => i.id === intentId);
     if (!intent || intent.source !== "autonomous" || intent.status !== "proposed" || intent.turn !== core?.turn || core.ended) return { ok: false, message: "军议已结算或不属本月。" };
     const army = state?.armies?.[intent.armyId];
@@ -1983,7 +2001,7 @@
   }
 
   function previewCoalitionPlan(planId, kind) {
-    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const strategy = readStrategyState(), core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const plan = strategy?.allianceDiplomacy?.plans.find(p => p.id === planId), pact = strategy?.promises.find(p => p.id === plan?.pactId);
     if (!plan || plan.turn !== core?.turn || core.ended || !window.XianAllianceDiplomacy.active(pact, core.turn)
       || !plan.members.some(m => m.status === "proposed")) return { ok: false, message: "共同军议已结算或盟约已结束。" };
@@ -1997,7 +2015,7 @@
   }
 
   function resolveCoalitionPlan(planId, kind) {
-    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const strategy = readStrategyState(), core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const plan = strategy?.allianceDiplomacy?.plans.find(p => p.id === planId), pact = strategy?.promises.find(p => p.id === plan?.pactId);
     if (!plan || plan.turn !== core?.turn || core.ended || !window.XianAllianceDiplomacy.active(pact, core.turn)) return false;
     if (kind !== "autonomous" && (!plan.intervention || plan.intervention.kind !== kind || !core.appliedReceipts?.includes(plan.intervention.receiptId))) return false;
@@ -2017,7 +2035,7 @@
   }
 
   function resolveLordIntent(intentId, kind) {
-    const strategy = readStrategyState(), core = window.XianEmperorGame?.getState?.() || coreState;
+    const strategy = readStrategyState(), core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
     const intent = strategy?.commandChain?.intents?.find(i => i.id === intentId);
     if (!intent || intent.source !== "autonomous" || intent.status !== "proposed" || intent.turn !== core?.turn || core.ended) return false;
     if (kind !== "autonomous" && (!intent.intervention || intent.intervention.kind !== kind || !core.appliedReceipts?.includes(intent.intervention.receiptId))) return false;
@@ -2048,7 +2066,7 @@
       if (!state || !coreState || coreState.ended || !promise?.contract) return false;
       const existing = state.orders.find(item => item.sourcePromiseId === promise.id);
       if (existing) return existing;
-      const core = window.XianEmperorGame?.getState?.() || coreState;
+      const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || coreState;
       if (core.turn > promise.deadlineTurn) return false;
       const issued = state.orders.find(item => !promise.contract.initialOrderIds.includes(item.id) && !item.sourcePromiseId && item.owner === promise.lordId && item.targetCityId === promise.contract.targetCityId && item.turn >= promise.createdTurn && ["support", "defend"].includes(item.task));
       if (issued) { issued.sourcePromiseId = promise.id; saveState(); return issued; }
@@ -2081,6 +2099,8 @@
     applyCampaignAssignment,
     applyCausalEffects,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
+    // 与 getState 内容相同，但返回冻结的共享快照，供只读调用方避免重复解析。
+    peekState,
     open: openOverlay,
   });
 })();

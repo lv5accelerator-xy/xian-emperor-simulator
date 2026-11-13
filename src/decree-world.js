@@ -278,7 +278,7 @@
     return [...matches];
   }
 
-  function detectLords(text, core = window.XianEmperorGame?.getState?.() || safeParse(localStorage.getItem(GAME_SAVE_KEY))) {
+  function detectLords(text, core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || safeParse(localStorage.getItem(GAME_SAVE_KEY))) {
     if (window.XianCharacterAvailability && core) return window.XianCharacterAvailability.diplomaticTargets(text, core);
     const matches = new Set();
     DATA.lords.forEach(lord => {

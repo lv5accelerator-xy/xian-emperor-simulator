@@ -30,7 +30,7 @@ try{
    for(let step=0;step<2;step++){const a=nextAction(await core(),setup.route,step);if(a)await act(a);}
    await page.locator("#end-turn-btn").click();assert.match(await page.locator("#modal-title").innerText(),/预检/);
    if(c.turn===9){const before=signature(await core());await page.locator("#modal-cancel").click();assert.deepEqual(signature(await core()),before);await page.locator("#end-turn-btn").click();}
-   await page.locator("#modal-confirm").click();await closeReport();
+   await page.locator("#modal-confirm").click();await page.waitForFunction(()=>!document.getElementById("settlement-progress"));await closeReport();
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`no horizontal overflow ${setup.route} turn${c.turn}`);
   }
   const final=await core();assert.equal(final.turn,12);assert.equal(final.story220.completedNormally,true);assert.deepEqual(nodes,[3,6,9,11]);assert.ok(final.story220.consequences.every(x=>x.status!=="pending"));

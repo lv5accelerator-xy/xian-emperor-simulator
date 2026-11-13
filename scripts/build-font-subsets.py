@@ -34,7 +34,10 @@ def collect_runtime_characters() -> set[int]:
     characters.update(chr(codepoint) for codepoint in range(0x20, 0x7F))
     characters.update(chr(codepoint) for codepoint in range(0x3000, 0x3040))
     characters.update(chr(codepoint) for codepoint in range(0xFF01, 0xFF5F))
-    return {ord(character) for character in characters if not character.isspace()}
+    # 换行、制表等控制类空白不需要字形；但半角空格与全角空格是正文字符，
+    # 缺了它们浏览器会为一个空格回退到下一个字体，甚至因此下载整份回退字体。
+    kept_spaces = {" ", "\u3000"}
+    return {ord(character) for character in characters if character in kept_spaces or not character.isspace()}
 
 
 def build_subset(source: Path, destination: Path, codepoints: set[int]) -> None:

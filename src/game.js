@@ -325,7 +325,7 @@
     el["faction-list"].innerHTML = DATA.factions
       .map(
         (faction) => `
-          <button class="faction-row" type="button" data-faction-id="${faction.id}">
+          <button class="faction-row" type="button" data-faction-id="${escapeHtml(faction.id)}">
             <span class="faction-dot" style="--faction-color:${faction.color}"></span>
             <span class="faction-copy">
               <strong>${faction.name}</strong>
@@ -346,15 +346,15 @@
         <span>当前建议</span><strong>裁决奏报后生成</strong><small>系统会根据国库、宫禁与警戒推荐一项行动。</small>
       </button><div class="action-advice-tools"><button type="button" data-action-compare="" hidden>比较方案</button><details data-action-advice-details="" hidden><summary>详细依据</summary><p></p></details></div></div>
       <div class="action-category-tabs" role="tablist" aria-label="常用行动分类">
-        ${ACTION_CATEGORIES.map(category => `<button type="button" role="tab" data-action-category-tab="${category.id}" aria-selected="false"><i>${category.icon}</i><span>${category.name}</span></button>`).join("")}
+        ${ACTION_CATEGORIES.map(category => `<button type="button" role="tab" data-action-category-tab="${escapeHtml(category.id)}" aria-selected="false"><i>${category.icon}</i><span>${category.name}</span></button>`).join("")}
       </div>
       <div class="action-category-groups">
         ${ACTION_CATEGORIES.map(category => `
-          <section class="action-category-group" data-action-category-group="${category.id}" aria-label="${category.name}行动">
+          <section class="action-category-group" data-action-category-group="${escapeHtml(category.id)}" aria-label="${category.name}行动">
             <header><strong>${category.name}</strong><small>${category.note}</small></header>
             <div class="action-category-grid">
               ${commonActions.filter(action => action.category === category.id).map(action => `
-                <button class="action-button" type="button" data-action-id="${action.id}">
+                <button class="action-button" type="button" data-action-id="${escapeHtml(action.id)}">
                   <span class="action-seal">${action.icon}</span>
                   <span><strong>${action.name}</strong><small>${action.description}</small></span>
                 </button>`).join("")}
@@ -617,13 +617,13 @@
         const value = state.stats[key];
         const status = getStatStatus(key, value);
         return `
-          <article class="stat-card ${status.className}" title="${meta.description}" data-stat-key="${key}">
+          <article class="stat-card ${escapeHtml(status.className ?? "")}" title="${escapeHtml(meta.description)}" data-stat-key="${escapeHtml(key)}">
             <div class="stat-heading">
               <span class="stat-seal">${meta.icon}</span>
               <span>${meta.name}</span>
               <strong>${Math.round(value)}</strong>
             </div>
-            <div class="stat-track" role="progressbar" aria-label="${meta.name}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(
+            <div class="stat-track" role="progressbar" aria-label="${escapeHtml(meta.name)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(
           value
         )}">
               <span style="width:${clamp(value, 0, 100)}%"></span>
@@ -650,7 +650,7 @@
 
   function renderStatRemedy(key, value) {
     const remedy = getStatRemedy(key, value);
-    return remedy ? `<button type="button" data-stat-remedy="${remedy.actionId}" title="前往常用行动处理${DATA.statMeta[key]?.name || key}">${remedy.label}<span aria-hidden="true">→</span></button>` : "";
+    return remedy ? `<button type="button" data-stat-remedy="${escapeHtml(remedy.actionId)}" title="前往常用行动处理${DATA.statMeta[key]?.name || key}">${remedy.label}<span aria-hidden="true">→</span></button>` : "";
   }
 
   function goToStatRemedy(actionId) {
@@ -733,7 +733,7 @@
         const faction = DATA.factions.find((item) => item.id === character.faction);
         const relation = state.relations[character.id] ?? 50;
         return `
-          <button class="character-card" type="button" data-character-id="${character.id}">
+          <button class="character-card" type="button" data-character-id="${escapeHtml(character.id)}">
             <span class="portrait-mark" style="--portrait-color:${faction?.color || "#777"}">${character.initials}</span>
             <span class="character-copy">
               <strong>${character.name}</strong>
@@ -870,7 +870,7 @@
       .slice(0, MAX_REPORTS)
       .map(
         (report) => `
-          <article class="report-item ${report.type}">
+          <article class="report-item ${escapeHtml(report.type ?? "")}">
             <div>
               <strong>${escapeHtml(report.title)}</strong>
               <time>${escapeHtml(report.date)}</time>
@@ -1070,7 +1070,7 @@
         <p class="modal-note">召见用途随政治身份变化：旧臣争官心、掌权集团换安全、外镇争制衡；同月国家收益共用次数，人物关系单独计次。</p>
         <label class="field-label">召见对象</label>
         <select id="modal-character-select" class="modal-select">
-          ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
+          ${people.map((p) => `<option value="${escapeHtml(p.id)}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">召见方式</label>
         <div class="option-cards">
@@ -1104,7 +1104,7 @@
         <p class="modal-note">官爵是汉廷仍可支配的稀缺政治资源。过度封赏会使官爵贬值。</p>
         <label class="field-label">对象</label>
         <select id="modal-character-select" class="modal-select">
-          ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
+          ${people.map((p) => `<option value="${escapeHtml(p.id)}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">方式</label>
         <select id="modal-appointment-type" class="modal-select">
@@ -1144,7 +1144,7 @@
         <p class="modal-note danger-note">密令可以改变格局，也最容易导致宫廷灾难。泄密风险会在每月结算时接受检验。</p>
         <label class="field-label">联络对象</label>
         <select id="modal-character-select" class="modal-select">
-          ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
+          ${people.map((p) => `<option value="${escapeHtml(p.id)}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">密令目标</label>
         <select id="modal-secret-type" class="modal-select">
@@ -1304,7 +1304,7 @@
         <p class="modal-note">以诏书、官爵或使者建立外部制衡。曹氏通常会关注此类往来。</p>
         <label class="field-label">外镇对象</label>
         <select id="modal-character-select" class="modal-select">
-          ${people.map((p) => `<option value="${p.id}">${p.name}｜${p.title}</option>`).join("")}
+          ${people.map((p) => `<option value="${escapeHtml(p.id)}">${p.name}｜${p.title}</option>`).join("")}
         </select>
         <label class="field-label">交涉方式</label>
         <div class="option-cards">
@@ -1646,7 +1646,7 @@
           return requestEndTurn();
         }
         closeModal();
-        endTurn();
+        runSettlementInFrames();
       },
     });
   }
@@ -1677,9 +1677,15 @@
     } }));
   }
 
-  function endTurn() {
-    if (window.__xianFullSaveImporting || !state || state.ended) return;
-    if (!state.eventResolved) return showToast("请先裁决本月奏报。", "warning");
+  function canSettleMonth() {
+    if (window.__xianFullSaveImporting || !state || state.ended) return false;
+    if (!state.eventResolved) { showToast("请先裁决本月奏报。", "warning"); return false; }
+    return true;
+  }
+
+  // 月末结算的全部步骤。每个 yield 是一个可以让出主线程的安全点：其前一阶段已经提交，
+  // 产出值是下一阶段的名称。endTurn 同步跑完全部步骤；界面入口则逐帧推进，避免长时间冻结。
+  function* settlementSteps() {
     const short = window.XianShortChallenges?.getActiveStatus?.(state);
     settlementLedger = state.pendingSettlement?.gameCreatedAt === state.createdAt && state.pendingSettlement.turn === state.turn
       ? state.pendingSettlement : window.XianMonthlySafety.beginSettlement(state, short?.checks || []);
@@ -1688,14 +1694,17 @@
       if (state.monthlySettledTurn < state.turn) {
         settlementPhase("旧事与地方回响", () => document.dispatchEvent(new CustomEvent("xian:before-month-end", { detail: { turn: state.turn, createdAt: state.createdAt } })));
         if (state.ended) return;
+        yield "固定用度与泄密检验";
         applyMonthlyDynamics();
         if (checkImmediateEnding()) return;
         state.monthlySettledTurn = state.turn;
         settlementPhase("月末即时反馈", () => saveGame(true));
       }
+      yield "天下局势";
       for (const [system, label] of [[window.XianWorldSystem, "天下局势"], [window.XianStrategyNetwork, "州郡与军路"], [window.XianArmySystem, "军团结算"]]) {
         settlementPhase(label, () => system?.settleMonth?.());
         if (state.ended) return;
+        yield label === "军团结算" ? "季度御题与后续回响" : label === "天下局势" ? "州郡与军路" : "军团结算";
       }
       if (checkImmediateEnding()) return;
       settlementPhase("季度御题与后续回响", () => document.dispatchEvent(new CustomEvent("xian:month-ended", { detail: { turn: state.turn, createdAt: state.createdAt } })));
@@ -1704,6 +1713,7 @@
         saveGame(true);
         if (checkImmediateEnding()) return;
       }
+      yield "终值核验";
       settlementPhase("终值核验", () => document.dispatchEvent(new CustomEvent("xian:month-settled", { detail: { turn: state.turn, createdAt: state.createdAt } })));
       if (state.ended) return;
       finalizeSettlement();
@@ -1711,6 +1721,100 @@
       advanceCalendar(); state.turn += 1; prepareTurn();
       saveGame(true); renderAll(); window.scrollTo({ top: 0, behavior: "smooth" });
     } finally { settlementLedger = null; settlementStage = ""; }
+  }
+
+  let settlementRun = null, settlementInputGuarded = false;
+  // 连续运行超过这个时长才让出一帧；测试可用 window.__xianSettlementSliceMs 改写以强制逐段推进。
+  const settlementSliceMs = () => Number(window.__xianSettlementSliceMs ?? 250);
+
+  // 同步结算：公开接口、测试与脚本使用，一次调用内完成全部阶段。
+  function endTurn() {
+    if (settlementRun || !canSettleMonth()) return;
+    for (const stage of settlementSteps()) void stage;
+  }
+
+  function settlementIndicator(label) {
+    let node = document.getElementById("settlement-progress");
+    if (label === null) { node?.remove?.(); return; }
+    if (!node) {
+      node = document.createElement("div");
+      node.id = "settlement-progress";
+      node.setAttribute("role", "status");
+      node.setAttribute("aria-live", "polite");
+      Object.assign(node.style, { position: "fixed", inset: "0", zIndex: "2147483000", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(16,12,10,.62)", color: "var(--text, #eee2cb)", cursor: "progress" });
+      const card = document.createElement("div");
+      Object.assign(card.style, { display: "flex", alignItems: "center", gap: "14px", padding: "18px 26px", borderRadius: "10px",
+        background: "var(--panel, #211713)", border: "1px solid var(--border, rgba(222,185,105,.25))", boxShadow: "0 18px 48px rgba(0,0,0,.45)", maxWidth: "86vw" });
+      const seal = document.createElement("span");
+      seal.setAttribute("aria-hidden", "true");
+      Object.assign(seal.style, { width: "22px", height: "22px", flex: "none", borderRadius: "50%", border: "3px solid var(--gold, #d4ad5d)", borderTopColor: "transparent" });
+      // transform 动画由合成线程驱动，主线程忙于结算时仍会转动。
+      if (!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) seal.animate?.([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], { duration: 900, iterations: Infinity });
+      const text = document.createElement("span");
+      text.id = "settlement-progress-text";
+      card.appendChild(seal); card.appendChild(text); node.appendChild(card);
+      document.body.appendChild(node);
+    }
+    const text = document.getElementById("settlement-progress-text") || node.lastChild?.lastChild;
+    if (text) text.textContent = `月末结算中 · ${label}`;
+  }
+
+  function blockInputDuringSettlement(event) {
+    if (!settlementRun) return;
+    event.preventDefault(); event.stopPropagation();
+  }
+
+  function drainSettlement() {
+    const run = settlementRun;
+    if (!run) return;
+    try { for (const stage of run.steps) void stage; }
+    finally { run.finish(); }
+  }
+
+  // 界面入口：先让“结算中”提示绘制出来，再每帧推进一个阶段。阶段之间只让出主线程，不改变阶段顺序与内容。
+  function runSettlementInFrames() {
+    if (settlementRun || !canSettleMonth()) return;
+    const steps = settlementSteps();
+    const run = settlementRun = { steps };
+    // 动画帧回调在本帧绘制之前执行：回调里更新的提示会随该帧绘出，下一阶段在下一帧开始。
+    // 只有第一次需要先等提示绘制完成（两帧），其后每阶段一帧。
+    const nextFrame = (callback, paintFirst = false) => {
+      let done = false;
+      const once = () => { if (done) return; done = true; clearTimeout(fallback); callback(); };
+      // 后台标签页不触发动画帧，用定时器兜底，避免结算停在半途。
+      const fallback = setTimeout(once, 250);
+      const raf = window.requestAnimationFrame;
+      if (typeof raf !== "function") once();
+      else if (paintFirst) raf(() => raf(once));
+      else raf(once);
+    };
+    const finish = () => {
+      if (settlementRun === run) settlementRun = null;
+      settlementIndicator(null);
+    };
+    run.finish = finish;
+    // 每让出一帧都要多等一次绘制，慢设备上尤其贵。所以只在连续运行超过预算后才让出：
+    // 快设备一口气跑完，慢设备才分段并更新阶段提示。
+    const advance = () => {
+      const started = Date.now();
+      let step;
+      try { do { step = steps.next(); } while (!step.done && Date.now() - started < settlementSliceMs()); }
+      catch (error) { finish(); throw error; }
+      if (step.done) return finish();
+      settlementIndicator(step.value);
+      nextFrame(advance);
+    };
+    // 监听只注册一次，是否生效由 settlementRun 决定。
+    if (!settlementInputGuarded) {
+      settlementInputGuarded = true;
+      document.addEventListener("keydown", blockInputDuringSettlement, true);
+      // 页面被隐藏或关闭时不能把结算留在半途：同步跑完剩余阶段，与一次性结算的落盘结果相同。
+      window.addEventListener?.("pagehide", drainSettlement);
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") drainSettlement(); });
+    }
+    settlementIndicator("旧事与地方回响");
+    nextFrame(advance, true);
   }
 
   function applyMonthlyDynamics() {
@@ -2117,6 +2221,8 @@
   }
 
   function loadGame(silent = false) {
+    // 读取中途失败时退回原先的局面，不把界面留在半载入的状态。
+    const previous = state;
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return false;
@@ -2131,13 +2237,20 @@
       return true;
     } catch (error) {
       console.error(error);
-      showToast("存档损坏或版本不兼容。", "error");
+      state = previous;
+      showToast("存档损坏或版本不兼容。可在“存档备份”中恢复最近的完整备份。", "error");
       return false;
     }
   }
 
+  // 只拒绝必然无法运行的形状（渲染奏报、史书时会直接抛错）；字段缺失仍交给 migrateSave 补齐，不因此拒收旧档。
   function validateSave(save) {
-    return Boolean(save && typeof save === "object" && save.stats && save.hidden && Array.isArray(save.chronicle));
+    const record = value => Boolean(value) && typeof value === "object" && !Array.isArray(value);
+    return record(save) && record(save.stats) && record(save.hidden)
+      && Array.isArray(save.chronicle) && save.chronicle.every(record)
+      && (save.reports === undefined || (Array.isArray(save.reports) && save.reports.every(record)))
+      && (save.relations == null || record(save.relations))
+      && (save.turn === undefined || Number.isFinite(Number(save.turn)));
   }
 
   function migrateSave(save, importedShort = null) {
@@ -2587,6 +2700,18 @@
     return true;
   }
 
+  function deepFreeze(value) {
+    if (value && typeof value === "object" && !Object.isFrozen(value)) { Object.freeze(value); for (const key of Object.keys(value)) deepFreeze(value[key]); }
+    return value;
+  }
+  let peekRawCache = null, peekSnapshotCache = null;
+  function peekState() {
+    if (!state) return null;
+    const raw = JSON.stringify(state);
+    if (raw !== peekRawCache) { peekSnapshotCache = deepFreeze(JSON.parse(raw)); peekRawCache = raw; }
+    return peekSnapshotCache;
+  }
+
   window.XianEmperorGame = Object.freeze({
     commit,
     getDeadline,
@@ -2624,5 +2749,7 @@
     getRandomKey,
     updateCausality,
     getState: () => state ? JSON.parse(JSON.stringify(state)) : null,
+    // 与 getState 内容相同，但返回冻结的共享快照；只读调用方用它避免每次深拷贝整个核心状态。
+    peekState,
   });
 })();

@@ -131,7 +131,7 @@
   }
 
   function syncFromCore() {
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (!core || core.ended || migrating || core.causality?.participationVersion === 1) return;
     migrating = true;
     try { commit((next, current) => migrateParticipation(next, current)); }
@@ -564,7 +564,7 @@
 
   function render() {
     const root = document.getElementById("causal-court-panel");
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (!root) return;
     if (!core || core.ended) {
       root.innerHTML = "";
@@ -621,7 +621,7 @@
   }
 
   function showHistory() {
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     const history = normalize(core?.causality).history.slice(0, 12);
     const body = history.length
       ? `<section class="causal-history-list">${history.map(item => `<article><span>第 ${item.turn} 月</span><div><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.text)}</p></div></article>`).join("")}</section>`
@@ -710,6 +710,6 @@
     selectEventId,
     buildMonthlyConsequences,
     syncFromCore,
-    getState: () => normalize(window.XianEmperorGame?.getState?.()?.causality),
+    getState: () => normalize((window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.()?.causality),
   });
 })();

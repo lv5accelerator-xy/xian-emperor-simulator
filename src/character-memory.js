@@ -86,7 +86,7 @@
     const available = !window.XianCharacterAvailability || window.XianCharacterAvailability.isAvailable(person.id, core);
     const attitude = available ? relation >= 72 ? "深信" : relation >= 55 ? "愿意合作" : relation >= 36 ? "观望" : "心存芥蒂" : "留档 · 当前不可受命";
     return `<article class="memory-person">
-      <header><div class="memory-avatar">${escapeHtml(person.initials || person.name.slice(0, 1))}</div><div><strong>${escapeHtml(person.name)}</strong><span>${attitude} · 记忆 ${memories.length}</span></div><button type="button" data-memory-consult="${person.id}" ${!available || Number(core?.actionPoints || 0) <= 0 || !core?.eventResolved ? "disabled" : ""}>问策</button></header>
+      <header><div class="memory-avatar">${escapeHtml(person.initials || person.name.slice(0, 1))}</div><div><strong>${escapeHtml(person.name)}</strong><span>${attitude} · 记忆 ${memories.length}</span></div><button type="button" data-memory-consult="${escapeHtml(person.id)}" ${!available || Number(core?.actionPoints || 0) <= 0 || !core?.eventResolved ? "disabled" : ""}>问策</button></header>
       <div class="memory-balance"><i style="--memory:${Math.max(4, Math.min(96, 50 + balance * 7))}%"></i></div>
       ${memories.length ? `<div class="memory-latest"><span>${escapeHtml(memories[0].date)}</span><strong>${escapeHtml(memories[0].title)}</strong><p>${escapeHtml(memories[0].text)}</p></div>` : '<p class="memory-none">尚无足以被此人记住的裁决。</p>'}
     </article>`;

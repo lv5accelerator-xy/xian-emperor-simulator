@@ -617,7 +617,7 @@
     if (!list) return;
     if (chip) chip.textContent = calculateCourtReach(lastCoreState);
     const entries = worldState?.worldLog?.slice(0, 4) || [];
-    list.innerHTML = entries.length ? entries.map((entry) => `<button class="world-brief-item ${entry.type}" type="button" data-world-entry-region="${entry.regionId || ""}"><span>${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><strong>${escapeHtml(entry.date)}</strong><p>${escapeHtml(entry.text)}</p></button>`).join("") : '<p class="empty-state">开启新局后，尚书台会汇总各地急递。</p>';
+    list.innerHTML = entries.length ? entries.map((entry) => `<button class="world-brief-item ${escapeHtml(entry.type ?? "")}" type="button" data-world-entry-region="${escapeHtml(entry.regionId || "")}"><span>${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><strong>${escapeHtml(entry.date)}</strong><p>${escapeHtml(entry.text)}</p></button>`).join("") : '<p class="empty-state">开启新局后，尚书台会汇总各地急递。</p>';
     list.querySelectorAll("[data-world-entry-region]").forEach((button) => button.addEventListener("click", () => openOverlay("world", { regionId: button.dataset.worldEntryRegion })));
   }
 
@@ -647,7 +647,7 @@
     const panel = document.createElement("section");
     panel.id = "character-four-dim-panel";
     panel.className = "character-four-dim-panel";
-    panel.innerHTML = `<div class="four-dim-title"><div><span class="section-kicker">政治人格</span><h4>忠诚 · 恐惧 · 野心 · 利益</h4></div><span class="archetype-chip">${escapeHtml(classifyCharacter(metrics, profile))}</span></div><div class="four-dim-grid">${Object.keys(DATA.metricMeta).map((key) => renderMetricBar(key, metrics[key])).join("")}</div><p class="political-assessment">${escapeHtml(buildCharacterAssessment(characterId, metrics, profile))}</p><div class="character-source-row"><span>最近变化：${escapeHtml(metrics.lastReason || "暂无")}</span><button type="button" data-character-sources="${characterId}">查阅人物史料</button></div>`;
+    panel.innerHTML = `<div class="four-dim-title"><div><span class="section-kicker">政治人格</span><h4>忠诚 · 恐惧 · 野心 · 利益</h4></div><span class="archetype-chip">${escapeHtml(classifyCharacter(metrics, profile))}</span></div><div class="four-dim-grid">${Object.keys(DATA.metricMeta).map((key) => renderMetricBar(key, metrics[key])).join("")}</div><p class="political-assessment">${escapeHtml(buildCharacterAssessment(characterId, metrics, profile))}</p><div class="character-source-row"><span>最近变化：${escapeHtml(metrics.lastReason || "暂无")}</span><button type="button" data-character-sources="${escapeHtml(characterId)}">查阅人物史料</button></div>`;
     modalBody.appendChild(panel);
     panel.querySelector("[data-character-sources]")?.addEventListener("click", () => openOverlay("sources", { sourceFilter: profile.sourceIds || [], characterId }));
   }
@@ -741,25 +741,25 @@
   function renderRegionTile(region, runtime) {
     const owner = runtime?.controller || region.controller;
     const controller = { ...(DATA.controllers[owner] || DATA.controllers.fragmented), ...(window.XianCharacterAvailability ? { name: window.XianCharacterAvailability.faction(owner, lastCoreState).name } : {}) };
-    return `<button class="map-region ${region.area}${overlayState.regionId === region.id ? " selected" : ""}" type="button" data-region-id="${region.id}" style="--controller:${controller.color};--controller-text:${controller.text}"><span class="region-short">${region.short}</span><strong>${region.name}</strong><small>${controller.name}</small><i title="地区稳定">稳 ${Math.round(runtime?.stability ?? region.stability)}</i></button>`;
+    return `<button class="map-region ${escapeHtml(region.area ?? "")}${overlayState.regionId === region.id ? " selected" : ""}" type="button" data-region-id="${escapeHtml(region.id)}" style="--controller:${controller.color};--controller-text:${controller.text}"><span class="region-short">${region.short}</span><strong>${region.name}</strong><small>${controller.name}</small><i title="地区稳定">稳 ${Math.round(runtime?.stability ?? region.stability)}</i></button>`;
   }
 
   function renderWorldLogEntry(entry) {
     const lord = DATA.lords.find((item) => item.id === entry.lordId);
     const region = DATA.regions.find((item) => item.id === entry.regionId);
-    return `<article class="world-log-entry ${entry.type}"><span class="world-log-icon">${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><div><div><strong>${escapeHtml(entry.lordName || lord?.name || (entry.lordId === "court" ? "汉廷" : "天下"))}</strong><time>${escapeHtml(entry.date)}</time></div><p>${escapeHtml(entry.text)}</p><small>${escapeHtml(region?.name || "全国")} · ${entry.mode === "historical-anchor" ? "历史锚点" : entry.type === "military" ? "动向推演；出兵与战果须查诸侯军议及军团回执" : "本局推演"}</small></div></article>`;
+    return `<article class="world-log-entry ${escapeHtml(entry.type ?? "")}"><span class="world-log-icon">${entry.mode === "historical-anchor" ? "史" : worldEntryIcon(entry.type)}</span><div><div><strong>${escapeHtml(entry.lordName || lord?.name || (entry.lordId === "court" ? "汉廷" : "天下"))}</strong><time>${escapeHtml(entry.date)}</time></div><p>${escapeHtml(entry.text)}</p><small>${escapeHtml(region?.name || "全国")} · ${entry.mode === "historical-anchor" ? "历史锚点" : entry.type === "military" ? "动向推演；出兵与战果须查诸侯军议及军团回执" : "本局推演"}</small></div></article>`;
   }
 
   function renderLordCard(lord) {
     const runtime = worldState?.lords?.[lord.id] || lord;
-    return `<article class="lord-card" data-lord-id="${lord.id}"><div class="lord-card-head"><div><strong>${lord.name}</strong><small>${lord.title} · ${lord.seat}</small></div><b>${Math.round(runtime.power)}</b></div>${renderCompactGauge("军政实力", runtime.power)}${renderCompactGauge("朝廷需求", runtime.courtNeed)}${renderCompactGauge("扩张倾向", runtime.expansion)}<p>${escapeHtml(runtime.lastAction || lord.agenda.join("、"))}</p></article>`;
+    return `<article class="lord-card" data-lord-id="${escapeHtml(lord.id)}"><div class="lord-card-head"><div><strong>${lord.name}</strong><small>${lord.title} · ${lord.seat}</small></div><b>${Math.round(runtime.power)}</b></div>${renderCompactGauge("军政实力", runtime.power)}${renderCompactGauge("朝廷需求", runtime.courtNeed)}${renderCompactGauge("扩张倾向", runtime.expansion)}<p>${escapeHtml(runtime.lastAction || lord.agenda.join("、"))}</p></article>`;
   }
 
   function renderCompactGauge(label, value) { return `<div class="compact-gauge"><span>${label}</span><i><b style="width:${clamp(value, 0, 100)}%"></b></i><em>${Math.round(value)}</em></div>`; }
 
   function renderPeoplePanel() {
     const characters = window.XianCharacterAvailability?.allCharacters() || window.GAME_DATA?.characters || [];
-    return `<div class="people-intro"><p>旧版单一“关系值”仍用于兼容核心规则；本页增加忠诚、恐惧、野心、利益四维政治人格。四项数值会随召见、封赏、密令、曹氏警戒与天下威望变化。</p></div><div class="political-character-grid">${Object.entries(characterProfiles()).filter(([id]) => id !== "liu_xie" && (!window.XianCharacterAvailability || window.XianCharacterAvailability.isAvailable(id, lastCoreState))).map(([id, profile]) => { const character = characters.find((item) => item.id === id); const metrics = worldState?.characters?.[id] || profile; return `<button class="political-character-card" type="button" data-world-character="${id}"><div class="political-character-head"><span>${escapeHtml(character?.initials || character?.name?.slice(0, 1) || "人")}</span><div><strong>${escapeHtml(character?.name || id)}</strong><small>${escapeHtml(character?.title || profile.archetype)}</small></div><b>${escapeHtml(classifyCharacter(metrics, profile))}</b></div><div class="political-mini-bars">${Object.keys(DATA.metricMeta).map((key) => `<div><span>${DATA.metricMeta[key].short}</span><i><b style="width:${clamp(metrics[key], 0, 100)}%"></b></i><em>${Math.round(metrics[key])}</em></div>`).join("")}</div><p>${escapeHtml(buildCharacterAssessment(id, metrics, profile))}</p></button>`; }).join("")}</div>`;
+    return `<div class="people-intro"><p>旧版单一“关系值”仍用于兼容核心规则；本页增加忠诚、恐惧、野心、利益四维政治人格。四项数值会随召见、封赏、密令、曹氏警戒与天下威望变化。</p></div><div class="political-character-grid">${Object.entries(characterProfiles()).filter(([id]) => id !== "liu_xie" && (!window.XianCharacterAvailability || window.XianCharacterAvailability.isAvailable(id, lastCoreState))).map(([id, profile]) => { const character = characters.find((item) => item.id === id); const metrics = worldState?.characters?.[id] || profile; return `<button class="political-character-card" type="button" data-world-character="${escapeHtml(id)}"><div class="political-character-head"><span>${escapeHtml(character?.initials || character?.name?.slice(0, 1) || "人")}</span><div><strong>${escapeHtml(character?.name || id)}</strong><small>${escapeHtml(character?.title || profile.archetype)}</small></div><b>${escapeHtml(classifyCharacter(metrics, profile))}</b></div><div class="political-mini-bars">${Object.keys(DATA.metricMeta).map((key) => `<div><span>${DATA.metricMeta[key].short}</span><i><b style="width:${clamp(metrics[key], 0, 100)}%"></b></i><em>${Math.round(metrics[key])}</em></div>`).join("")}</div><p>${escapeHtml(buildCharacterAssessment(id, metrics, profile))}</p></button>`; }).join("")}</div>`;
   }
 
   function renderTimelinePanel() {
@@ -772,14 +772,14 @@
   function renderHistoricalTimelineItem(item, currentYear, currentMonth) {
     const past = item.year < currentYear || (item.year === currentYear && item.month <= currentMonth);
     const current = item.year === currentYear && item.month === currentMonth;
-    return `<article class="historical-timeline-item ${past ? "past" : "future"} ${current ? "current" : ""}"><time>${item.year}年${item.month ? `${item.month}月` : ""}</time><div><h4>${escapeHtml(item.title)}</h4><p>${escapeHtml(item.summary)}</p><small>${escapeHtml(item.gameNote)}</small></div><button type="button" data-timeline-sources="${item.id}">史料</button></article>`;
+    return `<article class="historical-timeline-item ${past ? "past" : "future"} ${current ? "current" : ""}"><time>${item.year}年${item.month ? `${item.month}月` : ""}</time><div><h4>${escapeHtml(item.title)}</h4><p>${escapeHtml(item.summary)}</p><small>${escapeHtml(item.gameNote)}</small></div><button type="button" data-timeline-sources="${escapeHtml(item.id)}">史料</button></article>`;
   }
 
   function renderSourcesPanel() {
     let sources = DATA.sources;
     if (Array.isArray(overlayState.sourceFilter) && overlayState.sourceFilter.length > 0) { const filter = new Set(overlayState.sourceFilter); sources = DATA.sources.filter((source) => filter.has(source.id)); }
     const event = [...(window.GAME_DATA?.fixedEvents || []), ...(window.GAME_DATA?.randomEvents || []), ...Object.values(window.GAME_DATA?.scenarioEvents || {})].find((item) => item.id === lastCoreState?.currentEventId);
-    return `${overlayState.sourceFilter ? `<div class="source-context"><strong>${event ? `当前事件：${escapeHtml(event.title)}` : "筛选史料"}</strong><p>以下资料用于提供历史背景；游戏的数值、对话与具体因果属于设计性推演。</p><button type="button" data-clear-source-filter>查看全部史料</button></div>` : `<div class="source-context"><strong>引用原则</strong><p>正史与编年史用于确定人物、时间与大势；存在分歧或细节不足之处，游戏会明确标注“游戏化综合”。</p></div>`}<div class="source-grid">${sources.map((source) => `<article class="source-card"><div><span>${escapeHtml(source.reliability)}</span><h3>${escapeHtml(source.work)}</h3><h4>${escapeHtml(source.chapter)}</h4></div><p>${escapeHtml(source.scope)}</p><footer><small>${escapeHtml(source.author)}</small><a href="${source.url}" target="_blank" rel="noopener noreferrer">打开原文 ↗</a></footer></article>`).join("")}</div>`;
+    return `${overlayState.sourceFilter ? `<div class="source-context"><strong>${event ? `当前事件：${escapeHtml(event.title)}` : "筛选史料"}</strong><p>以下资料用于提供历史背景；游戏的数值、对话与具体因果属于设计性推演。</p><button type="button" data-clear-source-filter>查看全部史料</button></div>` : `<div class="source-context"><strong>引用原则</strong><p>正史与编年史用于确定人物、时间与大势；存在分歧或细节不足之处，游戏会明确标注“游戏化综合”。</p></div>`}<div class="source-grid">${sources.map((source) => `<article class="source-card"><div><span>${escapeHtml(source.reliability)}</span><h3>${escapeHtml(source.work)}</h3><h4>${escapeHtml(source.chapter)}</h4></div><p>${escapeHtml(source.scope)}</p><footer><small>${escapeHtml(source.author)}</small><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">打开原文 ↗</a></footer></article>`).join("")}</div>`;
   }
 
   function bindOverlayContentEvents() {

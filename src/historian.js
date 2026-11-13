@@ -122,7 +122,7 @@
   }
 
   function renderRunCard(run) {
-    return `<article class="historian-run"><header><div><span>${escapeHtml(run.scenarioName)}</span><strong>${escapeHtml(run.ending)}</strong></div><b>${run.score}</b></header><p>${escapeHtml(run.routeName)} · ${run.challengeCompleted ? "历史挑战完成" : "挑战未完成"}</p><div>${run.turningPoints.slice(0, 3).map(point => `<span>${escapeHtml(point.date)}｜${escapeHtml(point.choice)}</span>`).join("")}</div><button type="button" data-historian-export="${run.id}">导出复盘</button></article>`;
+    return `<article class="historian-run"><header><div><span>${escapeHtml(run.scenarioName)}</span><strong>${escapeHtml(run.ending)}</strong></div><b>${run.score}</b></header><p>${escapeHtml(run.routeName)} · ${run.challengeCompleted ? "历史挑战完成" : "挑战未完成"}</p><div>${run.turningPoints.slice(0, 3).map(point => `<span>${escapeHtml(point.date)}｜${escapeHtml(point.choice)}</span>`).join("")}</div><button type="button" data-historian-export="${escapeHtml(run.id)}">导出复盘</button></article>`;
   }
 
   function renderRouteComparison() {

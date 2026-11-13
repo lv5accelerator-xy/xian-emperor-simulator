@@ -36,7 +36,7 @@
     } catch (_) { return blankState(); }
   }
   function saveState() { try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (_) {} render(); }
-  function coreState() { return window.XianEmperorGame?.getState?.() || null; }
+  function coreState() { return (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || null; }
   function strategyState() { return window.XianStrategyNetwork?.getState?.() || null; }
 
   function sync() {
@@ -200,7 +200,7 @@
   function renderOption(echo, option) {
     const preview = previewResolution(echo, option.id);
     const reason = preview?.budget?.ok === false ? ` ${preview.budget.reason}` : "";
-    return `<button type="button" data-echo-id="${esc(echo.id)}" data-echo-option="${option.id}"><strong>${esc(option.label)}</strong><small>${esc(option.note + reason)}</small></button>`;
+    return `<button type="button" data-echo-id="${esc(echo.id)}" data-echo-option="${esc(option.id)}"><strong>${esc(option.label)}</strong><small>${esc(option.note + reason)}</small></button>`;
   }
 
   function showBudgetFailure(budget) {

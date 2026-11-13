@@ -23,7 +23,7 @@
 
   function targets(policyId) {
     const policy = POLICIES.find(item => item.id === policyId) || POLICIES[0];
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     const characters = window.XianCharacterAvailability?.availableCharacters(core, { action: policyId }) || (window.GAME_DATA?.characters || []).filter(item => item.id !== "liu_xie");
     if (policy.lords) return characters.filter(item => item.faction === "regional_lords").map(item => ({ id: item.id, name: item.name }));
     if (policy.people) return characters.map(item => ({ id: item.id, name: item.name }));
@@ -41,8 +41,8 @@
     panel = document.querySelector(".decree-panel"); input = document.getElementById("decree-input");
     if (!panel || !input) return;
     const policy = document.getElementById("decree-policy");
-    policy.innerHTML = POLICIES.map(item => `<option value="${item.id}">${item.name}</option>`).join("");
-    document.getElementById("decree-goal").innerHTML = GOALS.map(item => `<option value="${item.id}">${item.name}</option>`).join("");
+    policy.innerHTML = POLICIES.map(item => `<option value="${escapeHtml(item.id)}">${item.name}</option>`).join("");
+    document.getElementById("decree-goal").innerHTML = GOALS.map(item => `<option value="${escapeHtml(item.id)}">${item.name}</option>`).join("");
     policy.addEventListener("change", updateTargets);
     updateTargets();
     document.getElementById("decree-helper-open")?.addEventListener("click", open);
@@ -65,7 +65,7 @@
   }
 
   function open() {
-    if (!window.XianEmperorGame?.getState?.()) return;
+    if (!(window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.()) return;
     window.XianEmperorGame.setDecreeDraft(input.value, true); refresh();
     panel.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -97,7 +97,7 @@
 
   function refresh() {
     if (!panel || !input) return;
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     panel.classList.toggle("is-drafting", Boolean(core && !core.ended && core.decreeWorkspaceOpen));
     const status = document.getElementById("decree-draft-preview");
     const html = buildPreviewHtml(input.value, core);

@@ -177,19 +177,19 @@
 
   function stages() { return DATA.scenarioStages[core?.scenarioId] || []; }
   function currentStage() { return stages()[Math.min(Number(state?.currentStage || 0), stages().length - 1)] || null; }
-  function strategyState() { return window.XianStrategyNetwork?.getState?.() || safeParse(localStorage.getItem("xian_emperor_strategy_network_v040")) || {}; }
+  function strategyState() { return window.XianStrategyNetwork?.peekState?.() || window.XianStrategyNetwork?.getState?.() || safeParse(localStorage.getItem("xian_emperor_strategy_network_v040")) || {}; }
   function armyState() { return window.XianArmySystem?.getState?.() || safeParse(localStorage.getItem("xian_emperor_armies_v050")) || {}; }
 
   function objectiveValue(goal, context = {}) {
     const c = context.core || core || {};
-    const s = context.strategy || strategyState();
     const e = context.evolution || state || {};
     if (goal.type === "statMin" || goal.type === "statMax") return Number(c.stats?.[goal.key] || 0);
     if (goal.type === "hiddenMin" || goal.type === "hiddenMax") return Number(c.hidden?.[goal.key] || 0);
     if (goal.type === "turnMin") return Number(c.turn || 0);
     if (goal.type === "edictMin") return Number(c.edictsIssued || 0);
-    if (goal.type === "routeSupplyMin") return Number(s.routes?.[goal.key]?.supply || 0);
-    if (goal.type === "cityDefenseMin") return Number(s.cities?.[goal.key]?.defense || 0);
+    // 只有路线与城防目标需要策略网络快照；其余目标不必深拷贝整个策略状态。
+    if (goal.type === "routeSupplyMin") return Number((context.strategy || strategyState()).routes?.[goal.key]?.supply || 0);
+    if (goal.type === "cityDefenseMin") return Number((context.strategy || strategyState()).cities?.[goal.key]?.defense || 0);
     if (goal.type === "assignmentCount") return Number(e.assignmentsCompleted || 0);
     return 0;
   }
@@ -200,7 +200,7 @@
   }
 
   function evaluateStage() {
-    const live = window.XianEmperorGame?.getState?.();
+    const live = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     // Initialization can inspect a stored core before the player loads it.
     // Do not claim a reward until its live recipient can actually receive it.
     if (!live || live.createdAt !== core?.createdAt || live.ended) return;
@@ -220,7 +220,7 @@
         chronicle: `朝廷完成战役阶段“${stage.title}”。`,
       });
     } finally { window.__xianEvolutionRefreshOnly = false; }
-    core = window.XianEmperorGame?.getState?.() || core;
+    core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || core;
   }
 
   function seasonForMonth(month) {
@@ -350,7 +350,7 @@
       chronicle: `天子遣${character.name}${role.name}，目标为${targetName}。`,
     });
     if (!accepted) return notify("请先裁决本月奏报，并确认仍有行动次数。", "warning");
-    core = window.XianEmperorGame?.getState?.() || core;
+    core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || core;
     state.assignments.unshift({ id: `assignment-${Date.now()}`, characterId, characterName: character.name, roleId, roleName: role.name, targetId, targetName, startTurn: core.turn, endTurn: core.turn + role.duration, progressTurns: 0, status: "active" });
     state.log.unshift({ turn: core.turn, text: `${character.name}受命${role.name}。` });
     saveState();
@@ -426,7 +426,7 @@
   function renderOverlay() {
     if (!overlay || !state || !core) return;
     const tabs = [{ id: "objectives", name: "战役目标" }, { id: "assignments", name: "人物差遣" }, { id: "front", name: "动态战线" }];
-    overlay.innerHTML = `<section class="campaign-console" role="dialog" aria-modal="true" aria-label="战役台"><header><div><span class="section-kicker">御前战役台</span><h2>一处处理目标、人物与战线</h2><p>所有主动操作均使用原有行动次数，不增加新货币。</p></div><button data-campaign-close class="campaign-close" type="button" aria-label="关闭">×</button></header><nav>${tabs.map(tab => `<button class="${activeTab === tab.id ? "active" : ""}" data-campaign-tab="${tab.id}" type="button">${tab.name}</button>`).join("")}</nav><main>${activeTab === "assignments" ? renderAssignments() : activeTab === "front" ? renderFront() : renderObjectives()}</main></section>`;
+    overlay.innerHTML = `<section class="campaign-console" role="dialog" aria-modal="true" aria-label="战役台"><header><div><span class="section-kicker">御前战役台</span><h2>一处处理目标、人物与战线</h2><p>所有主动操作均使用原有行动次数，不增加新货币。</p></div><button data-campaign-close class="campaign-close" type="button" aria-label="关闭">×</button></header><nav>${tabs.map(tab => `<button class="${activeTab === tab.id ? "active" : ""}" data-campaign-tab="${esc(tab.id)}" type="button">${tab.name}</button>`).join("")}</nav><main>${activeTab === "assignments" ? renderAssignments() : activeTab === "front" ? renderFront() : renderObjectives()}</main></section>`;
     if (activeTab === "assignments") renderAssignmentTargets(document.getElementById("assignment-role")?.value || DATA.assignments[0].id);
   }
 
@@ -443,7 +443,7 @@
   function renderAssignments() {
     const characters = window.XianCharacterAvailability?.availableCharacters(core) || (window.GAME_DATA?.characters || []).filter(item => item.id !== "liu_xie");
     const active = state.assignments.filter(item => item.status === "active");
-    return `<section class="campaign-section"><div class="campaign-section-head"><div><span class="section-kicker">人物与地图联动</span><h3>派一人，办一件事</h3></div><strong>${active.length} / ${MAX_ASSIGNMENTS}</strong></div><div class="assignment-form"><label>人物<select id="assignment-character">${characters.map(item => `<option value="${esc(item.id)}">${esc(item.name)} · ${esc(item.title)}</option>`).join("")}</select></label><label>差遣<select id="assignment-role">${DATA.assignments.map(item => `<option value="${item.id}">${item.name}</option>`).join("")}</select></label><label>目标<select id="assignment-target"></select></label><button data-assignment-create type="button">下达差遣 · 1 行动</button></div><p class="assignment-note">巡抚影响城池，出使影响诸侯，监军影响军团；每项持续三个月。</p><div class="assignment-list">${active.length ? active.map(item => `<article><div><small>${esc(item.roleName)}</small><strong>${esc(item.characterName)} → ${esc(item.targetName)}</strong><span>进度 ${item.progressTurns} / ${Math.max(1, item.endTurn - item.startTurn)} 月</span></div><button data-assignment-cancel="${esc(item.id)}" type="button">召回</button></article>`).join("") : `<div class="campaign-empty">暂无进行中的差遣。新玩家可以先从“巡抚州郡”开始。</div>`}</div></section>`;
+    return `<section class="campaign-section"><div class="campaign-section-head"><div><span class="section-kicker">人物与地图联动</span><h3>派一人，办一件事</h3></div><strong>${active.length} / ${MAX_ASSIGNMENTS}</strong></div><div class="assignment-form"><label>人物<select id="assignment-character">${characters.map(item => `<option value="${esc(item.id)}">${esc(item.name)} · ${esc(item.title)}</option>`).join("")}</select></label><label>差遣<select id="assignment-role">${DATA.assignments.map(item => `<option value="${esc(item.id)}">${item.name}</option>`).join("")}</select></label><label>目标<select id="assignment-target"></select></label><button data-assignment-create type="button">下达差遣 · 1 行动</button></div><p class="assignment-note">巡抚影响城池，出使影响诸侯，监军影响军团；每项持续三个月。</p><div class="assignment-list">${active.length ? active.map(item => `<article><div><small>${esc(item.roleName)}</small><strong>${esc(item.characterName)} → ${esc(item.targetName)}</strong><span>进度 ${item.progressTurns} / ${Math.max(1, item.endTurn - item.startTurn)} 月</span></div><button data-assignment-cancel="${esc(item.id)}" type="button">召回</button></article>`).join("") : `<div class="campaign-empty">暂无进行中的差遣。新玩家可以先从“巡抚州郡”开始。</div>`}</div></section>`;
   }
 
   function renderFront() {

@@ -172,7 +172,7 @@
       <div class="focus-recommendation"><span>建议</span><strong>${escapeHtml(recommendation.label)}</strong><small>${escapeHtml(recommendation.benefit || recommendation.reason)}</small>${recommendation.cost ? `<small>代价：${escapeHtml(recommendation.cost)}</small>` : ""}</div>
       <div class="focus-actions">
         ${firstVisit ? '<button type="button" data-focus-open="guide" class="focus-guide">第一次到此剧本 · 查看指引</button>' : ""}
-        <button type="button" data-focus-jump="${focus.target}">${escapeHtml(focus.button)}</button>
+        <button type="button" data-focus-jump="${escapeHtml(focus.target)}">${escapeHtml(focus.button)}</button>
         <button type="button" data-focus-open="brief">展开总览</button>
       </div>`;
     strip.querySelectorAll("[data-focus-open]").forEach(button => button.addEventListener("click", () => open(button.dataset.focusOpen)));
@@ -409,7 +409,7 @@
         ${stepCard("二", "使用御前行动", Number(core.actionPoints || 0) <= 0, "actions")}
         ${stepCard("三", "结束本月", false, "end")}
       </div>
-      <section class="command-section"><h3>只需注意这些风险</h3><div class="command-warning-list">${warnings.map(item => `<article class="${item.level}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text)}</span></article>`).join("")}</div></section>`;
+      <section class="command-section"><h3>只需注意这些风险</h3><div class="command-warning-list">${warnings.map(item => `<article class="${escapeHtml(item.level ?? "")}"><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.text)}</span></article>`).join("")}</div></section>`;
   }
 
   function renderGuideTab() {
@@ -426,7 +426,7 @@
   }
 
   function stepCard(number, title, complete, target) {
-    return `<button type="button" data-command-jump="${target}" class="${complete ? "complete" : ""}"><span>${complete ? "✓" : number}</span><strong>${title}</strong></button>`;
+    return `<button type="button" data-command-jump="${escapeHtml(target)}" class="${complete ? "complete" : ""}"><span>${complete ? "✓" : number}</span><strong>${title}</strong></button>`;
   }
 
   function collectWarnings(state) {
@@ -470,8 +470,8 @@
     overlay.innerHTML = `
       <section class="command-center-window" role="dialog" aria-modal="true" aria-labelledby="command-center-title">
         <header><div><span>${escapeHtml(tab.kicker || "御前总览")}</span><h2 id="command-center-title">${escapeHtml(tab.title || tab.label)}</h2></div><button type="button" data-command-close aria-label="关闭">×</button></header>
-        <nav class="command-group-nav" aria-label="总览分组">${TAB_GROUPS.map(group => `<button type="button" data-command-group="${group.id}" class="${group.id === activeGroup.id ? "active" : ""}">${escapeHtml(group.label)}</button>`).join("")}</nav>
-        <nav class="command-tab-nav" aria-label="${escapeHtml(activeGroup.label)}栏目">${groupTabs.map(item => `<button type="button" data-command-tab="${item.id}" class="${item.id === tab.id ? "active" : ""}">${escapeHtml(item.label)}</button>`).join("")}</nav>
+        <nav class="command-group-nav" aria-label="总览分组">${TAB_GROUPS.map(group => `<button type="button" data-command-group="${escapeHtml(group.id)}" class="${group.id === activeGroup.id ? "active" : ""}">${escapeHtml(group.label)}</button>`).join("")}</nav>
+        <nav class="command-tab-nav" aria-label="${escapeHtml(activeGroup.label)}栏目">${groupTabs.map(item => `<button type="button" data-command-tab="${escapeHtml(item.id)}" class="${item.id === tab.id ? "active" : ""}">${escapeHtml(item.label)}</button>`).join("")}</nav>
         <main>${tab.render({ core: clone(core), store: clone(store) })}</main>
       </section>`;
     tab.onMount?.(overlay.querySelector("main"), { core: clone(core), refresh });

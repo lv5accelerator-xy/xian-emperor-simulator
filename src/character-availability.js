@@ -20,16 +20,19 @@
     const scenario = window.GAME_DATA?.scenarios?.find(item => item.id === core?.scenarioId);
     return Number(scenario?.startYear || 196) + Math.floor((Number(scenario?.startMonth || 1) - 1 + Math.max(0, Number(core?.turn || 1) - 1)) / 12);
   }
-  function allCharacters() {
-    return [...BASE(), ...EXTRAS].map(item => ({
+  function decorate(item) {
+    return {
       profile: item.institution ? "游戏化地区使署，承办当前往来与奉表；不是某位已故人物的延续，机构关系独立记录。" : "当前剧本人物。",
       ...item,
       publicTraits: Array.isArray(item.publicTraits) ? [...item.publicTraits] : item.institution ? ["机构联络", "有条件合作"] : [],
-    }));
+    };
   }
-  function getCharacter(id) { return allCharacters().find(item => item.id === id) || null; }
+  function allCharacters() { return [...BASE(), ...EXTRAS].map(decorate); }
+  // 按编号查原始条目，不为一次查找复制整张人物表。
+  function rawCharacter(id) { return BASE().find(item => item.id === id) || EXTRAS.find(item => item.id === id) || null; }
+  function getCharacter(id) { const item = rawCharacter(id); return item ? decorate(item) : null; }
   function isAvailable(id, core) {
-    const person = getCharacter(id); if (!person) return false;
+    const person = rawCharacter(id); if (!person) return false;
     const currentYear = year(core), limits = LIMITS[id];
     if (person.institution && currentYear < 220 && !(id === "palace_office" && currentYear < 195) && !(person.ownerKey && !isAvailable(person.ownerKey, core))) return false;
     if (limits && ((limits.from && currentYear < limits.from) || (limits.until && currentYear >= limits.until))) return false;

@@ -441,7 +441,7 @@
     if (!path) {
       focus.innerHTML = `
         <div class="focus-heading"><div><span class="imperial-kicker">v0.8.0 · 御前方略</span><h2>这一局，你准备依靠什么保存汉廷？</h2></div><small>选择后不可更改；它只整理现有玩法，不增加新货币。</small></div>
-        <div class="path-selection">${DATA.paths.map(item => `<button type="button" data-path-select="${item.id}"><span class="path-seal">${item.icon}</span><strong>${escapeHtml(item.name)}</strong><p>${escapeHtml(item.summary)}</p><small>风险：${escapeHtml(item.risk)}</small></button>`).join("")}</div>`;
+        <div class="path-selection">${DATA.paths.map(item => `<button type="button" data-path-select="${escapeHtml(item.id)}"><span class="path-seal">${item.icon}</span><strong>${escapeHtml(item.name)}</strong><p>${escapeHtml(item.summary)}</p><small>风险：${escapeHtml(item.risk)}</small></button>`).join("")}</div>`;
       return;
     }
 
@@ -490,11 +490,11 @@
     const remaining = Math.max(0, action.cooldown - (Number(core.turn || 0) - lastTurn));
     const budget = actionBudget(action.effects);
     const disabled = remaining > 0 || !core.eventResolved || core.actionPoints <= 0 || !budget.ok;
-    return `<button type="button" data-path-action="${action.id}" ${disabled ? "disabled" : ""}><strong>${escapeHtml(action.name)}</strong><small>${remaining ? `整备还需 ${remaining} 月` : escapeHtml(action.description)}${budget.cost ? ` 国库用度 ${budget.cost}。` : ""}${budget.ok ? "" : escapeHtml(budget.reason)}</small></button>`;
+    return `<button type="button" data-path-action="${escapeHtml(action.id)}" ${disabled ? "disabled" : ""}><strong>${escapeHtml(action.name)}</strong><small>${remaining ? `整备还需 ${remaining} 月` : escapeHtml(action.description)}${budget.cost ? ` 国库用度 ${budget.cost}。` : ""}${budget.ok ? "" : escapeHtml(budget.reason)}</small></button>`;
   }
 
   function actionBudget(effects = {}) {
-    const current = window.XianEmperorGame?.getState?.() || core;
+    const current = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || core;
     const cost = Math.max(0, -Number(effects?.treasury || 0));
     const shortfall = Math.max(0, cost - Number(current?.stats?.treasury || 0));
     return window.XianEmperorGame?.canAffordEffects?.(effects || {}) || { cost, shortfall, ok: Boolean(current && !current.ended && !shortfall),
@@ -528,7 +528,7 @@
   }
 
   function renderCollectionArchive() {
-    const themeCards = DATA.themes.map(theme => { const unlocked = progress.profile.themes.includes(theme.id); return `<button type="button" data-equip-theme="${theme.id}" ${unlocked ? "" : "disabled"} class="${progress.profile.activeTheme === theme.id ? "active" : ""}"><strong>${escapeHtml(theme.name)}</strong><small>${unlocked ? progress.profile.activeTheme === theme.id ? "使用中" : "点击使用" : escapeHtml(theme.requirement)}</small></button>`; }).join("");
+    const themeCards = DATA.themes.map(theme => { const unlocked = progress.profile.themes.includes(theme.id); return `<button type="button" data-equip-theme="${escapeHtml(theme.id)}" ${unlocked ? "" : "disabled"} class="${progress.profile.activeTheme === theme.id ? "active" : ""}"><strong>${escapeHtml(theme.name)}</strong><small>${unlocked ? progress.profile.activeTheme === theme.id ? "使用中" : "点击使用" : escapeHtml(theme.requirement)}</small></button>`; }).join("");
     return `<section class="collection-section"><h3>称号</h3><div class="equip-grid">${progress.profile.titles.map(title => `<button type="button" data-equip-title="${escapeHtml(title)}" class="${progress.profile.activeTitle === title ? "active" : ""}"><strong>${escapeHtml(title)}</strong><small>${progress.profile.activeTitle === title ? "使用中" : "点击佩戴"}</small></button>`).join("")}</div></section><section class="collection-section"><h3>朝仪外观</h3><div class="equip-grid">${themeCards}</div></section><section class="collection-section"><h3>印章与遗物</h3><div class="token-grid">${[...progress.profile.seals, ...progress.profile.memories].map(item => `<span>${escapeHtml(item)}</span>`).join("") || "<small>尚无收藏。</small>"}</div></section><section class="collection-section"><h3>已见终局</h3><div class="token-grid">${progress.profile.endings.map(item => `<span>${escapeHtml(item)}</span>`).join("") || "<small>完成一局后开始记录。</small>"}</div></section>`;
   }
 

@@ -19,10 +19,15 @@
   let timer = null, preparedGameId = null, problem = "";
   let lastMonth = null;
 
-  function readStore() {
+  // 每次提交完成都会来查一遍“本月是否已留档”；原文未变时复用上次解析结果，避免一个月内反复解析近1MB的索引。
+  // 只有留档路径（只读取条目、整体替换数组）使用缓存；列表与恢复界面仍取独立副本。
+  let cachedRaw = null, cachedValue = null;
+  function readStore(shared = false) {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw === null) return { version: 1, months: [], replacement: null };
-    const value = JSON.parse(raw);
+    let value;
+    if (shared && raw === cachedRaw) value = cachedValue;
+    else { value = JSON.parse(raw); if (shared) { cachedRaw = raw; cachedValue = value; } }
     if (!value || !Array.isArray(value.months)) throw new Error("Invalid backup index");
     return { version: 1, months: value.months.slice(0, 3), replacement: value.replacement || null };
   }
@@ -46,7 +51,7 @@
     try {
       const bundle = api().captureFullSave();
       if (!bundle) return;
-      const core = bundle.stores[CORE_KEY], id = keyFor(core), store = readStore();
+      const core = bundle.stores[CORE_KEY], id = keyFor(core), store = readStore(true);
       const active = bundle.stores.xian_emperor_short_challenges_v230?.active;
       if (active && !active.gameCreatedAt) return;
       // Refreshing or saving an action does not overwrite this month's checkpoint.
@@ -68,7 +73,7 @@
     try {
       const bundle = api().captureFullSave();
       if (!bundle) return true;
-      const store = readStore();
+      const store = readStore(true);
       store.replacement = makeEntry(bundle, label);
       writeStore(store);
       return true;
@@ -124,7 +129,7 @@
         ${entries.length ? entries.map(entry => {
           const info = describe(entry.bundle);
           const core = entry.bundle.stores[CORE_KEY];
-          return `<article><div><small>${escape(entry.label)}</small><h3>${escape(info.name)} · 第 ${entry.turn} 月${entry.ended ? " · 已终局" : ""}</h3><p>${escape(api().formatReignDate(entry.year, entry.month))} · ${core.eventResolved ? "奏报已决" : "奏报待决"} · 行动 ${core.actionPoints}</p><p>国库 ${Math.round(core.stats.treasury)} · 安全 ${Math.round(core.stats.security)}${core.random ? ` · 随机进度 ${core.random.draws}` : ""}</p><p>备份时间 ${escape(new Date(entry.capturedAt).toLocaleString("zh-CN", { hour12: false }))} · 存档 v${escape(info.version)}</p></div><div class="backup-actions"><button type="button" class="secondary-button" data-backup-restore="${entry.slot}">恢复此完整备份</button><button type="button" class="secondary-button" data-backup-export="${entry.slot}">导出此完整备份</button></div></article>`;
+          return `<article><div><small>${escape(entry.label)}</small><h3>${escape(info.name)} · 第 ${entry.turn} 月${entry.ended ? " · 已终局" : ""}</h3><p>${escape(api().formatReignDate(entry.year, entry.month))} · ${core.eventResolved ? "奏报已决" : "奏报待决"} · 行动 ${core.actionPoints}</p><p>国库 ${Math.round(core.stats.treasury)} · 安全 ${Math.round(core.stats.security)}${core.random ? ` · 随机进度 ${core.random.draws}` : ""}</p><p>备份时间 ${escape(new Date(entry.capturedAt).toLocaleString("zh-CN", { hour12: false }))} · 存档 v${escape(info.version)}</p></div><div class="backup-actions"><button type="button" class="secondary-button" data-backup-restore="${escape(entry.slot)}">恢复此完整备份</button><button type="button" class="secondary-button" data-backup-export="${escape(entry.slot)}">导出此完整备份</button></div></article>`;
         }).join("") : "<p>尚无完整备份。继续御览或开启新局后会自动留档。</p>"}
         <p class="backup-note">备份保存在本浏览器。清理网站数据会删除备份；换设备前请导出完整存档包。</p></div>`, onConfirm: api().closeUtilityModal });
     document.getElementById("modal-body").querySelectorAll("[data-backup-restore]").forEach(button => button.addEventListener("click", () => {
