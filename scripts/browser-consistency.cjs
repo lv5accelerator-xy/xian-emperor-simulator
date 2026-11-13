@@ -20,7 +20,7 @@ function normalize(value,key=""){
    await page.evaluate(()=>document.querySelector("[data-choice-index='0']").click());await wait();
    if([1,3,5].includes(month)) {await page.evaluate(()=>{document.getElementById("decree-input").value="请袁绍在邺城开仓赈济，整饬军备。";document.getElementById("issue-decree-btn").click();document.getElementById("decree-confirmation-confirm")?.click();});await wait();}
    if(restore&&month===3){checkpoint=await page.evaluate(()=>window.XianEmperorGame.captureFullSave());await Promise.all([page.waitForEvent("domcontentloaded"),page.evaluate(b=>window.XianEmperorGame.restoreFullSave(b),checkpoint)]);await page.waitForFunction(()=>Boolean(window.XianEmperorGame));await page.evaluate(()=>document.getElementById("continue-game-btn").click());}
-   await page.evaluate(()=>{document.getElementById("end-turn-btn").click();document.getElementById("modal-confirm").click();});await wait();
+   await page.evaluate(()=>{document.getElementById("end-turn-btn").click();document.getElementById("modal-confirm").click();});await page.waitForFunction(()=>!document.getElementById("settlement-progress"));await wait();
  }
  const bundle=await page.evaluate(()=>window.XianEmperorGame.captureFullSave());
  fs.writeFileSync(path.join(out,`trace-${delay}-${restore}.json`),JSON.stringify(bundle,null,2));await context.close();return bundle;

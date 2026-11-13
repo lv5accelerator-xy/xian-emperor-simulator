@@ -1646,7 +1646,7 @@
           return requestEndTurn();
         }
         closeModal();
-        endTurn();
+        runSettlementInFrames();
       },
     });
   }
@@ -1677,9 +1677,15 @@
     } }));
   }
 
-  function endTurn() {
-    if (window.__xianFullSaveImporting || !state || state.ended) return;
-    if (!state.eventResolved) return showToast("请先裁决本月奏报。", "warning");
+  function canSettleMonth() {
+    if (window.__xianFullSaveImporting || !state || state.ended) return false;
+    if (!state.eventResolved) { showToast("请先裁决本月奏报。", "warning"); return false; }
+    return true;
+  }
+
+  // 月末结算的全部步骤。每个 yield 是一个可以让出主线程的安全点：其前一阶段已经提交，
+  // 产出值是下一阶段的名称。endTurn 同步跑完全部步骤；界面入口则逐帧推进，避免长时间冻结。
+  function* settlementSteps() {
     const short = window.XianShortChallenges?.getActiveStatus?.(state);
     settlementLedger = state.pendingSettlement?.gameCreatedAt === state.createdAt && state.pendingSettlement.turn === state.turn
       ? state.pendingSettlement : window.XianMonthlySafety.beginSettlement(state, short?.checks || []);
@@ -1688,14 +1694,17 @@
       if (state.monthlySettledTurn < state.turn) {
         settlementPhase("旧事与地方回响", () => document.dispatchEvent(new CustomEvent("xian:before-month-end", { detail: { turn: state.turn, createdAt: state.createdAt } })));
         if (state.ended) return;
+        yield "固定用度与泄密检验";
         applyMonthlyDynamics();
         if (checkImmediateEnding()) return;
         state.monthlySettledTurn = state.turn;
         settlementPhase("月末即时反馈", () => saveGame(true));
       }
+      yield "天下局势";
       for (const [system, label] of [[window.XianWorldSystem, "天下局势"], [window.XianStrategyNetwork, "州郡与军路"], [window.XianArmySystem, "军团结算"]]) {
         settlementPhase(label, () => system?.settleMonth?.());
         if (state.ended) return;
+        yield label === "军团结算" ? "季度御题与后续回响" : label === "天下局势" ? "州郡与军路" : "军团结算";
       }
       if (checkImmediateEnding()) return;
       settlementPhase("季度御题与后续回响", () => document.dispatchEvent(new CustomEvent("xian:month-ended", { detail: { turn: state.turn, createdAt: state.createdAt } })));
@@ -1704,6 +1713,7 @@
         saveGame(true);
         if (checkImmediateEnding()) return;
       }
+      yield "终值核验";
       settlementPhase("终值核验", () => document.dispatchEvent(new CustomEvent("xian:month-settled", { detail: { turn: state.turn, createdAt: state.createdAt } })));
       if (state.ended) return;
       finalizeSettlement();
@@ -1711,6 +1721,100 @@
       advanceCalendar(); state.turn += 1; prepareTurn();
       saveGame(true); renderAll(); window.scrollTo({ top: 0, behavior: "smooth" });
     } finally { settlementLedger = null; settlementStage = ""; }
+  }
+
+  let settlementRun = null, settlementInputGuarded = false;
+  // 连续运行超过这个时长才让出一帧；测试可用 window.__xianSettlementSliceMs 改写以强制逐段推进。
+  const settlementSliceMs = () => Number(window.__xianSettlementSliceMs ?? 250);
+
+  // 同步结算：公开接口、测试与脚本使用，一次调用内完成全部阶段。
+  function endTurn() {
+    if (settlementRun || !canSettleMonth()) return;
+    for (const stage of settlementSteps()) void stage;
+  }
+
+  function settlementIndicator(label) {
+    let node = document.getElementById("settlement-progress");
+    if (label === null) { node?.remove?.(); return; }
+    if (!node) {
+      node = document.createElement("div");
+      node.id = "settlement-progress";
+      node.setAttribute("role", "status");
+      node.setAttribute("aria-live", "polite");
+      Object.assign(node.style, { position: "fixed", inset: "0", zIndex: "2147483000", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(16,12,10,.62)", color: "var(--text, #eee2cb)", cursor: "progress" });
+      const card = document.createElement("div");
+      Object.assign(card.style, { display: "flex", alignItems: "center", gap: "14px", padding: "18px 26px", borderRadius: "10px",
+        background: "var(--panel, #211713)", border: "1px solid var(--border, rgba(222,185,105,.25))", boxShadow: "0 18px 48px rgba(0,0,0,.45)", maxWidth: "86vw" });
+      const seal = document.createElement("span");
+      seal.setAttribute("aria-hidden", "true");
+      Object.assign(seal.style, { width: "22px", height: "22px", flex: "none", borderRadius: "50%", border: "3px solid var(--gold, #d4ad5d)", borderTopColor: "transparent" });
+      // transform 动画由合成线程驱动，主线程忙于结算时仍会转动。
+      if (!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) seal.animate?.([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], { duration: 900, iterations: Infinity });
+      const text = document.createElement("span");
+      text.id = "settlement-progress-text";
+      card.appendChild(seal); card.appendChild(text); node.appendChild(card);
+      document.body.appendChild(node);
+    }
+    const text = document.getElementById("settlement-progress-text") || node.lastChild?.lastChild;
+    if (text) text.textContent = `月末结算中 · ${label}`;
+  }
+
+  function blockInputDuringSettlement(event) {
+    if (!settlementRun) return;
+    event.preventDefault(); event.stopPropagation();
+  }
+
+  function drainSettlement() {
+    const run = settlementRun;
+    if (!run) return;
+    try { for (const stage of run.steps) void stage; }
+    finally { run.finish(); }
+  }
+
+  // 界面入口：先让“结算中”提示绘制出来，再每帧推进一个阶段。阶段之间只让出主线程，不改变阶段顺序与内容。
+  function runSettlementInFrames() {
+    if (settlementRun || !canSettleMonth()) return;
+    const steps = settlementSteps();
+    const run = settlementRun = { steps };
+    // 动画帧回调在本帧绘制之前执行：回调里更新的提示会随该帧绘出，下一阶段在下一帧开始。
+    // 只有第一次需要先等提示绘制完成（两帧），其后每阶段一帧。
+    const nextFrame = (callback, paintFirst = false) => {
+      let done = false;
+      const once = () => { if (done) return; done = true; clearTimeout(fallback); callback(); };
+      // 后台标签页不触发动画帧，用定时器兜底，避免结算停在半途。
+      const fallback = setTimeout(once, 250);
+      const raf = window.requestAnimationFrame;
+      if (typeof raf !== "function") once();
+      else if (paintFirst) raf(() => raf(once));
+      else raf(once);
+    };
+    const finish = () => {
+      if (settlementRun === run) settlementRun = null;
+      settlementIndicator(null);
+    };
+    run.finish = finish;
+    // 每让出一帧都要多等一次绘制，慢设备上尤其贵。所以只在连续运行超过预算后才让出：
+    // 快设备一口气跑完，慢设备才分段并更新阶段提示。
+    const advance = () => {
+      const started = Date.now();
+      let step;
+      try { do { step = steps.next(); } while (!step.done && Date.now() - started < settlementSliceMs()); }
+      catch (error) { finish(); throw error; }
+      if (step.done) return finish();
+      settlementIndicator(step.value);
+      nextFrame(advance);
+    };
+    // 监听只注册一次，是否生效由 settlementRun 决定。
+    if (!settlementInputGuarded) {
+      settlementInputGuarded = true;
+      document.addEventListener("keydown", blockInputDuringSettlement, true);
+      // 页面被隐藏或关闭时不能把结算留在半途：同步跑完剩余阶段，与一次性结算的落盘结果相同。
+      window.addEventListener?.("pagehide", drainSettlement);
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") drainSettlement(); });
+    }
+    settlementIndicator("旧事与地方回响");
+    nextFrame(advance, true);
   }
 
   function applyMonthlyDynamics() {
