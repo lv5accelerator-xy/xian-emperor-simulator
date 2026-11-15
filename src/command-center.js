@@ -484,7 +484,7 @@
   function jumpTo(target) {
     const selectors = { event: ".event-panel", actions: ".action-panel", end: "#end-turn-btn" };
     const element = document.querySelector(selectors[target] || target);
-    element?.scrollIntoView({ behavior: "smooth", block: "center" });
+    element?.scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "center" });
     if (target === "end" && element && !element.disabled) element.classList.add("command-pulse");
     setTimeout(() => element?.classList.remove("command-pulse"), 1400);
   }

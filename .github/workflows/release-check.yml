@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # 标签变化也要重新评估：equivalence 任务是否跳过取决于 changes-gameplay 标签。
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
 
 permissions:
@@ -262,7 +264,7 @@ jobs:
           grep -q 'src/imperial-progress.css?v=1.5.1' index.html
           grep -q 'src/imperial-progress-data.js?v=1.5.1' index.html
           grep -q 'src/imperial-progress.js?v=2.30.3' index.html
-          grep -q 'src/grand-map.css?v=2.6.1' index.html
+          grep -q 'src/grand-map.css?v=2.30.3' index.html
           grep -q 'src/historical-geography-data.js?v=2.6.1' index.html
           grep -q 'src/grand-map.js?v=2.30.3' index.html
           grep -q 'src/campaign-evolution.css?v=1.5.1' index.html
@@ -499,3 +501,24 @@ jobs:
 
       - name: Run ${{ matrix.script }}
         run: node scripts/${{ matrix.script }}.cjs
+
+  equivalence:
+    # 长局等价对照：PR 不应在无意间改变玩法结果。用同一套对局脚本分别驱动基线与本 PR 的 src，
+    # 比较 15 条固定种子完整对局终局时的全部存储。确实要改规则、数值或随机序列的 PR，
+    # 给它加上 changes-gameplay 标签即可跳过本任务，并在说明里写明改变了什么。
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'changes-gameplay')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Compare long playthroughs against the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: node scripts/playthrough-equivalence.cjs "origin/$BASE_REF"

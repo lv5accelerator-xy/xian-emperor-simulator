@@ -40,7 +40,7 @@
       target.click();
       return;
     }
-    document.querySelector(fallbackSelector)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.querySelector(fallbackSelector)?.scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "start" });
   }
 
   function installMobileNavigation() {
@@ -62,8 +62,8 @@
       if (!button) return;
       nav.querySelectorAll("button").forEach(item => item.classList.toggle("active", item === button));
       const destination = button.dataset.mobileDestination;
-      if (destination === "month") document.querySelector(".event-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      if (destination === "actions") document.querySelector(".action-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (destination === "month") document.querySelector(".event-panel")?.scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "start" });
+      if (destination === "actions") document.querySelector(".action-panel")?.scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "start" });
       if (destination === "map") clickUtilityButton("world-map-btn", ".event-panel");
       if (destination === "archive") clickUtilityButton("imperial-archive-btn", ".chronicle-panel");
     });

@@ -375,7 +375,7 @@
     el["action-grid"].querySelector("[data-action-recommend]")?.addEventListener("click", () => {
       const recommendation = getRecommendedCommonAction();
       if (recommendation.actionId === "end") return requestEndTurn();
-      if (recommendation.actionId === "event") return el["event-choices"].scrollIntoView({ behavior: "smooth", block: "center" });
+      if (recommendation.actionId === "event") return el["event-choices"].scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "center" });
       activeActionCategory = getActionCategory(recommendation.actionId);
       actionCategoryPinned = false;
       updateActionWorkspace();
@@ -655,14 +655,14 @@
 
   function goToStatRemedy(actionId) {
     if (!state.eventResolved) {
-      document.querySelector(".event-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.querySelector(".event-panel")?.scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "center" });
       showToast("请先裁决本月奏报，再处理数值危机。", "warning");
       return;
     }
     activeActionCategory = getActionCategory(actionId);
     actionCategoryPinned = true;
     updateActionWorkspace();
-    document.querySelector(".action-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.querySelector(".action-panel")?.scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "center" });
     setTimeout(() => openAction(actionId), 180);
   }
 
@@ -1719,7 +1719,7 @@
       finalizeSettlement();
       if (state.turn >= getDeadline()) { finishCampaign(); return; }
       advanceCalendar(); state.turn += 1; prepareTurn();
-      saveGame(true); renderAll(); window.scrollTo({ top: 0, behavior: "smooth" });
+      saveGame(true); renderAll(); window.scrollTo({ top: 0, behavior: window.XianMotion?.scrollBehavior() || "smooth" });
     } finally { settlementLedger = null; settlementStage = ""; }
   }
 

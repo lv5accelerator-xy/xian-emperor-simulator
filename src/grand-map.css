@@ -99,3 +99,7 @@
   .region-name-label{font-size:22px}
   .minor-place text{font-size:10px}
 }
+/* 全局的 button:hover 会把 transform 整个改写成上移 1px；舆图上的城池与军团标记靠 transform 居中，
+   被覆盖后会在悬停时跳开半个身位，鼠标随即落空。这里用更高的优先级保住居中。 */
+.grand-map-shell .grand-city:hover:not(:disabled),.grand-map-shell .grand-city:focus-visible{transform:translate(-50%,-50%) scale(1.16)}
+.grand-map-shell .grand-army-marker:hover:not(:disabled),.grand-map-shell .grand-army-marker:focus-visible{transform:translate(-50%,-50%)}

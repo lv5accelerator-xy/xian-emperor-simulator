@@ -616,7 +616,7 @@
     }
     const action = document.querySelector(`[data-action-id="${target}"]`);
     document.querySelector(`[data-action-category-tab="${action?.closest("[data-action-category-group]")?.dataset.actionCategoryGroup || "domestic"}"]`)?.click();
-    document.querySelector(".action-panel")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.querySelector(".action-panel")?.scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "center" });
     window.setTimeout(() => action?.click(), 220);
   }
 

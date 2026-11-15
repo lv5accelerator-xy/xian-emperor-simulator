@@ -123,7 +123,7 @@
     if (target === "overview") return window.XianCommandCenter?.open?.("monthly");
     const selectors = { event: ".event-panel", actions: ".action-panel", decree: ".decree-panel", end: "#end-turn-btn" };
     const element = document.querySelector(selectors[target]);
-    element?.scrollIntoView({ behavior: "smooth", block: "center" });
+    element?.scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "center" });
     element?.classList.add("monthly-flow-pulse");
     setTimeout(() => element?.classList.remove("monthly-flow-pulse"), 1200);
   }

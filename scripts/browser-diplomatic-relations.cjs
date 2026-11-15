@@ -1,6 +1,7 @@
 "use strict";
 const fs = require("node:fs"), path = require("node:path"), http = require("node:http"), assert = require("node:assert/strict");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const { createTap } = require("./browser-tap.cjs");
 const { alliedFixture, seal, treatyText } = require("../tests/alliance-coalition-regression");
 
 const { STRATEGY } = require("../tests/lord-command-chain-regression");
@@ -42,44 +43,7 @@ const results = process.env.COUNCIL_BROWSER_APPEND==="1"&&fs.existsSync(path.joi
     // Use real pointer input with an explicit hit test. Some desktop browser
     // sessions stop animation frames after navigation; pointer input remains
     // available and must still respect overlays and disabled controls.
-    const tap = async target => {
-      await target.waitFor({ state: "visible" });
-      await target.evaluate((node,width) => { const v=node.closest("[data-grand-viewport]"); if(v && width!==390){const r=node.getBoundingClientRect(),b=v.getBoundingClientRect();v.scrollTo({left:v.scrollLeft+r.x+r.width/2-b.x-b.width*.4,top:v.scrollTop+r.y+r.height/2-b.y-b.height*.45,behavior:"instant"});}else node.scrollIntoView({block:"center",inline:"center",behavior:"instant"});},width);
-      // 地图缩放、面板展开等动画期间元素仍在移动；先等位置连续两帧不变，再取可点击的坐标，否则点击会落空。
-      const locate = () => target.evaluate(async node => {
-        if (node.disabled) return null;
-        const probe = () => {
-          const r = node.getBoundingClientRect();
-          for (const fy of [.5, .25, .75]) for (const fx of [.5, .25, .75]) {
-            const x = r.x + r.width * fx, y = r.y + r.height * fy, hit = document.elementFromPoint(x, y);
-            if (hit && (hit === node || node.contains(hit))) return { x, y };
-          }
-          return null;
-        };
-        const deadline = performance.now() + 3000;
-        let last = "", steady = 0;
-        while (performance.now() < deadline) {
-          const r = node.getBoundingClientRect(), key = `${r.x}|${r.y}|${r.width}|${r.height}`;
-          steady = key === last ? steady + 1 : 0; last = key;
-          if (steady >= 2) { const found = probe(); if (found) return found; }
-          await new Promise(resolve => requestAnimationFrame(() => resolve()));
-        }
-        return probe();
-      });
-      let point = await locate();
-      if(!point)console.log(await target.evaluate(n=>({disabled:n.disabled,rect:n.getBoundingClientRect().toJSON(),viewport:n.closest("[data-grand-viewport]")?.getBoundingClientRect().toJSON(),hit:document.elementFromPoint(n.getBoundingClientRect().x+5,n.getBoundingClientRect().y+5)?.className})));
-      assert.ok(point, `visible control must receive pointer input: ${target}`);
-      // 以真实指针命中为准：刚滚动过的容器里，浏览器的输入命中可能还停在滚动前的位置。
-      // 先把指针移过去，确认悬停的确是目标再点击；否则重新定位。
-      for (let attempt = 0; attempt < 40; attempt++) {
-        await page.mouse.move(point.x, point.y);
-        if (await target.evaluate(node => node.matches(":hover"))) break;
-        await page.waitForTimeout(50);
-        point = await locate() || point;
-      }
-      await page.mouse.click(point.x, point.y);
-      await page.waitForTimeout(80);
-    };
+    const tap = createTap(page, { width, settleMs: 80 });
     const skipTutorial = async () => { await page.waitForTimeout(700); for (const selector of ["#tutorial-skip", ".tutorial-dialog footer [data-tutorial-move='skip']"]) if (await page.locator(selector).first().isVisible()) await tap(page.locator(selector).first()); };
     const tool = async id => {
       if (width === 390 && ["export-btn", "import-btn"].includes(id)) { await tap(page.locator("#mobile-save-tools")); await tap(page.locator(`[data-mobile-tool='${id}']`)); }

@@ -14,8 +14,10 @@ const baseTree = path.join(temp, "base");
 const git = (...argv) => execFileSync("git", argv, { cwd: root, stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
 
 // 时间戳与由时钟生成的编号每次运行都不同，不属于玩法结果。
+// 存档里记录的产品版本号随发布变化，同样不是玩法结果；规则版本与各存储的结构版本是整数，不受影响。
 function normalize(text) {
-  return text.replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z/g, "<time>").replace(/\d{9,}/g, "0");
+  return text.replace(/\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z/g, "<time>").replace(/\d{9,}/g, "0")
+    .replace(/"version":"\d+\.\d+\.\d+"/g, '"version":"<release>"');
 }
 function strip(value) {
   if (Array.isArray(value)) return value.map(strip);

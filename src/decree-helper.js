@@ -67,7 +67,7 @@
   function open() {
     if (!(window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.()) return;
     window.XianEmperorGame.setDecreeDraft(input.value, true); refresh();
-    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    panel.scrollIntoView({ behavior: window.XianMotion?.scrollBehavior() || "smooth", block: "start" });
   }
 
   function generate() {

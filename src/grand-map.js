@@ -339,6 +339,7 @@
 
   // 系统开启“减少动态效果”时不做平滑滚动：既是无障碍要求，也避免滚动途中点击落到别的图元上。
   function scrollBehavior(smooth = true) {
+    if (window.XianMotion) return window.XianMotion.scrollBehavior(smooth);
     return smooth && !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "smooth" : "auto";
   }
 

@@ -110,7 +110,7 @@ assert.ok(read("index.html").indexOf("src/edict-rules.js") < read("index.html").
 assert.match(read("index.html"), /imperial-progress\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.5\.1/);
 assert.match(read("index.html"), /imperial-progress\.js\?v=2\.30\.3/);
-assert.match(read("index.html"), /grand-map\.css\?v=2\.6\.1/);
+assert.match(read("index.html"), /grand-map\.css\?v=2\.30\.3/);
 assert.match(read("index.html"), /historical-geography-data\.js\?v=2\.6\.1/);
 assert.match(read("index.html"), /grand-map\.js\?v=2\.30\.3/);
 assert.match(read("index.html"), /campaign-evolution\.css\?v=1\.5\.1/);
