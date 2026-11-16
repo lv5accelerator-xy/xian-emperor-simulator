@@ -63,7 +63,7 @@
   function blankState() { return { version: 1, gameCreatedAt: null, cycle: 0, agendaId: null, chosen: null, processed: [], history: [] }; }
   function loadState() { try { const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); return { ...blankState(), ...(value || {}) }; } catch (_) { return blankState(); } }
   function saveState() { try { storageWrite("setItem", STORAGE_KEY, JSON.stringify(state)); } catch (_) {} render(); }
-  function coreState() { return window.XianEmperorGame?.getState?.() || null; }
+  function coreState() { return (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || null; }
   function agendaState() { return window.XianQuarterlyAgenda?.getState?.() || null; }
 
   function sync() {
@@ -171,7 +171,7 @@
       slot.innerHTML = `<section class="council-chosen"><div><span>本季主议</span><strong>${esc(adviser.name)} · ${esc(adviser.stance)}</strong></div><p>“${esc(state.chosen.proposal)}”</p><small>${esc(MODIFIERS[state.chosen.id]?.description)}。本季剩余 ${Math.max(0, MAX_USES - (state.chosen.alignedActions || 0))}/${MAX_USES} 次；重复行动仍按递减规则。御题以实际成果判定。</small></section>`;
       return;
     }
-    slot.innerHTML = `<section class="council-advice"><header><div><span>群臣对策</span><strong>三人三策，只采纳一议</strong></div><small>不消耗行动</small></header><div>${advisers.map(item => `<button type="button" data-adviser-id="${item.id}" ${item.affordable ? "" : "disabled"}><span>${esc(item.title)} · ${esc(item.stance)}</span><strong>${esc(item.name)}</strong><p>“${esc(item.proposal)}”</p><small>采纳即生效：${esc(item.immediateSummary)}</small><p>本季最多 ${MAX_USES} 次：${esc(item.modifier.description)}。重复行动的有利变化仍递减。</p><small>关系 ${Math.round(item.relation)} · ${item.trust}${item.remembered ? ` · 记得 ${item.remembered} 件旧事` : ""}</small><b>${item.affordable ? "采纳此议" : `国库不足，尚缺 ${item.shortfall}`}</b></button>`).join("")}</div></section>`;
+    slot.innerHTML = `<section class="council-advice"><header><div><span>群臣对策</span><strong>三人三策，只采纳一议</strong></div><small>不消耗行动</small></header><div>${advisers.map(item => `<button type="button" data-adviser-id="${esc(item.id)}" ${item.affordable ? "" : "disabled"}><span>${esc(item.title)} · ${esc(item.stance)}</span><strong>${esc(item.name)}</strong><p>“${esc(item.proposal)}”</p><small>采纳即生效：${esc(item.immediateSummary)}</small><p>本季最多 ${MAX_USES} 次：${esc(item.modifier.description)}。重复行动的有利变化仍递减。</p><small>关系 ${Math.round(item.relation)} · ${item.trust}${item.remembered ? ` · 记得 ${item.remembered} 件旧事` : ""}</small><b>${item.affordable ? "采纳此议" : `国库不足，尚缺 ${item.shortfall}`}</b></button>`).join("")}</div></section>`;
     slot.querySelectorAll("[data-adviser-id]").forEach(button => button.addEventListener("click", () => chooseAdvice(button.dataset.adviserId)));
   }
 

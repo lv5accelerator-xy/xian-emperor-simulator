@@ -2,6 +2,9 @@
 const fs = require("node:fs"), path = require("node:path"), assert = require("node:assert/strict");
 const { harness, plain } = require("../tests/helpers/game-harness");
 const output = process.env.NORMAL_OUTPUT || path.resolve(__dirname, "../../normal-playthrough.json");
+// 可选：把每条对局终局时的全部存储另存一份，供 playthrough-equivalence.cjs 做重构前后对照。
+const storesOutput = process.env.NORMAL_STORES_OUTPUT || "";
+const finalStores = [];
 const seeds = [20261017, 2654435761, 42424242];
 const scenarios = harness().window.GAME_DATA.scenarios;
 const rows = [];
@@ -92,10 +95,12 @@ for (const scenario of scenarios) for (const seed of seeds) {
   rows.push({ scenario: scenario.id, seed, deadline: scenario.maxTurns, finalTurn: final.turn, early: final.turn < scenario.maxTurns,
     ending: final.ending.title, treasurySpent, actionDistribution: trace.filter(item => item.kind === "action").reduce((counts, item) => ({ ...counts, [item.actionId]: (counts[item.actionId] || 0) + 1 }), {}),
     stages: { early: pick(.2), middle: pick(.5), late: pick(.9), final: checkpoints.at(-1) }, checkpoints, settlements, trace });
+  if (storesOutput) finalStores.push({ scenario: scenario.id, seed, stores: Object.fromEntries(Object.entries(run.stores()).map(([key, raw]) => { try { return [key, JSON.parse(raw)]; } catch (_) { return [key, raw]; } })) });
   console.log(JSON.stringify({ scenario: scenario.id, seed, turn: final.turn, ending: final.ending.title, treasury: final.stats.treasury, treasurySpent,
     campaignStages: rows.at(-1).stages.final.campaign.completed.length, armyOrders: rows.at(-1).stages.final.army.orders, conquests: rows.at(-1).stages.final.army.conquests }));
   fs.writeFileSync(output, JSON.stringify({ rulesVersion: final.rulesVersion, seeds, policy: "risk-aware actual choices, quarterly advisers, guard progression, one court army order, shared action recommendation", rows }, null, 2));
 }
+if (storesOutput) fs.writeFileSync(storesOutput, JSON.stringify(finalStores));
 assert.equal(rows.length, 15);
 assert.ok(rows.every(row => row.stages.early && row.stages.middle && row.stages.final));
 console.log(`PASS ${rows.length} complete normal-scenario trajectories; ${rows.filter(row => !row.early).length} reached the deadline.`);

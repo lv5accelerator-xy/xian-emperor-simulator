@@ -42,7 +42,7 @@
 
   function refresh() {
     if (!drawer) return;
-    const core = window.XianEmperorGame?.getState?.();
+    const core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.();
     if (core?.createdAt !== currentGame) { currentGame = core?.createdAt; drawer.open = false; }
     arrange();
     const agenda = window.XianQuarterlyAgenda?.getState?.();

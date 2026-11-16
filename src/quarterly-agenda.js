@@ -116,7 +116,7 @@
     if (notify) document.dispatchEvent(new CustomEvent("xian:quarterly-agenda-updated", { detail: getState() }));
   }
 
-  function coreState() { return window.XianEmperorGame?.getState?.() || null; }
+  function coreState() { return (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || null; }
   function deadline(core) {
     return Number(window.XianEmperorGame?.getDeadline?.(core) || window.XianShortChallenges?.getActiveStatus?.(core)?.duration || core?.maxTurns || 0);
   }
@@ -328,7 +328,7 @@
     const offers = state.offers.map(id => AGENDAS.find(item => item.id === id)).filter(Boolean);
     root.innerHTML = `
       <header class="quarterly-head"><div><span class="section-kicker">三月朝局 · 只择一事</span><h2>此季，陛下欲先办成何事？</h2><p>选择不会消耗行动。未来三个月的奏报、行动、人物与战事都会围绕此目标汇总。</p></div><div class="quarterly-seal" aria-hidden="true">策</div></header>
-      <div class="quarterly-offers">${offers.map(item => `<button type="button" data-agenda-id="${item.id}"><span>${item.category}</span><strong>${esc(item.title)}</strong><small>${esc(item.summary)}</small><b>定为御题 →</b></button>`).join("")}</div>
+      <div class="quarterly-offers">${offers.map(item => `<button type="button" data-agenda-id="${esc(item.id)}"><span>${item.category}</span><strong>${esc(item.title)}</strong><small>${esc(item.summary)}</small><b>定为御题 →</b></button>`).join("")}</div>
       ${state.history.length ? `<button class="quarterly-history-button" type="button" data-quarterly-history>查看历季得失</button>` : ""}`;
   }
 

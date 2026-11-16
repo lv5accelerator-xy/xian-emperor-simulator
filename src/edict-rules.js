@@ -14,7 +14,7 @@
   const negation = /不得|不可|不许|不准|不要|不再|不予|勿|毋|禁止|严禁|无需|不必|停止|暂停|暂缓|取消|拒绝|不(?:练兵|出兵|任命|加封|赈济|进贡|奉表|结盟|驰援)/;
   const punitive = /罢免|黜|问罪|讨伐|征讨|斥责|削爵|追责/;
 
-  function analyze(text, characters = window.GAME_DATA?.characters || [], core = window.XianEmperorGame?.getState?.()) {
+  function analyze(text, characters = window.GAME_DATA?.characters || [], core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.()) {
     const availability = window.XianCharacterAvailability;
     if (availability && core) characters = availability.availableCharacters(core);
     const clauses = String(text || "").split(/[，,；;。.!！?？\n]+/).map(item => item.trim()).filter(Boolean);

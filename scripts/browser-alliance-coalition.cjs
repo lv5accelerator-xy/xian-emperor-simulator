@@ -1,10 +1,13 @@
 "use strict";
 const fs = require("node:fs"), path = require("node:path"), http = require("node:http"), assert = require("node:assert/strict");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const { createTap } = require("./browser-tap.cjs");
 const { alliedFixture, seal, treatyText } = require("../tests/alliance-coalition-regression");
 
 const { STRATEGY } = require("../tests/lord-command-chain-regression");
 const { harness } = require("../tests/helpers/game-harness");
+// 缓存参数随发布号变化，不在脚本里写死。
+const releaseVersion = require("./read-version.cjs").readVersion(path.resolve(__dirname, ".."));
 const root = path.resolve(__dirname, ".."), out = process.env.COUNCIL_BROWSER_OUTPUT || path.resolve(root, "../browser-alliance-coalition");
 fs.mkdirSync(out, { recursive: true });
 const legacyStrategyTable=fs.readFileSync(path.join(root,"src/strategy-network-data.js"),"utf8").replace("同盟|联盟","同盟");
@@ -42,22 +45,7 @@ const results = [];
     // Use real pointer input with an explicit hit test. Some desktop browser
     // sessions stop animation frames after navigation; pointer input remains
     // available and must still respect overlays and disabled controls.
-    const tap = async target => {
-      await target.waitFor({ state: "visible" });
-      await target.evaluate((node,width) => { const v=node.closest("[data-grand-viewport]"); if(v && width!==390){const r=node.getBoundingClientRect(),b=v.getBoundingClientRect();v.scrollTo({left:v.scrollLeft+r.x+r.width/2-b.x-b.width*.4,top:v.scrollTop+r.y+r.height/2-b.y-b.height*.45,behavior:"instant"});}else node.scrollIntoView({block:"center",inline:"center",behavior:"instant"});},width);
-      const point = await target.evaluate(node => {
-        if (node.disabled) return null;
-        const r = node.getBoundingClientRect();
-        for (const fy of [.5, .25, .75]) for (const fx of [.5, .25, .75]) {
-          const x = r.x + r.width * fx, y = r.y + r.height * fy, hit = document.elementFromPoint(x, y);
-          if (hit && (hit === node || node.contains(hit))) return { x, y };
-        }
-        return null;
-      });
-      if(!point)console.log(await target.evaluate(n=>({disabled:n.disabled,rect:n.getBoundingClientRect().toJSON(),viewport:n.closest("[data-grand-viewport]")?.getBoundingClientRect().toJSON(),hit:document.elementFromPoint(n.getBoundingClientRect().x+5,n.getBoundingClientRect().y+5)?.className})));
-      assert.ok(point, `visible control must receive pointer input: ${target}`);
-      await page.mouse.click(point.x, point.y);
-    };
+    const tap = createTap(page, { width });
     const skipTutorial = async () => { await page.waitForTimeout(700); for (const selector of ["#tutorial-skip", ".tutorial-dialog footer [data-tutorial-move='skip']"]) if (await page.locator(selector).first().isVisible()) await tap(page.locator(selector).first()); };
     const tool = async id => {
       if (width === 390 && ["export-btn", "import-btn"].includes(id)) { await tap(page.locator("#mobile-save-tools")); await tap(page.locator(`[data-mobile-tool='${id}']`)); }
@@ -118,7 +106,7 @@ const results = [];
       await tap(page.locator("#strategy-network-close"));await importFile(current220File);assert.ok((await core()).year>=220);assert.ok((await page.locator(".alliance-brief").innerText()).includes(current220Names[0]));
       await openChain(false);await tap(page.locator("[data-strategy-tab='promises']"));const institutionalText=await page.locator(".promise-card").first().innerText();for(const name of current220Names)assert.ok(institutionalText.includes(name));assert.doesNotMatch(institutionalText,/袁绍|公孙瓒/);await page.screenshot({path:path.join(out,`institutional-alliance-220-${width}.png`)});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);assert.deepEqual(errors,[]);assert.deepEqual(httpFailures,[]);
-      assert.equal(staleStrategyCacheHits,0);assert.ok(strategyDataRequests.length>0);assert.ok(strategyDataRequests.every(url=>new URL(url).searchParams.get("v")==="2.30.0"));
+      assert.equal(staleStrategyCacheHits,0);assert.ok(strategyDataRequests.length>0);assert.ok(strategyDataRequests.every(url=>new URL(url).searchParams.get("v")===releaseVersion));
       results.push({channel,width,staleStrategyCacheHits,freshStrategyCacheUrl:true,allianceAliasPreview:true,current220Identities:true,actualInvitation:true,readOnlyPreview:true,twoActionBudget:true,individualOrders:true,singleSiegeTick:true,physicalContributions:true,actualMapBetrayal:true,refusal:true,actualFileExportImport:true,reload:true,pageErrors:errors,httpFailures});
       fs.writeFileSync(path.join(out,"summary.json"),JSON.stringify(results,null,2));console.log(`PASS alliance browser ${width}`);
     }catch(error){console.error(error);await page.screenshot({path:path.join(out,`failure-${width}.png`),timeout:10000});throw error;}finally{await page.close();}

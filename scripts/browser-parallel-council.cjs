@@ -1,6 +1,7 @@
 "use strict";
 const fs = require("node:fs"), path = require("node:path"), http = require("node:http"), assert = require("node:assert/strict");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const { createTap } = require("./browser-tap.cjs");
 const { parallelFixture } = require("../tests/parallel-council-regression");
 const { convoyFixture } = require("../tests/diplomatic-cascade-regression");
 const { STRATEGY } = require("../tests/lord-command-chain-regression");
@@ -36,21 +37,7 @@ const results = [];
     // Use real pointer input with an explicit hit test. Some desktop browser
     // sessions stop animation frames after navigation; pointer input remains
     // available and must still respect overlays and disabled controls.
-    const tap = async target => {
-      await target.waitFor({ state: "visible" });
-      await target.evaluate(node => node.scrollIntoView({ block: "center", inline: "center", behavior: "instant" }));
-      const point = await target.evaluate(node => {
-        if (node.disabled) return null;
-        const r = node.getBoundingClientRect();
-        for (const fy of [.5, .25, .75]) for (const fx of [.5, .25, .75]) {
-          const x = r.x + r.width * fx, y = r.y + r.height * fy, hit = document.elementFromPoint(x, y);
-          if (hit && (hit === node || node.contains(hit))) return { x, y };
-        }
-        return null;
-      });
-      assert.ok(point, `visible control must receive pointer input: ${target}`);
-      await page.mouse.click(point.x, point.y);
-    };
+    const tap = createTap(page, { width });
     const skipTutorial = async () => { await page.waitForTimeout(700); for (const selector of ["#tutorial-skip", ".tutorial-dialog footer [data-tutorial-move='skip']"]) if (await page.locator(selector).first().isVisible()) await tap(page.locator(selector).first()); };
     const tool = async id => {
       if (width === 390 && ["export-btn", "import-btn"].includes(id)) { await tap(page.locator("#mobile-save-tools")); await tap(page.locator(`[data-mobile-tool='${id}']`)); }

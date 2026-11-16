@@ -10,6 +10,10 @@
       throw error;
     }
   }
+  // 系统开启“减少动态效果”时，界面跳转直接定位，不做平滑滚动。各模块滚动时统一问这里。
+  window.XianMotion = Object.freeze({
+    scrollBehavior: (smooth = true) => smooth && !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "smooth" : "auto",
+  });
   const KEY = "xian_reading_size_v1";
   const SIZES = ["standard", "large", "largest"];
   const LABELS = { standard: "标准", large: "大字", largest: "特大" };

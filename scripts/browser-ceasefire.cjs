@@ -41,6 +41,8 @@ const CORE = "xian_emperor_simulator_v01", ARMY = "xian_emperor_armies_v050", ST
       const month = async () => {
         if (!(await core()).eventResolved) await page.locator("[data-choice-index='1']").click();
         const turn = (await core()).turn; await page.locator("#end-turn-btn").click(); await page.locator("#modal-confirm").click();
+        // 月末结算分帧执行：等“结算中”提示消失再读取结果。
+        await page.waitForFunction(() => !document.getElementById("settlement-progress"));
         const report = page.locator(".monthly-addon-confirm"); if (await report.isVisible()) await report.click();
         assert.equal((await core()).turn, turn + 1); assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       };

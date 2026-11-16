@@ -87,7 +87,7 @@
     const recordedPreview = costPreview?.outcome?.execution?.value;
     const execution = Number.isFinite(recordedPreview) ? { low: clamp(recordedPreview - 6, 28, 94), mid: recordedPreview, high: clamp(recordedPreview + 6, 28, 94) } : estimateExecution(effectiveText);
     const warnings = [...(interpretation?.warnings || [])];
-    warnings.push(...(API.previewHostilities?.(effectiveText, window.XianEmperorGame?.getState?.() || safeParse(localStorage.getItem(CORE_KEY))) || []).map(item => item.message));
+    warnings.push(...(API.previewHostilities?.(effectiveText, (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || safeParse(localStorage.getItem(CORE_KEY))) || []).map(item => item.message));
     if (costPreview?.reason) warnings.push(costPreview.reason);
     if (interpretation?.targets.length > 1) warnings.push("人物关系与外部制衡共用一份行动收益，不按名字数量倍增。" );
     const armies = Object.values(window.XianArmySystem?.getState?.()?.armies || {});
@@ -247,7 +247,7 @@
   function routeDef(id) { return DATA.routes.find(route => route.id === id); }
   function lordDef(id) {
     const definition = DATA.lords.find(lord => lord.id === id);
-    const current = window.XianCharacterAvailability?.faction(id, window.XianEmperorGame?.getState?.() || safeParse(localStorage.getItem(CORE_KEY)));
+    const current = window.XianCharacterAvailability?.faction(id, (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.() || safeParse(localStorage.getItem(CORE_KEY)));
     return definition ? { ...definition, ...(current ? { name: current.name } : {}) } : null;
   }
   function safeParse(raw) { try { return raw ? JSON.parse(raw) : null; } catch (_) { return null; } }

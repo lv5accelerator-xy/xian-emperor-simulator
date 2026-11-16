@@ -1,6 +1,7 @@
 "use strict";
 const fs = require("node:fs"), path = require("node:path"), http = require("node:http"), assert = require("node:assert/strict");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const { createTap } = require("./browser-tap.cjs");
 const { alliedFixture, seal, treatyText } = require("../tests/alliance-coalition-regression");
 
 const { STRATEGY } = require("../tests/lord-command-chain-regression");
@@ -42,23 +43,7 @@ const results = process.env.COUNCIL_BROWSER_APPEND==="1"&&fs.existsSync(path.joi
     // Use real pointer input with an explicit hit test. Some desktop browser
     // sessions stop animation frames after navigation; pointer input remains
     // available and must still respect overlays and disabled controls.
-    const tap = async target => {
-      await target.waitFor({ state: "visible" });
-      await target.evaluate((node,width) => { const v=node.closest("[data-grand-viewport]"); if(v && width!==390){const r=node.getBoundingClientRect(),b=v.getBoundingClientRect();v.scrollTo({left:v.scrollLeft+r.x+r.width/2-b.x-b.width*.4,top:v.scrollTop+r.y+r.height/2-b.y-b.height*.45,behavior:"instant"});}else node.scrollIntoView({block:"center",inline:"center",behavior:"instant"});},width);
-      const point = await target.evaluate(node => {
-        if (node.disabled) return null;
-        const r = node.getBoundingClientRect();
-        for (const fy of [.5, .25, .75]) for (const fx of [.5, .25, .75]) {
-          const x = r.x + r.width * fx, y = r.y + r.height * fy, hit = document.elementFromPoint(x, y);
-          if (hit && (hit === node || node.contains(hit))) return { x, y };
-        }
-        return null;
-      });
-      if(!point)console.log(await target.evaluate(n=>({disabled:n.disabled,rect:n.getBoundingClientRect().toJSON(),viewport:n.closest("[data-grand-viewport]")?.getBoundingClientRect().toJSON(),hit:document.elementFromPoint(n.getBoundingClientRect().x+5,n.getBoundingClientRect().y+5)?.className})));
-      assert.ok(point, `visible control must receive pointer input: ${target}`);
-      await page.mouse.click(point.x, point.y);
-      await page.waitForTimeout(80);
-    };
+    const tap = createTap(page, { width, settleMs: 80 });
     const skipTutorial = async () => { await page.waitForTimeout(700); for (const selector of ["#tutorial-skip", ".tutorial-dialog footer [data-tutorial-move='skip']"]) if (await page.locator(selector).first().isVisible()) await tap(page.locator(selector).first()); };
     const tool = async id => {
       if (width === 390 && ["export-btn", "import-btn"].includes(id)) { await tap(page.locator("#mobile-save-tools")); await tap(page.locator(`[data-mobile-tool='${id}']`)); }
