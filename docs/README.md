@@ -48,7 +48,7 @@
 | [参与维护](../CONTRIBUTING.md) | 测试要求、提交约定、版本与素材规则 |
 | [DEPLOY_GITHUB_PAGES.md](DEPLOY_GITHUB_PAGES.md) | 部署到 GitHub Pages |
 | [RELEASE_MIGRATION.md](RELEASE_MIGRATION.md) | 历史 ZIP 清单与校验值、tag 与 Release 迁移建议（尚未执行） |
-| [REPOSITORY_PROFILE.md](REPOSITORY_PROFILE.md) | 仓库简介、网站与主题标签的待设置内容 |
+| [REPOSITORY_PROFILE.md](REPOSITORY_PROFILE.md) | 仓库简介、网站与主题标签（已设置） |
 | [更新记录](../CHANGELOG.md) · [逐版说明](../patch-notes/README.md) | 全部版本记录 |
 | [素材授权](../CREDITS.md) · [项目许可证](../LICENSE) | 素材来源与待确认事项；项目许可证尚待选择 |
 
@@ -73,4 +73,4 @@
 | v2.24 | [RULES](archive/RULES_V224.md) | [VALIDATION](archive/VALIDATION_V224.md) | [BALANCE](archive/BALANCE_V224.md) | — |
 | v2.16 | — | — | [BALANCE](archive/BALANCE_V216.md) | — |
 
-数据文件：[`data/a11y-summary.json`](data/a11y-summary.json)、[`data/balance-paired-summary.json`](data/balance-paired-summary.json)；README 截图在 `images/`。
+数据文件：[`data/a11y-summary.json`](data/a11y-summary.json)、[`data/balance-paired-summary.json`](data/balance-paired-summary.json)；README 截图与仓库社交预览图在 `images/`。

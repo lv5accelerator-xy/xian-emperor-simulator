@@ -82,11 +82,12 @@ README称其为项目原创，但未见逐项来源、作者、制作记录或�
 | assets/images/illustrations/secret-edict.webp | 仓内记载OpenAI内置图片生成 | 来源待补充(TODO) | 待所有者确认(TODO) |
 | assets/images/illustrations/treasury-crisis.webp | 仓内记载OpenAI内置图片生成 | 来源待补充(TODO) | 待所有者确认(TODO) |
 
-## README截图
+## README截图与社交预览图
 
 | 文件 | 来源 | 作者 | 再分发 |
 | --- | --- | --- | --- |
 | docs/images/screenshot-start.webp、screenshot-court.webp、screenshot-map.webp | 本仓库游戏画面截图（v2.30.3），仅作README展示 | 本次仓库维护 | 画面包含上表场景插图、字体与人物立绘，再分发条件随这些素材，待所有者确认(TODO) |
+| docs/images/social-preview.png（源文件social-preview.html） | GitHub仓库社交预览图，由opening-palace.webp插图与自带字体排版 | 本次仓库维护 | 再分发条件随所用插图与字体，插图部分待所有者确认(TODO) |
 
 ## 内嵌操作音效及旧背景音频
 
