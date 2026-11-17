@@ -19,6 +19,11 @@ function planVersion(root,target,notes){
  const log=read("CHANGELOG.md"),heading=/^# [^\r\n]+/m.exec(log);if(!heading)throw new Error("CHANGELOG缺少标题");
  add("CHANGELOG.md",log.slice(0,heading.index+heading[0].length)+"\n\n## v"+target+"\n\n"+body+"\n"+log.slice(heading.index+heading[0].length));
  add(patch,"v"+target+"\n\n"+body+"\n");
+ // 逐版说明索引：新版本插在表格第一行，说明取发布说明的第一行。
+ const index=read("patch-notes/README.md"),header="| --- | --- |\n",at=index.indexOf(header);
+ if(at<0)throw new Error("patch-notes/README.md缺少版本表格");
+ const headline=(body.split(/\r?\n/).find(line=>line.trim())||"").trim().replace(/\|/g,"／");
+ add("patch-notes/README.md",index.slice(0,at+header.length)+"| [v"+target+"](v"+target+".txt) | "+headline+" |\n"+index.slice(at+header.length));
  for(const f of [".github/workflows/release-check.yml","tests/release-regression.js"]){
   const s=read(f).replaceAll(previous,target).replaceAll(previous.replaceAll(".","\\."),target.replaceAll(".","\\."));
   add(f,s);

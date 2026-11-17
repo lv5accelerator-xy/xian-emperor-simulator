@@ -1,88 +1,99 @@
 # 天子蒙尘：献帝模拟器
 
-扮演汉献帝刘协，在汉末危局中以奏报、诏令、外交与军略维系汉室的纯前端游戏。
+[![Release check](https://github.com/lv5accelerator-xy/xian-emperor-simulator/actions/workflows/release-check.yml/badge.svg?branch=main)](https://github.com/lv5accelerator-xy/xian-emperor-simulator/actions/workflows/release-check.yml)
 
-## 在线试玩
+扮演汉献帝刘协，在汉末危局中以奏报、诏令、外交与军略维系汉室的纯前端策略游戏。浏览器本地运行，无需安装、无需联网服务。
 
-[开始游玩](https://lv5accelerator-xy.github.io/xian-emperor-simulator/)
+**[▶ 在线试玩](https://lv5accelerator-xy.github.io/xian-emperor-simulator/)**
 
-<!-- TODO: 截图 -->
+| 开局 | 御前朝政 | 山河舆图 |
+| --- | --- | --- |
+| ![开局：选择字风、字号与历史剧本](docs/images/screenshot-start.webp) | ![朝政界面：本月奏报、六项国势与常用行动](docs/images/screenshot-court.webp) | ![舆图：州郡、城池、军路与军团](docs/images/screenshot-map.webp) |
 
-## 核心玩法
+## 玩法
 
-- 五个历史剧本，持续12至24个月，每月裁决奏报并使用有限行动。
-- 自由拟旨，在用玺前复核人物、动作、城池顺序和军路；使用本地关键词规则。
-- 处理人物与派系关系，选择御前方略和三月施政目标。
-- 调遣军团，经历行军、野战、围城与战后裁决。
-- 诸侯军议、结盟协战、议和及修好，以实际军务与长期履约决定外交后果。
-- 短局、同题挑战与汉祚长卷提供复玩目标，终局可导出帝纪与千秋定论。
+- **五个历史剧本**：从中平六年的洛阳到延康元年的禅代前夜，每局 12 至 24 个月；每月裁决一件奏报，再用有限行动处理朝政。
+- **自由拟旨**：用自己的话写诏书，用玺前复核涉及的人物、动作、城池顺序与军路；解析在本地完成。
+- **朝堂与人物**：经营人物与派系关系，选择御前方略和三月施政目标。
+- **军团与舆图**：调遣军团行军、野战、围城，战后裁决处置城池与降将。
+- **诸侯外交**：军议、结盟协战、议和与遣使修好；外交结局以真实军务与长期履约为凭。
+- **复玩目标**：五月短局、同题挑战、每周挑战与“汉祚长卷”连续大作战；终局可导出帝纪与千秋定论。
 
 ## 当前版本
 
 <!-- CURRENT_VERSION_START -->
 **v2.30.3**
-修复导入或被改写的存档可向页面注入脚本的问题：各模块进入页面的存档字段统一转义；必然无法运行的损坏存档在读取时拒收并保持原局面。
-月末结算提速，并在确认后先显示“月末结算中”进度：减少重复解析与深拷贝，慢设备分段执行；页面隐藏或关闭时同步完成结算，不留半途。
-规则230、核心存档103与全部存储格式不变；15条固定种子长局的终局存储逐字段一致。新增长局对照脚本，九个浏览器回归接入CI。
+修复导入或被改写的存档可向页面注入脚本的问题，损坏存档在读取时拒收并保持原局面。
+月末结算提速，确认后先显示“月末结算中”，慢设备分段执行；补齐字体缺字，修复舆图标记悬停时跳位。
+规则230、核心存档103与全部存储格式不变。完整记录见[更新记录](CHANGELOG.md)。
 <!-- CURRENT_VERSION_END -->
 
-## 开始游玩
+## 本地运行
 
-无需安装依赖、无需构建，双击根目录的 `index.html` 即可运行。
-也可使用任意静态服务器，例如安装Python后执行 `python -m http.server 8000`，访问 http://localhost:8000/。
-游戏不调用付费AI API；数据保存在当前浏览器，不会自动上传。
+无需安装依赖、无需构建，双击根目录的 `index.html` 即可游玩。
 
-## 存档与兼容
+也可用任意静态服务器，例如 `python -m http.server 8000` 后访问 <http://localhost:8000/>。游戏不调用任何 AI 或付费接口；数据只保存在当前浏览器，不会上传。
 
-- 支持完整JSON存档与旧版单一核心档导入，迁移保留旧结局及已有历史凭据。
-- 完整包按系统白名单导出；备份索引、字体/字号与地图引导偏好不随包导出。
-- 最近三个月与替换前备份可在“存档备份”查看；换设备或清理网站数据前先导出。
-- 存档及备份使用浏览器localStorage，容量和浏览器权限会影响保存。
+## 存档
 
-## 项目结构
+- 进度自动保存在浏览器 localStorage；“存档备份”保留最近三个月的完整备份，以及开新局、导入或恢复前的一份。
+- 换设备、换浏览器或清理网站数据前，请用“导出”保存完整 JSON 存档；“导入”同时支持完整存档与旧版单一核心档。
+- 字体、字号与舆图引导等偏好不随存档导出。
+- 存储空间不足或被浏览器禁用时，页面会提示先导出存档。
+
+## 仓库结构
 
 | 路径 | 内容 |
 | --- | --- |
-| index.html、styles.css | 入口、经典脚本加载顺序与基础样式 |
-| src/ | 数据、系统、模块样式与内嵌人物立绘 |
-| assets/ | 本地字体、场景图、音乐与第三方许可附件 |
-| scripts/、tests/ | Node.js维护脚本及自动发现的回归测试 |
-| docs/、docs/archive/ | 当前规则、维护说明与历史版本文档 |
-| CHANGELOG.md、patch-notes/ | 完整版本记录与逐版说明 |
-| history/ | 历史ZIP，尚未删除或迁出Git历史 |
-| .github/ | 发布检查与协作配置 |
+| `index.html`、`styles.css` | 入口页与基础样式；脚本按固定顺序以经典 `<script>` 加载 |
+| `src/` | 游戏数据、各系统模块、模块样式与内嵌人物立绘 |
+| `assets/` | 本地字体子集、场景插图、背景音乐及第三方许可附件 |
+| `tests/` | Node 回归测试，`*-regression.js` 由统一检查自动发现 |
+| `scripts/` | 统一检查、浏览器回归、长局对照、版本与字体维护工具 |
+| `docs/` | 规则、设计与维护文档，[文档索引](docs/README.md)；`docs/archive/` 为历史版本记录 |
+| `CHANGELOG.md`、`patch-notes/` | 完整更新记录与逐版说明 |
+| `history/` | v1.6.0–v2.13.0 历史发布 ZIP（约 613 MB），迁移方案见[历史包迁移](docs/RELEASE_MIGRATION.md) |
+| `.github/` | CI 工作流与 Issue 模板 |
 
-## 测试
+## 开发与测试
 
-维护测试使用Node.js 24，不是游玩前提。
-
-### 完整验证
+维护工具需要 Node.js 24，不是游玩前提。
 
 ```bash
-node scripts/check.cjs
-node scripts/check.cjs --regression-only
-node scripts/check-doc-links.cjs
+node scripts/check.cjs                     # 全部语法检查与回归测试
+node scripts/check-doc-links.cjs           # 文档内链接
+node scripts/playthrough-equivalence.cjs origin/main   # 长局对照：重构不应改变玩法结果
 ```
 
-统一检查自动发现 `src/**/*.js` 语法与全部 `tests/*-regression.js`，无需维护手工测试列表。
-日志默认写入仓库相邻的validation/；可用VALIDATION_OUTPUT指定目录。
-单独运行发布测试时，预期版本应对应 `src/data.js`；手工覆盖写作 `EXPECTED_VERSION=<当前版本>`，须替换占位值。
-浏览器检查另需Playwright与浏览器，可设置PLAYWRIGHT_MODULE指向现有安装；不影响游戏运行。
+- 统一检查自动发现 `src/**/*.js` 与 `tests/*-regression.js`，日志写入仓库相邻的 `validation/`，可用 `VALIDATION_OUTPUT` 改到别处。
+- 长局对照用同一套对局脚本分别驱动基线与当前代码，比较 15 条固定种子完整对局终局时的全部存储，约两分钟。
+- 浏览器回归在 `scripts/browser-*.cjs`，需要 Playwright；用自带 Chromium 时设 `BROWSER_CHANNEL=chromium COUNCIL_BROWSER_CHANNEL=chromium`，也可用 `PLAYWRIGHT_MODULE` 指向现有安装。
 
-## 部署
+每个 PR 会运行三类检查：
 
-GitHub Pages从main根目录直接发布，没有构建步骤。
-发布元数据可用scripts/bump-version.cjs同步，先使用--dry-run审查；每次更新应先验证，再核对发布记录与普通网址；流程见[部署说明](docs/DEPLOY_GITHUB_PAGES.md)。
+| 任务 | 内容 |
+| --- | --- |
+| `validate` | 语法、资源引用与版本一致性，以及全部 Node 回归 |
+| `browser` | 9 个真实浏览器回归，覆盖手机与桌面宽度 |
+| `equivalence` | 长局对照；确实要改规则、数值或随机序列的 PR 加 `changes-gameplay` 标签跳过 |
 
-## 相关文档
+贡献约定见[参与维护](CONTRIBUTING.md)，工程约定见[工程笔记](docs/ENGINEERING_NOTES.md)。
 
-- [文档索引](docs/README.md)与[完整更新记录](CHANGELOG.md)
-- [游戏设计](docs/GAME_DESIGN.md)与[独立版本说明](patch-notes/README.md)
-- [仓库盘点](docs/AUDIT_2026-11.md)与[AI接入边界](docs/AI_INTEGRATION.md)
+## 发布
+
+GitHub Pages 直接从 `main` 根目录发布，没有构建步骤。
+
+发布号以 `src/data.js` 为准。用 `node scripts/bump-version.cjs <新版本> --notes-file <说明> --dry-run` 预览，确认后去掉 `--dry-run`，它会同步页面标题、缓存参数、本文“当前版本”、更新记录与 patch-notes。流程见[部署说明](docs/DEPLOY_GITHUB_PAGES.md)。
+
+## 文档
+
+- [文档索引](docs/README.md)：当前规则、系统说明、维护记录与历史归档
+- [游戏设计](docs/GAME_DESIGN.md) · [当前规则 v2.30](docs/RULES_V230.md) · [AI 接入边界](docs/AI_INTEGRATION.md)
+- [更新记录](CHANGELOG.md) · [逐版说明](patch-notes/README.md)
 
 ## 授权
 
-项目许可证待所有者选择，见[LICENSE](LICENSE)；逐项素材及待确认项见[CREDITS.md](CREDITS.md)。
-Natural Earth原始轮廓的仓内公有领域说明见[地图数据](docs/MAP_DATA.md)，历史边界为游戏化近似。
-本地字体及OFL附件见[字体说明](assets/fonts/README.md)；Noto Serif SC署名对应关系待核对。
-音乐、立绘等仍有授权缺项，不能由公开可见或“原创”字样推定再分发许可。
+- 项目许可证尚待所有者选择，见 [LICENSE](LICENSE)。
+- 逐项素材来源与待确认事项见 [CREDITS.md](CREDITS.md)；音乐、立绘等仍有授权缺项，不能由公开可见或“原创”字样推定再分发许可。
+- 本地字体按 SIL OFL 1.1 分发，见[字体说明](assets/fonts/README.md)。
+- 海岸线来自 Natural Earth 公有领域数据，历史疆界为游戏化近似，见[地图数据](docs/MAP_DATA.md)。

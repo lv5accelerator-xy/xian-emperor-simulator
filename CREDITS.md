@@ -14,17 +14,17 @@
 | wenkai-game-medium.woff2 / 霞鹜文楷 | 同一固定来源；TTF blob bc6e9fe500ef11c5f89089786b517b0a049437d6 | LXGW 2021–2026；The Klee Project Authors 2020 | 同上 | 同上 |
 | zcool-xiaowei-game.woff2 / 站酷小薇体 | 仓内固定google/fonts@5e8a3ba，ofl/zcoolxiaowei | The ZCOOL XiaoWei Project Authors，2018 | [SIL OFL 1.1](assets/fonts/licenses/ZCOOL-XiaoWei-OFL.txt) | 按附件条件允许，保留声明与许可文本 |
 | noto-sans-sc-game.woff2 / Noto Sans SC | 仓内固定google/fonts@5e8a3ba，ofl/notosanssc | Adobe，2014–2021；字体与附件署名对应 | [SIL OFL 1.1](assets/fonts/licenses/Noto-Sans-SC-OFL.txt) | 按附件条件允许，保留声明与许可文本 |
-| noto-serif-sc-game.woff2 / Noto Serif SC | 仓内说明指向google/fonts@5e8a3ba，ofl/notoserifsc；产物与许可对应关系来源待补充(TODO) | 字体名称表：Adobe 2017–2024；附件：Google Inc. 2012，二者不一致 | [当前随附文本](assets/fonts/licenses/Noto-Serif-SC-OFL.txt)标为SIL OFL 1.1，但署名待核对 | 待确认(TODO)：所有者核对实际来源、正确版权声明及适用许可；本轮不擅自更换附件 |
+| noto-serif-sc-game.woff2 / Noto Serif SC | 仓内固定google/fonts@5e8a3ba，ofl/notoserifsc；v2.30.3由该来源的`NotoSerifSC[wght].ttf`重新生成，产物来源已核实 | 字体名称表：Adobe 2017–2024；附件：Google Inc. 2012，二者不一致 | [随附文本](assets/fonts/licenses/Noto-Serif-SC-OFL.txt)为SIL OFL 1.1，与上游同一提交的`ofl/notoserifsc/OFL.txt`逐字一致；署名不一致来自上游本身 | 按附件条件允许；是否另行补充Adobe版权声明待所有者决定(TODO)，本轮不擅自更换附件 |
 
-字体文件SHA-256（用于对应上述证据）：
+字体文件SHA-256（v2.30.3按上述固定来源重新生成后的值，用于对应上述证据）：
 
 | 文件 | SHA-256 |
 | --- | --- |
-| noto-sans-sc-game.woff2 | 78fb94af3ec99d7aab5c09c79c21d99fa9d0c0a51006f1f5cbd2e88d51b1d73d |
-| noto-serif-sc-game.woff2 | 34a8b947b3470f0a20dc4f416f58ffc71cdddd2ef2075f878b698a4e7a580eb4 |
-| wenkai-game-medium.woff2 | c17fa8854bd63a1905fd14e8908ead3e362c13c968875a2b02ec75f1f08e59ae |
-| wenkai-game-regular.woff2 | fc1e40011af356512cffc6036242447f3c2819dfba5d2320d6ab40fb2b30b738 |
-| zcool-xiaowei-game.woff2 | 9ec1eb9dbd23c1804d1cb1c194e8777c07c6ec8acf15877018a1d5ab5de56604 |
+| noto-sans-sc-game.woff2 | fe4bf2001de709ae3a9b9328df755177c39fba9a7912ae011444b78712057918 |
+| noto-serif-sc-game.woff2 | 6e53663b80f386151943057c98c6ec3cfd0e63b229dc93b260497370ad83b3a4 |
+| wenkai-game-medium.woff2 | ce835ada150531ce244ffea428b040971bd52f5239b01ad161b8873cff81a11b |
+| wenkai-game-regular.woff2 | f3a61160148e12969a76a1605abb81c346cd7374d9f816544b8576d932d8aaf4 |
+| zcool-xiaowei-game.woff2 | dcd5410eb096a7fc599b7ea6477930396bcff98e3832af5f39e3144130572a9f |
 
 ## 地图数据
 
@@ -82,6 +82,12 @@ README称其为项目原创，但未见逐项来源、作者、制作记录或�
 | assets/images/illustrations/secret-edict.webp | 仓内记载OpenAI内置图片生成 | 来源待补充(TODO) | 待所有者确认(TODO) |
 | assets/images/illustrations/treasury-crisis.webp | 仓内记载OpenAI内置图片生成 | 来源待补充(TODO) | 待所有者确认(TODO) |
 
+## README截图
+
+| 文件 | 来源 | 作者 | 再分发 |
+| --- | --- | --- | --- |
+| docs/images/screenshot-start.webp、screenshot-court.webp、screenshot-map.webp | 本仓库游戏画面截图（v2.30.3），仅作README展示 | 本次仓库维护 | 画面包含上表场景插图、字体与人物立绘，再分发条件随这些素材，待所有者确认(TODO) |
+
 ## 内嵌操作音效及旧背景音频
 
 资源位于[src/audio-data.js](src/audio-data.js)，为data:audio/ogg嵌入数据。编码器标记不等于作者或许可。
@@ -99,7 +105,7 @@ README称其为项目原创，但未见逐项来源、作者、制作记录或�
 ## 待所有者补齐
 
 - 选择根目录项目许可证；当前LICENSE只作待决策占位。
-- 优先核对Noto Serif SC产物与许可署名，补齐八份MP3以及内嵌音频的合法来源。
+- 决定Noto Serif SC是否另行补充Adobe版权声明（产物来源与附件已于v2.30.3核实，见上表）；补齐八份MP3以及内嵌音频的合法来源。
 - 确认人物立绘、场景插图、历史地图改绘的制作人、归属与再分发范围。
 - history/中的旧包没有逐个完成素材确权；当前清单不为历史包作统一授权保证。准备公开上传旧ZIP前，需逐包核对。
 - 新增素材应同时更新本文件，并保存原始许可文本及来源版本，不用“原创”代替证据。
