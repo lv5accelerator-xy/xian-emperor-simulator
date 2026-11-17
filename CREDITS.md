@@ -16,22 +16,24 @@
 | noto-sans-sc-game.woff2 / Noto Sans SC | 仓内固定google/fonts@5e8a3ba，ofl/notosanssc | Adobe，2014–2021；字体与附件署名对应 | [SIL OFL 1.1](assets/fonts/licenses/Noto-Sans-SC-OFL.txt) | 按附件条件允许，保留声明与许可文本 |
 | noto-serif-sc-game.woff2 / Noto Serif SC | 仓内固定google/fonts@5e8a3ba，ofl/notoserifsc；v2.30.3由该来源的`NotoSerifSC[wght].ttf`重新生成，产物来源已核实 | 字体名称表：Adobe 2017–2024；附件：Google Inc. 2012，二者不一致 | [随附文本](assets/fonts/licenses/Noto-Serif-SC-OFL.txt)为SIL OFL 1.1，与上游同一提交的`ofl/notoserifsc/OFL.txt`逐字一致；署名不一致来自上游本身 | 按附件条件允许；是否另行补充Adobe版权声明待所有者决定(TODO)，本轮不擅自更换附件 |
 
-字体文件SHA-256（v2.30.3按上述固定来源重新生成后的值，用于对应上述证据）：
+字体文件SHA-256（v2.31.0按上述固定来源重新生成后的值，用于对应上述证据）：
 
 | 文件 | SHA-256 |
 | --- | --- |
-| noto-sans-sc-game.woff2 | fe4bf2001de709ae3a9b9328df755177c39fba9a7912ae011444b78712057918 |
-| noto-serif-sc-game.woff2 | 6e53663b80f386151943057c98c6ec3cfd0e63b229dc93b260497370ad83b3a4 |
-| wenkai-game-medium.woff2 | ce835ada150531ce244ffea428b040971bd52f5239b01ad161b8873cff81a11b |
-| wenkai-game-regular.woff2 | f3a61160148e12969a76a1605abb81c346cd7374d9f816544b8576d932d8aaf4 |
-| zcool-xiaowei-game.woff2 | dcd5410eb096a7fc599b7ea6477930396bcff98e3832af5f39e3144130572a9f |
+| noto-sans-sc-game.woff2 | 2347f733660633e3e3b55915745e4c8066cd12b5acde6f7165b52737d649c4a2 |
+| noto-serif-sc-game.woff2 | 78da81db23b7ab78c92e103a5f1d2cee42f100a9dabd6be9cac338519c77e65a |
+| wenkai-game-medium.woff2 | 5fbc9e53775b62e19ba45f1048ea209bf67e193fbe6afc89554ea61436b49d92 |
+| wenkai-game-regular.woff2 | f40ec8855cbbac5b078eb734f52cfae2e98db5e3728411c0a5cff45c4fec79d4 |
+| zcool-xiaowei-game.woff2 | 6463d874df5d91b46086c1d134b67c57bb2ef6b1b669d20b796d39700c9f3f84 |
 
 ## 地图数据
 
 | 资源 | 来源 | 作者 | 许可/声明 | 是否允许再分发 |
 | --- | --- | --- | --- | --- |
-| src/historical-geography-data.js中的海岸线/岛屿轮廓 | [仓内MAP_DATA说明](docs/MAP_DATA.md)：Natural Earth 1:110m简化、裁切、投影 | Natural Earth项目；具体贡献者来源待补充(TODO) | 仓内说明原始数据为公有领域，并列出[上游地址](https://www.naturalearthdata.com/) | 原始数据依仓内公有领域说明；建议所有者保留上游声明证据(TODO) |
-| 历史势力边界、州郡位置、山川与游戏化改绘 | 仓内说明为历史近似；制作记录来源待补充(TODO) | 来源待补充(TODO) | 项目许可待选；不能把原始轮廓声明自动套用于所有改绘 | 待所有者确认(TODO) |
+| assets/images/map/terrain.webp（地形底图） | Natural Earth 10m栅格 HYP_HR_SR（分层设色地形）与 GRAY_HR_SR（灰度山体阴影），取自维护者仓库 [nvkelso/natural-earth-raster](https://github.com/nvkelso/natural-earth-raster)；由scripts/build-map-terrain.py裁切、重新着色并按汉代海岸修订 | Natural Earth项目（Tom Patterson、Nathaniel Vaughn Kelso等） | Natural Earth数据为公有领域，见[上游使用条款](https://www.naturalearthdata.com/about/terms-of-use/) | 允许；SHA-256 `4efd0b353619c1f0e45a677583f93606e0725edee768a8e67e6843e10a46afed` |
+| src/historical-geography-data.js 中的陆地、河流与湖泊轮廓 | Natural Earth 10m矢量 ne_10m_land、ne_10m_rivers_lake_centerlines、ne_10m_lakes（[nvkelso/natural-earth-vector](https://github.com/nvkelso/natural-earth-vector) 5.2.0-pre），同一脚本裁切、抽稀、投影 | Natural Earth项目 | 公有领域，同上 | 允许 |
+| 汉代修订：东汉黄河与淮水下游、济水泗水汝水、汉代湖泽、汉代海岸、十三州界 | scripts/map-data/eastern-han.json，本仓库维护时依《续汉书·郡国志》郡国建制与通行历史地理常识整理的近似坐标；州界由105个郡国治所推算，未描摹任何受版权保护的历史地图 | 本次仓库维护 | 项目许可待选 | 待所有者确认(TODO) |
+| 16座城池、14个策略区域与地名标注 | src/historical-geography-data.js 中手工维护的坐标，游戏化近似 | 来源待补充(TODO) | 项目许可待选 | 待所有者确认(TODO) |
 
 ## 五首运行音乐与三首备选
 

@@ -37,6 +37,13 @@ v2.30.3 起的工程约定。每条都有对应的回归测试或 CI 任务把�
 - 出现缺字时用 `scripts/build-font-subsets.py` 重建（来源与用法见[字体说明](../assets/fonts/README.md)），再更新样式表与 `index.html` 里字体地址的缓存参数，并同步 [CREDITS.md](../CREDITS.md) 中的 SHA-256。
 - 把关：`tests/font-coverage-regression.js`。
 
+## 舆图数据
+
+- `src/historical-geography-data.js` 里 `GENERATED` 标记之间的陆地、水系、湖泽、州界与山名由 `scripts/build-map-terrain.py` 生成，不要手改；改 `scripts/map-data/eastern-han.json` 后重新生成，方法见[地图数据](MAP_DATA.md)。
+- 标记之外的城池坐标、策略区域与地名仍手工维护。
+- 底图偏好 `xian_map_basemap_v1` 是本机显示设置，写入同样经过 `storageWrite`。
+- 把关：`tests/grand-map-regression.js`（十三州、典型归属、汉代故道、底图切换）。
+
 ## 缓存参数
 
 - 页面资源带 `?v=` 缓存参数。改了某个文件，就把它在 `index.html` 里的参数改成当前发布号；字体地址的参数写在样式表里。

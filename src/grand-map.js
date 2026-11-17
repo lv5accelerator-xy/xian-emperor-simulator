@@ -1,4 +1,4 @@
-/* 天子蒙尘：献帝模拟器 v2.6.1 · 郡国全图 */
+/* 天子蒙尘：献帝模拟器 · 郡国全图（v2.31 起：实测地形底图、汉代水系与十三州界切换） */
 (() => {
   "use strict";
 
@@ -14,6 +14,9 @@
   const STRATEGY_KEY = "xian_emperor_strategy_network_v040";
   const ARMY_KEY = "xian_emperor_armies_v050";
   const PROGRESSION_KEY = "xian_emperor_progression_v100";
+  // 底图偏好（地形 / 州界）只是本机显示设置，不随存档导出。
+  const BASEMAP_KEY = "xian_map_basemap_v1";
+  const BASEMAPS = ["terrain", "provinces"];
   const GUIDE_KEY = "xian_emperor_map_guide_v261";
   const GEO = window.XIAN_HISTORICAL_GEOGRAPHY || {};
   const WIDTH = GEO.width || 1200;
@@ -23,7 +26,11 @@
   const CITY_POSITIONS = GEO.cityPositions || {};
   const REGION_SHAPES = GEO.regionPaths || {};
 
-  let state = { zoomIndex: 2, layer: "all", selectedType: null, selectedId: null, command: null, guideStep: 0, justDragged: false, inspectorCollapsed: false };
+  let state = { zoomIndex: 2, layer: "all", basemap: readBasemap(), selectedType: null, selectedId: null, command: null, guideStep: 0, justDragged: false, inspectorCollapsed: false };
+
+  function readBasemap() {
+    try { const value = localStorage.getItem(BASEMAP_KEY); return BASEMAPS.includes(value) ? value : "terrain"; } catch (_) { return "terrain"; }
+  }
 
   function safeParse(raw) {
     if (!raw) return null;
@@ -86,11 +93,12 @@
     const regionStates = worldState?.regions || Object.fromEntries(worldData.regions.map(region => [region.id, region]));
 
     return `
-      <section class="grand-map-shell${isFocusMode() ? " focus-map" : ""}${state.command ? " commanding" : ""}${state.inspectorCollapsed ? " inspector-collapsed" : ""}" data-map-layer="${escapeHtml(state.layer)}">
+      <section class="grand-map-shell${isFocusMode() ? " focus-map" : ""}${state.command ? " commanding" : ""}${state.inspectorCollapsed ? " inspector-collapsed" : ""}" data-map-layer="${escapeHtml(state.layer)}" data-basemap="${escapeHtml(state.basemap)}">
         <header class="grand-map-toolbar">
-          <div><span class="section-kicker">v2.6.1 · 郡国全图</span><h3>汉末山河军政图</h3><p>全屏舆图 · 州名、郡国治所、山川与军路同图推演</p></div>
+          <div><span class="section-kicker">v2.31 · 郡国全图</span><h3>汉末山河军政图</h3><p>全屏舆图 · 实测地形、汉代水系、十三州界与军路同图推演</p></div>
           <div class="grand-map-actions" aria-label="地图图层">
             ${layerButton("all", "全局")}${layerButton("politics", "势力")}${layerButton("routes", "军路")}${layerButton("armies", "军团")}${layerButton("pressure", "战线")}
+            <span class="grand-map-basemap" role="group" aria-label="底图">${basemapButton("terrain", "地形")}${basemapButton("provinces", "州界")}</span>
           </div>
           <div class="grand-map-zoom" aria-label="地图缩放">
             <button type="button" data-map-zoom="out" aria-label="缩小地图">−</button>
@@ -107,20 +115,20 @@
                 <svg class="grand-map-terrain" viewBox="0 0 ${WIDTH} ${HEIGHT}" aria-hidden="true">
                   <defs>
                     <linearGradient id="mapSea" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#174d62"/><stop offset=".52" stop-color="#2b7180"/><stop offset="1" stop-color="#8ab7b5"/></linearGradient>
-                    <linearGradient id="mapLand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9b7a52"/><stop offset=".5" stop-color="#785f42"/><stop offset="1" stop-color="#4d4638"/></linearGradient>
                     <filter id="mapGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-                    <filter id="mapRelief" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".009 .018" numOctaves="4" seed="196" result="noise"/><feColorMatrix in="noise" type="matrix" values=".58 0 0 0 .08 0 .42 0 0 .06 0 0 .22 0 .02 0 0 0 .55 0"/></filter>
-                    <pattern id="mapGrid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="rgba(235,246,239,.055)" stroke-width="1"/></pattern>
                     <clipPath id="mapLandClip">${renderLandPaths()}</clipPath>
                   </defs>
-                  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapSea)"/><rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapGrid)"/>
+                  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapSea)"/>
+                  <image class="geography-terrain" href="${escapeHtml(GEO.terrainImage || "")}" width="${WIDTH}" height="${HEIGHT}" preserveAspectRatio="none"/>
                   <g class="geography-land">${renderLandPaths("land")}</g>
-                  <g class="geography-relief" clip-path="url(#mapLandClip)"><rect width="${WIDTH}" height="${HEIGHT}" filter="url(#mapRelief)"/></g>
+                  <g class="han-provinces" clip-path="url(#mapLandClip)">${renderProvinces()}</g>
                   <g class="grand-regions" clip-path="url(#mapLandClip)">${worldData.regions.map(region => renderRegion(region, regionStates[region.id])).join("")}</g>
-                  <g class="terrain-ridges">${renderTerrainLines(GEO.ranges, "ridge")}</g>
-                  <g class="terrain-rivers">${renderTerrainLines(GEO.rivers, "river")}</g>
+                  <g class="terrain-lakes">${renderLakes()}</g>
+                  <g class="terrain-rivers">${renderRivers()}</g>
+                  <g class="terrain-ranges">${renderRangeNames()}</g>
                   <g class="geography-labels">${renderGeographyLabels()}</g>
                   <g class="region-name-labels">${renderRegionLabels(worldData.regions)}</g>
+                  <g class="province-name-labels">${renderProvinceLabels()}</g>
                   <g class="minor-place-labels">${renderMinorPlaces()}</g>
                   <g class="grand-routes">${strategyData.routes.map(route => renderRoute(route, runtime.strategy)).join("")}</g>
                 </svg>
@@ -133,7 +141,7 @@
           <aside class="grand-map-inspector" data-map-inspector>${renderOverviewInspector(coreState, activeArmies, criticalRoutes, weakCities)}</aside>
         </div>
         <footer class="grand-map-legend">
-          <span><i class="legend-river"></i>山河</span><span><i class="legend-city"></i>城池</span><span><i class="legend-route"></i>军路</span><span><i class="legend-hot"></i>高压战线</span><span><i class="legend-army"></i>军团</span>
+          <span><i class="legend-river"></i>水系</span><span class="legend-historic"><i></i>汉代故道（示意）</span><span class="legend-province"><i></i>州界</span><span><i class="legend-city"></i>城池</span><span><i class="legend-route"></i>军路</span><span><i class="legend-hot"></i>高压战线</span><span><i class="legend-army"></i>军团</span>
           <p>${escapeHtml(GEO.disclaimer || "海岸山河按真实方位简化；汉末州郡与势力范围为策略近似。")}</p>
         </footer>${renderMapGuide()}
       </section>`;
@@ -143,8 +151,43 @@
     return (GEO.landPaths || []).map(item => `<path d="${item.d}"${mode === "land" ? ` data-land="${escapeHtml(item.id)}"` : ""}/>`).join("");
   }
 
-  function renderTerrainLines(items = [], kind) {
-    return items.map(item => `<path class="terrain-${kind}" data-feature="${escapeHtml(item.id)}" d="${GEO.path?.(item.points, false) || ""}"/><text class="terrain-name" x="${GEO.project?.(item.points[Math.floor(item.points.length / 2)])?.[0] || 0}" y="${(GEO.project?.(item.points[Math.floor(item.points.length / 2)])?.[1] || 0) - 8}">${escapeHtml(item.name)}</text>`).join("");
+  function renderRivers() {
+    const rivers = GEO.rivers || [];
+    const lines = rivers.map(item => `<path class="terrain-river rank-${Number(item.rank) || 4}${item.historic ? " historic" : ""}" data-feature="${escapeHtml(item.id)}" d="${item.d || ""}"/>`).join("");
+    const names = rivers.filter(item => item.name && item.label).map(item => {
+      const [x, y] = GEO.project?.(item.label) || [0, 0];
+      return `<text class="terrain-name river-name rank-${Number(item.rank) || 4}" x="${x}" y="${y}">${escapeHtml(item.name)}</text>`;
+    }).join("");
+    return lines + names;
+  }
+
+  function renderLakes() {
+    return (GEO.lakes || []).map(item => {
+      const [x, y] = GEO.project?.(item.label) || [0, 0];
+      return `<path class="terrain-lake${item.approximate ? " approximate" : ""}" d="${item.d || ""}"/><text class="terrain-name lake-name" x="${x}" y="${y + 3}">${escapeHtml(item.name)}</text>`;
+    }).join("");
+  }
+
+  function renderRangeNames() {
+    return (GEO.ranges || []).map(item => {
+      const [x, y] = GEO.project?.(item.point) || [0, 0];
+      return `<text class="terrain-name range-name" x="${x}" y="${y}">${escapeHtml(item.name)}</text>`;
+    }).join("");
+  }
+
+  function renderProvinces() {
+    return (GEO.provinces || []).map(item => `<path class="han-province" data-province="${escapeHtml(item.id)}" d="${item.d || ""}" style="--province-color:${escapeHtml(item.color || "#8a7a55")}"/>`).join("");
+  }
+
+  function renderProvinceLabels() {
+    return (GEO.provinces || []).map(item => {
+      const [x, y] = GEO.project?.(item.label) || [0, 0];
+      return `<text class="province-name-label" x="${x}" y="${y}">${escapeHtml(item.name)}</text>`;
+    }).join("");
+  }
+
+  function basemapButton(id, label) {
+    return `<button type="button" data-map-basemap="${escapeHtml(id)}" aria-pressed="${state.basemap === id}">${label}</button>`;
   }
 
   function renderGeographyLabels() {
@@ -245,6 +288,13 @@
       state.layer = button.dataset.mapLayer;
       shell.dataset.mapLayer = state.layer;
       shell.querySelectorAll("[data-map-layer]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.mapLayer === state.layer)));
+    }));
+
+    shell.querySelectorAll("[data-map-basemap]").forEach(button => button.addEventListener("click", () => {
+      state.basemap = BASEMAPS.includes(button.dataset.mapBasemap) ? button.dataset.mapBasemap : "terrain";
+      shell.dataset.basemap = state.basemap;
+      shell.querySelectorAll("[data-map-basemap]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.mapBasemap === state.basemap)));
+      try { storageWrite("setItem", BASEMAP_KEY, state.basemap); } catch (_) { /* storageWrite 已提示存储失败；偏好写不进去只影响下次打开的默认底图。 */ }
     }));
 
     shell.querySelectorAll("[data-map-zoom]").forEach(button => button.addEventListener("click", () => {
