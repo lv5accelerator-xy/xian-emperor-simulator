@@ -16,7 +16,8 @@ try{
  assert.equal(readVersion(temporary),target);assert.deepEqual(fs.readFileSync(path.join(temporary,"src/game.js")),before,"rules, keys and schema are unchanged");
  assert.ok(fs.readFileSync(path.join(temporary,"CHANGELOG.md"),"utf8").includes(history.slice(history.indexOf("\n"))),"historical changelog retained");
  assert.ok(fs.readFileSync(path.join(temporary,"index.html"),"utf8").includes("?v="+target));assert.ok(fs.readFileSync(path.join(temporary,"index.html"),"utf8").includes("?v=1.5.1"),"older cache cohort preserved");
- assert.ok(fs.readFileSync(path.join(temporary,"README.md"),"utf8").split("\n").length<=150);assert.throws(()=>planVersion(temporary,version,null),/已经存在/);
+ assert.ok(fs.readFileSync(path.join(temporary,"README.md"),"utf8").split("\n").length<=150);
+ const notesIndex=fs.readFileSync(path.join(temporary,"patch-notes/README.md"),"utf8");assert.ok(notesIndex.includes("| --- | --- |\n| [v"+target+"](v"+target+".txt) | 测试发布说明，不涉及玩法 |"),"逐版说明索引在表格首行新增该版本");assert.throws(()=>planVersion(temporary,version,null),/已经存在/);
  const env={...process.env};delete env.EXPECTED_VERSION;
  cp.execFileSync(process.execPath,["tests/release-regression.js"],{cwd:temporary,env,stdio:"pipe"});
  console.log("版本同步回归通过：只读计划、非法目标、历史保留、规则/键/schema不变、临时目录发布回归。");

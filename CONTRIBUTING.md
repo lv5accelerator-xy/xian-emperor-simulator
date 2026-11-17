@@ -19,6 +19,8 @@ node scripts/playthrough-equivalence.cjs 基线提交
 
 它用同一套对局脚本分别驱动基线与当前工作区的src，比较15条固定种子完整对局终局时的全部存储，耗时数分钟，零差异才算等价。PR会自动跑这项对照；确实要改规则、数值或随机序列时，给PR加上changes-gameplay标签跳过，并在说明里写明改变了什么。多数回归不超过六个月，账本、外交责任等只在长局显现的差异要靠它发现。
 
+浏览器回归在scripts/browser-*.cjs，共用scripts/browser-tap.cjs的真实点击；本地用Playwright自带Chromium时设BROWSER_CHANNEL=chromium与COUNCIL_BROWSER_CHANNEL=chromium。转义、只读快照、分帧结算、字体子集与缓存参数等现行约定见[工程笔记](docs/ENGINEERING_NOTES.md)。
+
 每个阶段使用独立分支和提交。提交信息采用“类型: 说明”，例如“修复: 补齐存储失败提示”“文档: 更新外交规则说明”。说明变更、验证结果、已知限制。
 
 规则、数值、随机或存档变更必须同步CHANGELOG与对应patch-notes，明确兼容边界；不把产品版本、规则版本、存档schema及模块键名混为一谈。先保留失败用例，再实现修复。
