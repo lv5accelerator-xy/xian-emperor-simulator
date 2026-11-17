@@ -2,7 +2,7 @@
 
 文件名带版本号的文档记录的是该版本引入时的规则与验证；规则后来又改过的，以“当前规则”为准。
 
-## 当前版本 v2.30 规则
+## 当前版本 v2.31 规则
 
 | 文档 | 内容 |
 | --- | --- |
@@ -26,7 +26,7 @@
 | [DECISION_COMPARISON.md](DECISION_COMPARISON.md) | 方案比较、目标转折与两局对比 |
 | [READING_COMFORT.md](READING_COMFORT.md) | 三档字号与月报重点 |
 | [TYPOGRAPHY.md](TYPOGRAPHY.md) | 古风／清晰两种字风 |
-| [MAP_DATA.md](MAP_DATA.md) | 舆图海岸线来源与历史疆界的近似方式 |
+| [MAP_DATA.md](MAP_DATA.md) | 舆图：实测地形来源、汉代水系与海岸修订、十三州界推算与重新生成方法 |
 | [AI_INTEGRATION.md](AI_INTEGRATION.md) | 将来接入大语言模型时的职责边界（尚未实现） |
 
 ## 工程与维护
