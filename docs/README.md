@@ -73,4 +73,4 @@
 | v2.24 | [RULES](archive/RULES_V224.md) | [VALIDATION](archive/VALIDATION_V224.md) | [BALANCE](archive/BALANCE_V224.md) | — |
 | v2.16 | — | — | [BALANCE](archive/BALANCE_V216.md) | — |
 
-数据文件：[`data/a11y-summary.json`](data/a11y-summary.json)、[`data/balance-paired-summary.json`](data/balance-paired-summary.json)；README 截图在 `images/`。
+数据文件：[`data/a11y-summary.json`](data/a11y-summary.json)、[`data/balance-paired-summary.json`](data/balance-paired-summary.json)；README 截图与仓库社交预览图在 `images/`。
