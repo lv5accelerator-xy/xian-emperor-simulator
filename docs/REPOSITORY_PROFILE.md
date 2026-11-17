@@ -1,9 +1,11 @@
-# GitHub 仓库门面待设置清单
+# GitHub 仓库门面
 
-本轮只准备可复制内容，未代为修改GitHub仓库网页设置。
+仓库主页 About 栏的设置。2026-11-17 由所有者在网页上设置，并通过 GitHub API 核对一致。
 
-- Description：汉末政治与军略模拟游戏,扮演汉献帝刘协,纯前端、浏览器本地运行。
+- Description：汉末政治与军略模拟游戏，扮演汉献帝刘协。纯前端，浏览器本地运行，无需安装。
 - Website：https://lv5accelerator-xy.github.io/xian-emperor-simulator/
-- Topics：game, simulation, html5, javascript, strategy-game, chinese, three-kingdoms, history, browser-game
+- Topics：browser-game, chinese, game, history, html5, javascript, simulation, strategy-game, three-kingdoms
 
-index.html已有含产品名和当前版本的title、meta description与lang="zh-CN"；本阶段补充Open Graph和本地SVG favicon，未修改页面正文或样式。社交预览复用已有开场插图，其归属/再分发待补事项仍见[CREDITS](../CREDITS.md)。未向社交平台请求重新抓取或验证实际卡片缓存。
+尚未设置：Settings → General → Social preview（分享链接时显示的图片）。GitHub 要求 PNG 或 JPG、至少 640×320。
+
+index.html已有含产品名和当前版本的title、meta description与lang="zh-CN"，以及Open Graph和本地SVG favicon。页面的社交预览复用已有开场插图，其归属/再分发待补事项仍见[CREDITS](../CREDITS.md)。未向社交平台请求重新抓取或验证实际卡片缓存。
