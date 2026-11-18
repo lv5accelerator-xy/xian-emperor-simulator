@@ -1,12 +1,29 @@
 "use strict";
 // 舆图回归：只用 Tab、Shift+Tab、方向键、回车与 Esc 完成一次调兵；另查标注避让。
 // 检查焦点不会在军情栏内容替换后掉回页面顶部、Esc 能取消军令、焦点环可见，城池圆点落在坐标上、名牌与军团标记互不遮挡。
-// 桌面与手机宽度各跑一遍。
+// 桌面与手机宽度各跑一遍；另查工具栏不压两侧栏、许都不被浮层遮住、最东的城池能滚到可见处（含 1530×740 与特大字号）。
 const fs = require("node:fs"), path = require("node:path"), assert = require("node:assert/strict");
 const { pathToFileURL } = require("node:url");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const root = path.resolve(__dirname, ".."), out = path.resolve(process.env.MAP_KEYBOARD_OUTPUT || path.join(root, "../browser-map-keyboard"));
 fs.mkdirSync(out, { recursive: true });
+
+// 浮层检查：工具栏不能压住两侧栏；地图归中后许都不在任何浮层底下；最东的城池能滚到没被遮住的区域。
+const panelCheck = () => {
+  const rect = selector => document.querySelector(selector)?.getBoundingClientRect();
+  const toolbar = rect(".grand-map-toolbar"), rail = rect(".world-map-status-rail"), inspector = rect(".grand-map-inspector");
+  const overlap = (a, b) => a && b && a.height && b.height && a.left < b.right && a.right > b.left ? Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)) : 0;
+  const covers = point => [...document.querySelectorAll(".grand-map-toolbar, .world-map-status-rail, .grand-map-inspector, .grand-map-legend")]
+    .some(node => { const box = node.getBoundingClientRect(); return box.width && getComputedStyle(node).opacity !== "0" && point.x > box.left && point.x < box.right && point.y > box.top && point.y < box.bottom; });
+  const dot = id => { const box = document.querySelector(`[data-grand-city="${id}"] span`).getBoundingClientRect(); return { x: box.left + box.width / 2, y: box.top + box.height / 2 }; };
+  const viewport = document.querySelector("[data-grand-viewport]");
+  const easternmost = [...document.querySelectorAll("[data-grand-city]")].map(node => node.dataset.grandCity).sort((a, b) => window.XianGrandMap.positions[b][0] - window.XianGrandMap.positions[a][0])[0];
+  const before = viewport.scrollLeft; viewport.scrollLeft = viewport.scrollWidth;
+  const eastVisible = !covers(dot(easternmost));
+  viewport.scrollLeft = before;
+  const result = { railOverlap: Math.round(overlap(toolbar, rail)), inspectorOverlap: Math.round(overlap(toolbar, inspector)), xuduCovered: covers(dot("xudu")), easternmost, eastVisible };
+  return { ...result, ok: !result.railOverlap && !result.inspectorOverlap && !result.xuduCovered && eastVisible };
+};
 
 (async () => {
   const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || "chrome" });
@@ -70,6 +87,9 @@ fs.mkdirSync(out, { recursive: true });
         const scale = stage.width / 1200, [x, y] = window.XianGrandMap.positions[el.dataset.grandCity];
         return Math.abs(dot.left + dot.width / 2 - (stage.left + x * scale)) < 3 && Math.abs(dot.top + dot.height / 2 - (stage.top + y * scale)) < 3;
       })));
+
+      const panels = await page.evaluate(panelCheck);
+      check("toolbar does not cover the side panels, and Xudu is not hidden behind any panel", panels.ok, panels);
 
       // 找一支可以直接下令的军团所在城池。
       const target = await page.evaluate(() => {
@@ -150,6 +170,27 @@ fs.mkdirSync(out, { recursive: true });
 
       check("no page errors", errors.length === 0, errors);
       await page.screenshot({ path: path.join(out, `map-keyboard-${width}.png`) });
+      await context.close();
+    }
+    // 用户反馈的窗口：1530×740，另测特大字号（工具栏更高）。
+    for (const size of ["standard", "largest"]) {
+      const context = await browser.newContext({ viewport: { width: 1530, height: 740 }, reducedMotion: "reduce" });
+      const page = await context.newPage();
+      page.on("dialog", dialog => dialog.accept());
+      await page.addInitScript(value => { try { localStorage.setItem("xian_reading_size_v1", value); } catch (_) {} }, size);
+      await page.goto(pathToFileURL(path.join(root, "index.html")).href);
+      await page.evaluate(() => window.XianEmperorGame.startNewGame("standard", "zhongping_189", { randomSeed: 20261017 }));
+      await page.waitForTimeout(1000);
+      for (const selector of ["[data-tutorial-move='skip']", "#modal-confirm"]) { const target = page.locator(selector).first(); if (await target.isVisible().catch(() => false)) await target.click().catch(() => {}); }
+      if (!await page.locator("#world-map-btn").isVisible()) await page.locator("#utility-more-toggle").click();
+      await page.locator("#world-map-btn").click();
+      await page.locator(".grand-map-viewport").waitFor(); await page.waitForTimeout(800);
+      if (await page.locator("[data-map-guide-skip]").isVisible()) await page.locator("[data-map-guide-skip]").click();
+      await page.waitForTimeout(300);
+      const panels = await page.evaluate(panelCheck);
+      const ok = panels.ok;
+      console.log(ok ? "PASS" : "FAIL", 1530, `${size}: panels clear of the toolbar and every city reachable`, ok ? "" : JSON.stringify(panels));
+      if (!ok) failures.push({ width: 1530, name: size, detail: panels });
       await context.close();
     }
   } finally { await browser.close(); }

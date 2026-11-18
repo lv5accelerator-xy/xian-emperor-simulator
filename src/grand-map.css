@@ -193,3 +193,7 @@
 .grand-map-shell .grand-city.label-above strong{grid-row:1}
 .grand-map-shell .grand-city.label-above small{grid-row:2}
 @keyframes commandTarget{50%{filter:drop-shadow(0 0 12px rgba(239,203,105,.8));transform:translate(var(--city-x,-50%),var(--city-y,-50%)) scale(1.08)}}
+/* v2.37 两侧栏按工具栏实际高度定位：工具栏高度随窗口宽度与字号变化，写死的 top 会被它压住 */
+.world-map-page .grand-map-inspector,.world-map-status-rail{top:calc(var(--map-top,8.2rem) + .55rem)}
+@media(max-width:760px){.world-map-page .grand-map-inspector{top:auto}.world-map-status-rail{top:calc(var(--map-top,8.2rem) + .35rem)}}
+.map-alert-list button b{color:#dc8a70}
