@@ -1065,7 +1065,7 @@
     overlay.querySelector("#strategy-network-close")?.addEventListener("click", closeOverlay);
     overlay.addEventListener("click", event => { if (event.target === overlay) closeOverlay(); });
     overlay.querySelectorAll("[data-strategy-tab]").forEach(button => button.addEventListener("click", () => { activeTab = button.dataset.strategyTab; renderOverlay(); }));
-    document.addEventListener("keydown", event => { if (event.key === "Escape" && !overlay.classList.contains("hidden")) closeOverlay(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !overlay.classList.contains("hidden") && !overlay.closest("[inert]")) closeOverlay(); });
   }
 
   function openOverlay() {

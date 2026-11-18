@@ -146,23 +146,23 @@
           <div class="grand-map-viewport" data-grand-viewport tabindex="0" aria-label="可拖动的汉末天下地图">
             <div class="grand-map-zoom-space" data-map-space>
               <div class="grand-map-stage" data-map-stage style="--map-width:${WIDTH}px;--map-height:${HEIGHT}px">
-                <svg class="grand-map-terrain" viewBox="0 0 ${WIDTH} ${HEIGHT}" aria-hidden="true">
-                  <defs>
+                <svg class="grand-map-terrain" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="group" aria-label="州郡、策略区域与军路">
+                  <defs aria-hidden="true">
                     <linearGradient id="mapSea" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#174d62"/><stop offset=".52" stop-color="#2b7180"/><stop offset="1" stop-color="#8ab7b5"/></linearGradient>
                     <filter id="mapGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
                     <clipPath id="mapLandClip">${renderLandPaths()}</clipPath>
                   </defs>
-                  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapSea)"/>
-                  <image class="geography-terrain" href="${escapeHtml(GEO.terrainImage || "")}" width="${WIDTH}" height="${HEIGHT}" preserveAspectRatio="none"/>
-                  <g class="geography-land">${renderLandPaths("land")}</g>
+                  <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapSea)" aria-hidden="true"/>
+                  <image class="geography-terrain" href="${escapeHtml(GEO.terrainImage || "")}" aria-hidden="true" width="${WIDTH}" height="${HEIGHT}" preserveAspectRatio="none"/>
+                  <g class="geography-land" aria-hidden="true">${renderLandPaths("land")}</g>
                   <g class="han-provinces" clip-path="url(#mapLandClip)">${renderProvinces(era)}</g>
                   <g class="grand-regions" clip-path="url(#mapLandClip)">${worldData.regions.map(region => renderRegion(region, regionStates[region.id])).join("")}</g>
-                  <g class="terrain-lakes">${renderLakes()}</g>
-                  <g class="terrain-rivers">${renderRivers()}</g>
-                  <g class="terrain-ranges">${renderRangeNames()}</g>
-                  <g class="geography-labels">${renderGeographyLabels()}</g>
-                  <g class="province-name-labels">${renderProvinceLabels(era)}</g>
-                  <g class="minor-place-labels">${renderMinorPlaces()}</g>
+                  <g class="terrain-lakes" aria-hidden="true">${renderLakes()}</g>
+                  <g class="terrain-rivers" aria-hidden="true">${renderRivers()}</g>
+                  <g class="terrain-ranges" aria-hidden="true">${renderRangeNames()}</g>
+                  <g class="geography-labels" aria-hidden="true">${renderGeographyLabels()}</g>
+                  <g class="province-name-labels" aria-hidden="true">${renderProvinceLabels(era)}</g>
+                  <g class="minor-place-labels" aria-hidden="true">${renderMinorPlaces()}</g>
                   <g class="grand-routes">${strategyData.routes.map(route => renderRoute(route, runtime.strategy)).join("")}</g>
                 </svg>
                 <div class="grand-city-layer">${strategyData.cities.map(city => renderCity(city, runtime.strategy, cityArmies[city.id] || [])).join("")}</div>
@@ -381,6 +381,7 @@
       if (guide) {
         guide.outerHTML = renderMapGuide();
         bindGuide(shell);
+        shell.querySelector("[data-map-guide-next]")?.focus();
       }
     });
     bindDrag(viewport);
@@ -405,14 +406,18 @@
       if (state.guideStep >= 2) return finishGuide(shell);
       state.guideStep += 1;
       const guide = shell.querySelector("[data-map-guide]");
-      if (guide) { guide.outerHTML = renderMapGuide(); bindGuide(shell); }
+      if (guide) { guide.outerHTML = renderMapGuide(); bindGuide(shell); shell.querySelector("[data-map-guide-next]")?.focus(); }
     });
   }
 
   function finishGuide(shell) {
+    const guide = shell.querySelector("[data-map-guide]");
+    const hadFocus = guide?.contains(document.activeElement);
     storageWrite("setItem", GUIDE_KEY, "seen");
-    shell.querySelector("[data-map-guide]")?.remove();
+    guide?.remove();
     state.guideStep = 0;
+    // 指引里的按钮随指引一起移除，焦点交给地图本身，免得掉回页面顶部。
+    if (hadFocus) shell.querySelector("[data-grand-viewport]")?.focus();
   }
 
   // 标注避让：在页面上实测各标注的尺寸后再排布，避免军团标记、州名与小地名压住城池名。

@@ -134,7 +134,7 @@
       }
     });
     document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && overlay && !overlay.classList.contains("hidden")) close();
+      if (event.key === "Escape" && overlay && !overlay.classList.contains("hidden") && !overlay.closest("[inert]")) close();
     });
   }
 

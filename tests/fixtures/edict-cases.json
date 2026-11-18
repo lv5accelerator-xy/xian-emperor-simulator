@@ -8,9 +8,9 @@
     "mode": "Read-only analysis/preview; desired fields are human semantic expectations, not rule changes."
   },
   "sourceHashes": {
-    "src/edict-rules.js": "035ac1818e92f90d2f710cdc013df9ebd92524802063ea8b6a9918b3565bfb39",
+    "src/edict-rules.js": "67950b781047d7b74289b025cb8ec7ca7f51deff01c23272f06526ee1d9a17e8",
     "src/strategy-network.js": "944efbe5987c6c0c4bd6be0ebb2478f6bcb072217430c6bef4e2d6293eecd59b",
-    "src/strategy-network-data.js": "d342894e0260fc423eba580dca4cef06bfeb302f5f7042f02cc5f880029053b6",
+    "src/strategy-network-data.js": "86cb31f9b894d6605e204eabc03e193ddc13fef5c242d9a330c12ee4397bc70b",
     "src/character-availability.js": "d77672631044d3f9084cf651f43d835257d76cefa0d0b8c8396b5750116c9188"
   },
   "cases": [
@@ -1730,6 +1730,296 @@
           "reason": "请先裁决本月奏报，草稿可以保留。",
           "actionCost": 1,
           "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "V01",
+      "group": "军令动词",
+      "text": "进攻许都",
+      "note": "最常见的进攻说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "cityOrder": [
+          "xudu"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "进攻许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "V02",
+      "group": "军令动词",
+      "text": "令曹操进攻邺城",
+      "note": "受命者不是被讨伐对象",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "targetDisposition": {
+          "cao_cao": "positive"
+        }
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [
+          "cao_cao"
+        ],
+        "targetDisposition": {
+          "cao_cao": "positive"
+        },
+        "effectiveText": "令曹操进攻邺城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "ye"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "V03",
+      "group": "军令动词",
+      "text": "发兵攻打宛城",
+      "note": "发兵＋攻打",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "发兵攻打宛城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "wan"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "V04",
+      "group": "军令动词",
+      "text": "围攻寿春",
+      "note": "围攻",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "围攻寿春",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "shouchun"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "V05",
+      "group": "军令动词",
+      "text": "派兵增援许都",
+      "note": "派兵＋增援",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "派兵增援许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "V06",
+      "group": "军令动词",
+      "text": "与袁绍并力讨伐刘表",
+      "note": "盟友并力，不是褒贬混杂",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "blocked": false,
+        "targetDisposition": {
+          "yuan_shao": "positive",
+          "liu_biao": "punitive"
+        }
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [
+          "yuan_shao",
+          "liu_biao"
+        ],
+        "targetDisposition": {
+          "yuan_shao": "positive",
+          "liu_biao": "punitive"
+        },
+        "effectiveText": "与袁绍并力讨伐刘表",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "V07",
+      "group": "军令动词",
+      "text": "令曹操讨伐袁绍",
+      "note": "受命讨伐者为正面，讨伐对象为惩处",
+      "desired": {
+        "blocked": false,
+        "targetDisposition": {
+          "cao_cao": "positive",
+          "yuan_shao": "punitive"
+        }
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [
+          "cao_cao",
+          "yuan_shao"
+        ],
+        "targetDisposition": {
+          "cao_cao": "positive",
+          "yuan_shao": "punitive"
+        },
+        "effectiveText": "令曹操讨伐袁绍",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "V08",
+      "group": "军令动词",
+      "text": "收复洛阳",
+      "note": "收复",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "cityOrder": [
+          "luoyang"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "收复洛阳",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "luoyang"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
         }
       }
     }

@@ -16,6 +16,73 @@
   const clone = value => JSON.parse(JSON.stringify(value));
   const keyFor = core => `${core.createdAt}:${core.turn}`;
   const escape = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+  // 备份压缩（v2.36 起）：每份备份是全部存储的完整副本，一局长档约 35 万字符，四份备份能占去本地存储配额的大半。
+  // 条目里的月份、标签等元数据仍是明文，只有完整副本 bundle 压成 packed 字符串（约缩为七分之一）。
+  // 旧版写入的明文 bundle 照常读取；每月只压缩新增的一份，已有条目原样保留。
+  // 按 lz-string 1.x 的 compressToUTF16 / decompressFromUTF16 算法改写（MIT，Pieroxy）。
+  function pack(input) {
+    const bitsPerChar = 15, dict = new Map(), toCreate = new Set(), data = [];
+    let w = "", enlargeIn = 2, dictSize = 3, numBits = 2, val = 0, pos = 0;
+    const bit = b => { val = (val << 1) | b; if (pos === bitsPerChar - 1) { pos = 0; data.push(String.fromCharCode(val + 32)); val = 0; } else pos++; };
+    const bitsOf = (value, count) => { for (let i = 0; i < count; i++) { bit(value & 1); value >>= 1; } };
+    const grow = () => { if (--enlargeIn === 0) { enlargeIn = 2 ** numBits; numBits++; } };
+    const output = () => {
+      if (toCreate.has(w)) {
+        const code = w.charCodeAt(0);
+        if (code < 256) { bitsOf(0, numBits); bitsOf(code, 8); } else { bitsOf(1, numBits); bitsOf(code, 16); }
+        grow(); toCreate.delete(w);
+      } else bitsOf(dict.get(w), numBits);
+      grow();
+    };
+    for (let i = 0; i < input.length; i++) {
+      const c = input.charAt(i);
+      if (!dict.has(c)) { dict.set(c, dictSize++); toCreate.add(c); }
+      const wc = w + c;
+      if (dict.has(wc)) { w = wc; continue; }
+      output();
+      dict.set(wc, dictSize++);
+      w = c;
+    }
+    if (w !== "") output();
+    bitsOf(2, numBits);
+    for (;;) { val <<= 1; if (pos === bitsPerChar - 1) { data.push(String.fromCharCode(val + 32)); break; } pos++; }
+    return data.join("") + " ";
+  }
+  function unpack(packed) {
+    const length = packed.length, reset = 16384, next = index => packed.charCodeAt(index) - 32;
+    const dict = [0, 1, 2], result = [];
+    let enlargeIn = 4, dictSize = 4, numBits = 3, w, entry, value = next(0), position = reset, index = 1;
+    const read = count => {
+      let bits = 0;
+      for (let power = 1, max = 2 ** count; power !== max; power <<= 1) {
+        const b = value & position; position >>= 1;
+        if (position === 0) { position = reset; value = next(index++); }
+        if (b > 0) bits |= power;
+      }
+      return bits;
+    };
+    let c;
+    switch (read(2)) { case 0: c = String.fromCharCode(read(8)); break; case 1: c = String.fromCharCode(read(16)); break; default: return ""; }
+    dict[3] = c; w = c; result.push(c);
+    for (;;) {
+      if (index > length) throw new Error("压缩数据不完整");
+      let code = read(numBits);
+      if (code === 0 || code === 1) { dict[dictSize++] = String.fromCharCode(read(code === 0 ? 8 : 16)); code = dictSize - 1; enlargeIn--; }
+      else if (code === 2) return result.join("");
+      if (enlargeIn === 0) { enlargeIn = 2 ** numBits; numBits++; }
+      if (code < dictSize && dict[code] !== undefined) entry = dict[code];
+      else if (code === dictSize) entry = w + w.charAt(0);
+      else throw new Error("压缩数据损坏");
+      result.push(entry);
+      dict[dictSize++] = w + entry.charAt(0);
+      enlargeIn--;
+      w = entry;
+      if (enlargeIn === 0) { enlargeIn = 2 ** numBits; numBits++; }
+    }
+  }
+  function packEntry(entry) { const { bundle, ...meta } = entry; return { ...meta, packed: pack(JSON.stringify(bundle)) }; }
+  function unpackEntry(entry) { if (!entry || entry.bundle || typeof entry.packed !== "string") return entry; const { packed, ...meta } = entry; return { ...meta, bundle: JSON.parse(unpack(packed)) }; }
+
   let timer = null, preparedGameId = null, problem = "";
   let lastMonth = null;
 
@@ -24,12 +91,12 @@
   let cachedRaw = null, cachedValue = null;
   function readStore(shared = false) {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw === null) return { version: 1, months: [], replacement: null };
+    if (raw === null) return { version: 2, months: [], replacement: null };
     let value;
     if (shared && raw === cachedRaw) value = cachedValue;
     else { value = JSON.parse(raw); if (shared) { cachedRaw = raw; cachedValue = value; } }
     if (!value || !Array.isArray(value.months)) throw new Error("Invalid backup index");
-    return { version: 1, months: value.months.slice(0, 3), replacement: value.replacement || null };
+    return { version: 2, months: value.months.slice(0, 3), replacement: value.replacement || null };
   }
   function writeStore(store) { storageWrite("setItem", STORE_KEY, JSON.stringify(store)); problem = ""; }
   function fail() {
@@ -56,7 +123,7 @@
       if (active && !active.gameCreatedAt) return;
       // Refreshing or saving an action does not overwrite this month's checkpoint.
       if (lastMonth === id && store.months.some(entry => entry.id === id)) return;
-      store.months = [makeEntry(bundle, "月度自动留档"), ...store.months.filter(entry => entry.id !== id)].slice(0, 3);
+      store.months = [packEntry(makeEntry(bundle, "月度自动留档")), ...store.months.filter(entry => entry.id !== id)].slice(0, 3);
       writeStore(store);
       lastMonth = id;
     } catch (_) { fail(); }
@@ -74,7 +141,7 @@
       const bundle = api().captureFullSave();
       if (!bundle) return true;
       const store = readStore(true);
-      store.replacement = makeEntry(bundle, label);
+      store.replacement = packEntry(makeEntry(bundle, label));
       writeStore(store);
       return true;
     } catch (_) { return fail(); }
@@ -99,7 +166,7 @@
 
   function list() {
     const store = readStore();
-    return [store.replacement && { ...store.replacement, slot: "replacement" }, ...store.months.map((entry, index) => ({ ...entry, slot: `month-${index}` }))].filter(Boolean);
+    return [store.replacement && { ...unpackEntry(store.replacement), slot: "replacement" }, ...store.months.map((entry, index) => ({ ...unpackEntry(entry), slot: `month-${index}` }))].filter(Boolean);
   }
   function describe(bundle) {
     const core = bundle?.stores?.[CORE_KEY];

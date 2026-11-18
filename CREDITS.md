@@ -35,6 +35,12 @@
 | 汉代修订：东汉黄河与淮水下游、济水泗水汝水、汉代湖泽、汉代海岸、十三州界 | scripts/map-data/eastern-han.json，本仓库维护时依《续汉书·郡国志》郡国建制与通行历史地理常识整理的近似坐标；州界由105个郡国治所推算，未描摹任何受版权保护的历史地图 | 本次仓库维护 | 项目MIT许可证 | 允许 |
 | 16座城池、14个策略区域与地名标注 | src/historical-geography-data.js 中手工维护的坐标，游戏化近似 | 项目作者 | 项目MIT许可证 | 允许 |
 
+## 第三方算法
+
+| 用途 | 来源 | 许可 |
+| --- | --- | --- |
+| 完整备份压缩（`src/save-backups.js` 中的 `pack`／`unpack`） | 按 [lz-string](https://github.com/pieroxy/lz-string) 1.x 的 `compressToUTF16`／`decompressFromUTF16` 算法改写，作者 Pieroxy | MIT |
+
 ## 五首运行音乐与三首备选
 
 运行映射见[src/audio-tracks.js](src/audio-tracks.js)，用途说明见[音乐清单](assets/audio/bgm/README.md)。仓内只有曲名、文件及用途，未找到作者、下载/生成来源、订单或许可文本。备选曲不在运行映射内，这不等于具有再分发权。

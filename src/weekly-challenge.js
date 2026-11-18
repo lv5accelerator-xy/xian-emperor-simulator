@@ -105,6 +105,10 @@
     store.results.unshift(record);
     store.results = store.results.slice(0, 32);
     if (!store.best[code] || store.best[code].rulesVersion !== record.rulesVersion || result.score > store.best[code].score) store.best[code] = record;
+    // 每周一个新挑战码，最佳成绩按完成时间只留最近 40 周（本周的始终保留），否则逐年增长。
+    const older = Object.entries(store.best).filter(([key]) => key !== code && key !== selectedCode)
+      .sort((a, b) => String(b[1]?.completedAt || "").localeCompare(String(a[1]?.completedAt || "")));
+    for (const [key] of older.slice(39)) delete store.best[key];
     saveStore();
     window.XianCommandCenter?.refresh?.();
   }

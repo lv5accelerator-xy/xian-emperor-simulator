@@ -192,7 +192,7 @@
     overlay.querySelector("#court-politics-close")?.addEventListener("click", closeOverlay);
     overlay.addEventListener("click", event => { if (event.target === overlay) closeOverlay(); });
     overlay.querySelectorAll("[data-court-tab]").forEach(button => button.addEventListener("click", () => { activeTab = button.dataset.courtTab; renderOverlay(); }));
-    document.addEventListener("keydown", event => { if (event.key === "Escape" && !overlay.classList.contains("hidden")) closeOverlay(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !overlay.classList.contains("hidden") && !overlay.closest("[inert]")) closeOverlay(); });
   }
 
   function openOverlay() { document.getElementById("court-politics-overlay")?.classList.remove("hidden"); document.body.classList.add("court-politics-open"); renderOverlay(); }

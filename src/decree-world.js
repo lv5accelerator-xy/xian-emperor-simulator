@@ -263,7 +263,7 @@
     const efficiency = efficiencyMatch
       ? clamp(Number(efficiencyMatch[1]) / 100, 0.28, 0.94)
       : 0.58;
-    const negative = /(讨伐|罢免|黜|问罪|斥责|削爵|追责|征讨|平叛)/.test(combined);
+    const negative = /(讨伐|罢免|黜|问罪|斥责|削爵|追责|征讨|平叛|进攻|攻打|围攻)/.test(combined);
 
     return { categories: report.edict?.categories || categories, regionIds, lordIds, efficiency, negative, empty: effective === "" };
   }
