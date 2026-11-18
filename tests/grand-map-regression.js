@@ -40,7 +40,7 @@ const api = context.window.XianGrandMap;
 const worldSystemCode = read("src/world-system.js");
 assert.ok(api, "grand map API should load");
 assert.equal(Object.keys(api.positions).length, 16, "all sixteen strategic cities need map coordinates");
-assert.equal(api.geography.version, "2.31.0", "real geography data should match the map release");
+assert.equal(api.geography.version, "2.32.0", "real geography data should match the map release");
 const geo = api.geography;
 assert.match(geo.terrainImage, /^assets\/images\/map\/terrain\.webp/, "terrain basemap image is bundled locally");
 assert.ok(fs.existsSync(path.join(root, geo.terrainImage.split("?")[0])), "terrain basemap image exists");
@@ -98,6 +98,31 @@ assert.equal(provinceAt([114.35, 36.33]), "冀州", "Ye lies in Jizhou");
 assert.equal(provinceAt([112.62, 34.72]), "司隶", "Luoyang lies in Sili");
 assert.equal(provinceAt([119.30, 26.08]), "扬州", "Fujian belonged to Kuaiji in Yangzhou");
 
+// 州制随年份：189 年十三州，194 年起河西另置雍州，213 年起复为九州
+assert.equal(geo.provinceEras.length, 3);
+const eraOf = year => geo.provincesForYear(year);
+assert.equal(eraOf(189).provinces.length, 13);
+assert.equal(eraOf(195).provinces.length, 14);
+assert.equal(eraOf(200).provinces.length, 14);
+assert.equal(eraOf(213).provinces.length, 9);
+assert.equal(eraOf(220).provinces.length, 9);
+assert.deepEqual(Array.from(eraOf(220).provinces, item => item.name).sort(), ["兖州", "冀州", "徐州", "扬州", "益州", "荆州", "豫州", "雍州", "青州"].sort());
+for (const era of geo.provinceEras) {
+  assert.equal(era.provinces.reduce((sum, item) => sum + item.commanderies.length, 0), 105, `${era.id}: every commandery belongs to exactly one province`);
+}
+const provinceIn = (year, point) => eraOf(year).provinces.find(item => pointIn(item.d, geo.project(point)))?.name;
+assert.equal(provinceIn(189, [94.66, 40.14]), "凉州", "Dunhuang in Liangzhou before 194");
+assert.equal(provinceIn(196, [94.66, 40.14]), "雍州", "Dunhuang in the Hexi Yongzhou from 194");
+assert.equal(provinceIn(196, [103.85, 35.40]), "凉州", "Longxi stays in Liangzhou in 196");
+assert.equal(provinceIn(220, [103.85, 35.40]), "雍州", "Liangzhou merged into Yongzhou in 213");
+assert.equal(provinceIn(220, [112.50, 37.85]), "冀州", "Bingzhou merged into Jizhou in 213");
+assert.equal(provinceIn(220, [113.27, 23.13]), "荆州", "Jiaozhou merged into Jingzhou in 213");
+assert.ok(eraOf(220).provinces.find(item => item.name === "冀州").commanderies.includes("河内郡"), "Henei joined Jizhou with Wei's ten commanderies");
+const html220 = api.render({ regions: {} }, { turn: 3, maxTurns: 24, year: 220 });
+assert.equal((html220.match(/class="han-province"/g) || []).length, 9, "the map shows the province system of the current game year");
+assert.match(html220, /州制：建安十八年复九州/);
+assert.match(api.render({ regions: {} }, { turn: 1, maxTurns: 24, year: 196 }), /州制：兴平元年分置雍州/);
+
 // 底图切换：默认地形，可切到州界，偏好记在本机
 assert.match(html, /data-basemap="terrain"/);
 assert.equal((html.match(/data-map-basemap=/g) || []).length, 2);
@@ -116,7 +141,8 @@ assert.match(html, /地图归中/);
 assert.match(html, /本月关键警讯 · 最多三条/);
 assert.match(html, /选择军团后可直接在地图下令/);
 assert.match(html, /舆图指引/);
-assert.equal((html.match(/class="region-name-label"/g) || []).length, 14, "all fourteen strategic regions need large map labels");
+assert.equal((html.match(/class="region-name-label"/g) || []).length, 0, "strategic region names live in the inspector, not as large map labels");
+assert.equal((html.match(/class="grand-region"[^>]*aria-label="[^"]+"/g) || []).length, 14, "all fourteen strategic regions stay clickable and named");
 assert.equal((html.match(/class="minor-place"/g) || []).length, 32, "commandery and county-seat labels should enrich the historical map");
 assert.match(html, /data-map-inspector-toggle/);
 assert.match(worldSystemCode, /world-map-page/);

@@ -1,8 +1,8 @@
 # 素材来源与授权清单
 
-维护新增素材：`assets/favicon.svg`由本轮维护过程以基本几何图形手写，无外部图片或字体。作者记录为本次仓库维护；权利归属及项目再分发许可仍待所有者决定，见LICENSE中的TODO。本条不替代任何现有素材的授权凭据。
+维护新增素材：`assets/favicon.svg`由本轮维护过程以基本几何图形手写，无外部图片或字体。作者记录为本次仓库维护，按项目MIT许可证发布。本条不替代任何现有素材的授权凭据。
 
-本清单只记录仓库内可核实的说明、许可附件及字体文件元数据。项目许可证尚未选定，见[LICENSE](LICENSE)。第三方许可不随项目许可证自动变更；缺少凭据的项目保留TODO，由所有者确认。没有从曲名、编码器信息或“原创”字样推定作者与再分发权。
+本清单只记录仓库内可核实的说明、许可附件及字体文件元数据。项目代码按[MIT许可证](LICENSE)发布，LICENSE中列出的素材不在其内。第三方许可不随项目许可证自动变更；缺少凭据的项目保留TODO，由所有者确认。没有从曲名、编码器信息或“原创”字样推定作者与再分发权。
 
 ## 字体
 
@@ -32,8 +32,8 @@
 | --- | --- | --- | --- | --- |
 | assets/images/map/terrain.webp（地形底图） | Natural Earth 10m栅格 HYP_HR_SR（分层设色地形）与 GRAY_HR_SR（灰度山体阴影），取自维护者仓库 [nvkelso/natural-earth-raster](https://github.com/nvkelso/natural-earth-raster)；由scripts/build-map-terrain.py裁切、重新着色并按汉代海岸修订 | Natural Earth项目（Tom Patterson、Nathaniel Vaughn Kelso等） | Natural Earth数据为公有领域，见[上游使用条款](https://www.naturalearthdata.com/about/terms-of-use/) | 允许；SHA-256 `4efd0b353619c1f0e45a677583f93606e0725edee768a8e67e6843e10a46afed` |
 | src/historical-geography-data.js 中的陆地、河流与湖泊轮廓 | Natural Earth 10m矢量 ne_10m_land、ne_10m_rivers_lake_centerlines、ne_10m_lakes（[nvkelso/natural-earth-vector](https://github.com/nvkelso/natural-earth-vector) 5.2.0-pre），同一脚本裁切、抽稀、投影 | Natural Earth项目 | 公有领域，同上 | 允许 |
-| 汉代修订：东汉黄河与淮水下游、济水泗水汝水、汉代湖泽、汉代海岸、十三州界 | scripts/map-data/eastern-han.json，本仓库维护时依《续汉书·郡国志》郡国建制与通行历史地理常识整理的近似坐标；州界由105个郡国治所推算，未描摹任何受版权保护的历史地图 | 本次仓库维护 | 项目许可待选 | 待所有者确认(TODO) |
-| 16座城池、14个策略区域与地名标注 | src/historical-geography-data.js 中手工维护的坐标，游戏化近似 | 来源待补充(TODO) | 项目许可待选 | 待所有者确认(TODO) |
+| 汉代修订：东汉黄河与淮水下游、济水泗水汝水、汉代湖泽、汉代海岸、十三州界 | scripts/map-data/eastern-han.json，本仓库维护时依《续汉书·郡国志》郡国建制与通行历史地理常识整理的近似坐标；州界由105个郡国治所推算，未描摹任何受版权保护的历史地图 | 本次仓库维护 | 项目MIT许可证 | 允许 |
+| 16座城池、14个策略区域与地名标注 | src/historical-geography-data.js 中手工维护的坐标，游戏化近似 | 项目作者 | 项目MIT许可证 | 允许 |
 
 ## 五首运行音乐与三首备选
 
@@ -107,7 +107,6 @@ README称其为项目原创，但未见逐项来源、作者、制作记录或�
 
 ## 待所有者补齐
 
-- 选择根目录项目许可证；当前LICENSE只作待决策占位。
 - 决定Noto Serif SC是否另行补充Adobe版权声明（产物来源与附件已于v2.30.3核实，见上表）；补齐八份MP3以及内嵌音频的合法来源。
 - 确认人物立绘、场景插图、历史地图改绘的制作人、归属与再分发范围。
 - history/中的旧包没有逐个完成素材确权；当前清单不为历史包作统一授权保证。准备公开上传旧ZIP前，需逐包核对。

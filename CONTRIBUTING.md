@@ -27,6 +27,6 @@ node scripts/playthrough-equivalence.cjs 基线提交
 
 发布号以src/data.js的GAME_DATA.version为准，维护工具自动读取。更新发布元数据时先运行scripts/bump-version.cjs的--dry-run，再检查差异；历史文档、存储键和规则版本不会自动升级。
 
-新增素材须登记CREDITS.md并附可核验的许可；项目LICENSE尚待所有者决定。不要自行认定“原创”或公开可见即代表再分发授权。
+项目代码按MIT许可证发布，提交的代码与文档同样按MIT授权；LICENSE写明了不在其内的素材。新增素材须登记CREDITS.md并附可核验的许可。不要自行认定“原创”或公开可见即代表再分发授权。
 
-history/目前保留。历史包迁移、许可证选择、IndexedDB和模块化等决策由所有者确认；不要将这些建议当作已经授权的删除、历史重写或上线动作。
+history/目前保留。历史包迁移、IndexedDB和模块化等决策由所有者确认；不要将这些建议当作已经授权的删除、历史重写或上线动作。

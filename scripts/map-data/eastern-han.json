@@ -1,5 +1,5 @@
 {
- "about": "东汉十三州部（据《续汉书·郡国志》，顺帝永和五年即140年前后建制）及汉代水系、海岸线的近似数据。坐标为治所今址的近似经纬度，仅供游戏读图，不构成学术测绘。由 scripts/build-map-terrain.py 读取。",
+ "about": "东汉州部（据《续汉书·郡国志》，顺帝永和五年即140年前后建制）及汉代水系、海岸线的近似数据。坐标为治所今址的近似经纬度，仅供游戏读图，不构成学术测绘。由 scripts/build-map-terrain.py 读取。",
  "provinces": {
   "sili": {
    "name": "司隶",
@@ -52,6 +52,10 @@
   "jiaozhou": {
    "name": "交州",
    "color": "#5f8a6a"
+  },
+  "yongzhou": {
+   "name": "雍州",
+   "color": "#b07a5a"
   }
  },
  "commanderies": [
@@ -2088,5 +2092,59 @@
     36.2
    ]
   }
- ]
+ ],
+ "eras": {
+  "about": "州制随年份变化。每个时期在基础建制（永和五年十三州）上调整：moveProvinces 把整州并入另一州，moveCommanderies 把个别郡国改属。辅助点随与之最近的同州郡国一起改属。游戏按当前年份取用。",
+  "list": [
+   {
+    "id": "yonghe",
+    "from": 0,
+    "to": 193,
+    "label": "东汉十三州",
+    "note": "顺帝永和五年（140）前后建制，至中平、初平年间未变。",
+    "moveProvinces": {},
+    "moveCommanderies": {}
+   },
+   {
+    "id": "xingping",
+    "from": 194,
+    "to": 212,
+    "label": "兴平元年分置雍州",
+    "note": "兴平元年（194）分凉州河西四郡另置雍州，共十四州。",
+    "moveProvinces": {},
+    "moveCommanderies": {
+     "武威郡": "yongzhou",
+     "张掖郡": "yongzhou",
+     "酒泉郡": "yongzhou",
+     "敦煌郡": "yongzhou",
+     "张掖属国": "yongzhou",
+     "张掖居延属国": "yongzhou"
+    }
+   },
+   {
+    "id": "jianan18",
+    "from": 213,
+    "to": 9999,
+    "label": "建安十八年复九州",
+    "note": "建安十八年（213）并十四州复为九州：省幽、并入冀州，省司隶与凉州入雍州，省交州入荆州。河东、河内属魏国十郡，归冀州。",
+    "moveProvinces": {
+     "youzhou": "jizhou",
+     "bingzhou": "jizhou",
+     "liangzhou": "yongzhou",
+     "jiaozhou": "jingzhou",
+     "sili": "yongzhou"
+    },
+    "moveCommanderies": {
+     "武威郡": "yongzhou",
+     "张掖郡": "yongzhou",
+     "酒泉郡": "yongzhou",
+     "敦煌郡": "yongzhou",
+     "张掖属国": "yongzhou",
+     "张掖居延属国": "yongzhou",
+     "河东郡": "jizhou",
+     "河内郡": "jizhou"
+    }
+   }
+  ]
+ }
 }
