@@ -93,7 +93,7 @@ GitHub Pages 直接从 `main` 根目录发布，没有构建步骤。
 
 ## 授权
 
-- 项目许可证尚待所有者选择，见 [LICENSE](LICENSE)。
+- 项目代码按 [MIT 许可证](LICENSE) 发布。字体、Natural Earth 数据与授权待确认的音乐、插图、立绘不在其内，见下文与 [CREDITS.md](CREDITS.md)。
 - 逐项素材来源与待确认事项见 [CREDITS.md](CREDITS.md)；音乐、立绘等仍有授权缺项，不能由公开可见或“原创”字样推定再分发许可。
 - 本地字体按 SIL OFL 1.1 分发，见[字体说明](assets/fonts/README.md)。
 - 舆图地形、水系与海岸来自 Natural Earth 公有领域数据并按汉代修订，十三州界据郡治推算为近似，见[地图数据](docs/MAP_DATA.md)。

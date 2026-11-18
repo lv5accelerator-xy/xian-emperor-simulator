@@ -1,3 +1,44 @@
-TODO: 由仓库所有者选择许可证(MIT / Apache-2.0 / All Rights Reserved)
+MIT License
 
-本文件是待决策占位，不是许可证授予。第三方素材适用各自许可与署名要求，见CREDITS.md。
+Copyright (c) 2026 lv5accelerator-xy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-------------------------------------------------------------------------------
+适用范围 / Scope
+
+本许可证适用于本仓库中由项目作者编写的源代码、样式、测试、维护脚本、游戏文本与
+文档，以及由项目作者整理的数据（如 scripts/map-data/）。
+
+以下内容不在本许可证范围内，各自适用其来源许可或尚待确认，详见 CREDITS.md：
+
+- assets/fonts/ 下的字体文件：SIL Open Font License 1.1，许可全文见
+  assets/fonts/licenses/。
+- 由 Natural Earth 数据生成的地形底图与地理轮廓：公有领域。
+- 授权尚待确认的素材：assets/audio/ 下的音乐、assets/images/illustrations/ 下的
+  场景插图、src/portraits/ 中内嵌的人物立绘、src/audio-data.js 中内嵌的音效，
+  以及包含上述素材的 docs/images/ 截图与 history/ 下的历史发布包。
+  在 CREDITS.md 标明授权之前，这些素材不随本许可证授予任何权利。
+
+This license covers the source code, styles, tests, maintenance scripts, game
+text and documentation written by the project author, and data compiled by the
+project author. Fonts (OFL 1.1), Natural Earth derived data (public domain) and
+assets whose rights are still unconfirmed (music, illustrations, embedded
+portraits and sound effects, screenshots containing them, and the history/
+archives) are excluded; see CREDITS.md.

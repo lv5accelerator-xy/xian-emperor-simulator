@@ -50,7 +50,7 @@
 | [RELEASE_MIGRATION.md](RELEASE_MIGRATION.md) | 历史 ZIP 清单与校验值、tag 与 Release 迁移建议（尚未执行） |
 | [REPOSITORY_PROFILE.md](REPOSITORY_PROFILE.md) | 仓库简介、网站与主题标签（已设置） |
 | [更新记录](../CHANGELOG.md) · [逐版说明](../patch-notes/README.md) | 全部版本记录 |
-| [素材授权](../CREDITS.md) · [项目许可证](../LICENSE) | 素材来源与待确认事项；项目许可证尚待选择 |
+| [素材授权](../CREDITS.md) · [项目许可证](../LICENSE) | 素材来源与待确认事项；代码按 MIT 许可证发布 |
 
 ## 快照（只记录当时状态）
 
