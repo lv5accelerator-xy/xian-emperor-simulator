@@ -63,6 +63,11 @@ Natural Earth 是今天的地理。以下几处与汉末差别显著，按汉代
 
 区域只决定地图着色与点选；势力、稳定度等玩法数据按区域编号存取，与多边形形状无关，重新划界不改变任何玩法结果。
 
+## 标注避让与按需载入
+
+- 城池圆点落在实际坐标上，名牌放在右、左、下、上四个方位之一；打开舆图后按实测尺寸逐个选取遮挡最少的方位。军团标记、州名、次要河名山名与小地名依次避让，小地名等挪动后仍压住城池才隐藏。
+- `historical-geography-data.js` 不随首页加载。`index.html` 中 `grand-map.js` 标签的 `data-geography-src` 记着它的地址与缓存参数；第一次打开舆图或开局后浏览器空闲时才载入，双击运行同样可用。
+
 ## 投影
 
 等经纬度投影：`x = (经度 − 88) × 30`，`y = (43⅓ − 纬度) × 30`，画布 1200 × 720，经度 88°–128°、纬度 19⅓°–43⅓°。Natural Earth 1 角分栅格同为等经纬度，裁剪后正好是画布的 2 倍（2400 × 1440），无需重新投影。
@@ -92,7 +97,7 @@ python3 scripts/build-map-terrain.py \
 
 修改后：
 
-1. 更新 `historical-geography-data.js` 中 `terrainImage` 与 `index.html` 中该文件的缓存参数。
+1. 更新 `historical-geography-data.js` 中 `terrainImage` 与 `index.html` 中 `data-geography-src` 的缓存参数。
 2. 新地名用到字体子集之外的字时，`tests/font-coverage-regression.js` 会失败，按[字体说明](../assets/fonts/README.md)重建字体。
 3. 运行 `node tests/grand-map-regression.js`，并在 390 × 844 与桌面视口各看一次两种底图。
 

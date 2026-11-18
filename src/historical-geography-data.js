@@ -127,7 +127,7 @@
   ]);
 
   window.XIAN_HISTORICAL_GEOGRAPHY = Object.freeze({
-    version: "2.33.0",
+    version: "2.34.0",
     width: WIDTH,
     height: HEIGHT,
     source: "Natural Earth 1:10m · public domain",

@@ -21,11 +21,13 @@ const collect = () => {
     if (opacity < 0.2) continue;
     const rect = element.getBoundingClientRect();
     if (rect.width < 4 || rect.height < 4 || rect.bottom < 0 || rect.right < 0 || rect.top > innerHeight || rect.left > innerWidth) continue;
+    if (Math.min(rect.right, innerWidth) - Math.max(0, rect.left) < 8 || Math.min(rect.bottom, innerHeight) - Math.max(0, rect.top) < 4) continue;
     const top = document.elementFromPoint(Math.min(innerWidth - 1, Math.max(0, rect.left + rect.width / 2)), Math.min(innerHeight - 1, Math.max(0, rect.top + rect.height / 2)));
     if (!top || !(top === element || element.contains(top) || top.contains(element))) continue;
     const color = style.color.match(/[\d.]+/g).map(Number);
     items.push({ key: `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ""}${element.classList.length ? `.${[...element.classList].join(".")}` : ""}`, text: text.slice(0, 16),
-      x: Math.max(0, rect.left), y: Math.max(0, rect.top), w: Math.min(rect.width, innerWidth - rect.left), h: Math.min(rect.height, innerHeight - rect.top),
+      // 只取视口内的部分；部分移出视口的元素按可见部分取背景。
+      x: Math.max(0, rect.left), y: Math.max(0, rect.top), w: Math.min(rect.right, innerWidth) - Math.max(0, rect.left), h: Math.min(rect.bottom, innerHeight) - Math.max(0, rect.top),
       color: color.slice(0, 3), alpha: (color[3] ?? 1) * opacity, size: parseFloat(style.fontSize), weight: Number(style.fontWeight) });
   }
   return items;

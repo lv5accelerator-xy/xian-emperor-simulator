@@ -1,5 +1,5 @@
 "use strict";
-// 舆图上的城池与军团标记靠 transform: translate(-50%,-50%) 居中。全局的 button:hover:not(:disabled)
+// 舆图上的城池与军团标记靠 transform 定位（军团标记 translate(-50%,-50%) 居中，城池按名牌方位用变量）。全局的 button:hover:not(:disabled)
 // 会把 transform 整个改写成 translateY(-1px)，优先级还高于 .grand-city:hover，于是标记在悬停时跳开半个身位、
 // 鼠标随即落空。舆图样式必须用不低于全局规则的优先级保住居中。
 const assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path");
@@ -20,6 +20,7 @@ for (const element of [".grand-city", ".grand-army-marker"]) {
     .filter(rule => rule.selector.includes(`${element}:hover`) && /transform:/.test(rule.body));
   const strong = rules.filter(rule => higherOrEqual(specificity(rule.selector), specificity(generic[1].trim())));
   assert.ok(strong.length, `${element} 的悬停样式优先级必须不低于全局按钮悬停规则`);
-  assert.ok(strong.every(rule => /transform:\s*translate\(-50%,\s*-50%\)/.test(rule.body)), `${element} 悬停时必须保留居中位移`);
+  // 城池自 v2.34 起按名牌方位用变量定位（圆点落在坐标上），军团标记仍居中。
+  assert.ok(strong.every(rule => /transform:\s*translate\((-50%,\s*-50%|var\(--city-x\),\s*var\(--city-y\))\)/.test(rule.body)), `${element} 悬停时必须保留定位位移`);
 }
 console.log("map-hover-regression passed");
