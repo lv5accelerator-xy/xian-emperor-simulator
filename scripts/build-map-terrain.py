@@ -250,91 +250,151 @@ GRID = 20  # 州界计算网格：每度 20 格（0.05°）
 WATERSHED_COMPACTNESS = 0.002  # 越大越接近等距划分，越小越贴合山脊
 
 
-def era_assignment(data: dict, era: dict) -> list[tuple[float, float, str]]:
-    """某一时期每个划界点所属的州：基础建制上先整州合并，再改属个别郡国；辅助点随最近的同州郡国。"""
-    move_prov, move_cmd = era.get("moveProvinces", {}), era.get("moveCommanderies", {})
-    commanderies = [(c[0], c[2], c[3], c[1]) for c in data["commanderies"]]
-    owner = {name: move_cmd.get(name, move_prov.get(base, base)) for name, _, _, base in commanderies}
-    seeds = [(x, y, owner[name]) for name, x, y, _ in commanderies]
-    for _, base, x, y in data["auxiliarySeeds"]["points"]:
-        same = [c for c in commanderies if c[3] == base]
-        nearest = min(same, key=lambda c: (c[1] - x) ** 2 + (c[2] - y) ** 2)
-        seeds.append((x, y, owner[nearest[0]]))
-    return seeds
-
-
 def province_surface(level: np.ndarray) -> np.ndarray:
     """划界用的地势面：高程层级降到 1/20° 网格并适度平滑，只保留大山脊、去掉细碎起伏。"""
     coarse = level.reshape(level.shape[0] // 3, 3, level.shape[1] // 3, 3).mean(axis=(1, 3))  # 1/60° → 1/20°
     return ndimage.gaussian_filter(coarse, 3)
 
 
-def province_features(data: dict, land, level: np.ndarray) -> list[dict]:
-    """东汉州部：各时期分别以郡治为种子在地势面上做分水岭划分，按州描出轮廓，再限定在汉境与陆地内。
-
-    分水岭从各郡治按地势由低到高“灌水”，不同州的水在山脊相遇，州界因此大致落在分水岭上；
-    compactness 让平原上的分界仍接近等距，不至于随微小起伏乱跑。
-    """
+def realm_geometry(data: dict, land):
+    """汉境：所有郡治与辅助点的凹包外扩后与陆地相交。"""
     frontier_spec = data["frontier"]
     all_points = [(c[2], c[3]) for c in data["commanderies"]] + [(a[2], a[3]) for a in data["auxiliarySeeds"]["points"]]
     hull = concave_hull(MultiPoint(all_points), ratio=frontier_spec["concaveRatio"])
     frontier = hull.buffer(frontier_spec["bufferDegrees"], quad_segs=12).buffer(-0.3).buffer(0.3)
-    realm = frontier.intersection(land).intersection(FRAME)
+    return frontier.intersection(land).intersection(FRAME)
 
-    surface = province_surface(level)
+
+def seeds_by_owner(data: dict, owner_of_commandery: dict) -> list[tuple[float, float, str]]:
+    """郡治按给定归属；辅助点随与之最近的同州（基础建制）郡国。"""
+    commanderies = [(c[0], c[2], c[3], c[1]) for c in data["commanderies"]]
+    seeds = [(x, y, owner_of_commandery[name]) for name, x, y, _ in commanderies]
+    for _, base, x, y in data["auxiliarySeeds"]["points"]:
+        same = [c for c in commanderies if c[3] == base]
+        nearest = min(same, key=lambda c: (c[1] - x) ** 2 + (c[2] - y) ** 2)
+        seeds.append((x, y, owner_of_commandery[nearest[0]]))
+    return seeds
+
+
+def watershed_partition(seeds, ids, surface, realm) -> dict:
+    """以各点为种子在地势面上做分水岭划分，按归属描出轮廓（先略微模糊再取 0.5 等值线，使相邻两区边界重合且平滑），
+    再限定在 realm 内。返回 {id: (几何, 标注点)}。"""
     rows, cols = surface.shape
     to_cell = lambda x, y: (min(rows - 1, max(0, int((NORTH - y) * GRID))), min(cols - 1, max(0, int((x - WEST) * GRID))))
+    markers = np.zeros(surface.shape, dtype=np.int32)
+    for x, y, owner in seeds:
+        markers[to_cell(x, y)] = ids.index(owner) + 1
+    owner_grid = watershed(surface, markers, compactness=WATERSHED_COMPACTNESS) - 1
+    out = {}
+    for index, pid in enumerate(ids):
+        mask = ndimage.gaussian_filter((owner_grid == index).astype(np.float32), 1.1)
+        rings = []
+        for contour in find_contours(np.pad(mask, 1), 0.5):
+            if len(contour) < 8:
+                continue
+            ring = Polygon([(WEST + (c - 1 + 0.5) / GRID, NORTH - (r - 1 + 0.5) / GRID) for r, c in contour]).buffer(0)
+            if not ring.is_empty:
+                rings.append(ring)
+        rings.sort(key=lambda g: -g.area)
+        region = Polygon()
+        for ring in rings:
+            region = region.difference(ring) if region.contains(ring.representative_point()) else region.union(ring)
+        region = region.intersection(realm)
+        if region.is_empty:
+            continue
+        parts = [region] if region.geom_type == "Polygon" else [g for g in region.geoms if g.geom_type == "Polygon"]
+        parts = [p.simplify(0.035) for p in parts if p.area > 0.03]
+        if not parts:
+            continue
+        label = polylabel(max(parts, key=lambda g: g.area), 0.02)
+        out[pid] = (MultiPolygon(parts) if len(parts) > 1 else parts[0], [round(label.x, 2), round(label.y, 2)])
+    return out
+
+
+def map_obstacles(data: dict) -> list[tuple[float, float, float]]:
+    """地图上已有的文字与图标位置（经纬度, 权重）：城池、郡国标注、河名、山名。州名放置时尽量避开它们。"""
+    source = GEO_JS.read_text(encoding="utf-8")
+    points = []
+    block = source[source.index("const cityCoordinates"):source.index("});", source.index("const cityCoordinates"))]
+    points += [(float(x), float(y), 1.0) for x, y in re.findall(r"\[\s*([\d.]+),\s*([\d.]+)\s*\]", block)]  # 城池：图标加名牌，最需避开
+    block = source[source.index("const minorPlaces"):source.index("]);", source.index("const minorPlaces"))]
+    points += [(float(x), float(y), 0.6) for x, y in re.findall(r"point:\s*\[\s*([\d.]+),\s*([\d.]+)\s*\]", block)]
+    points += [(r["label"][0], r["label"][1], 0.5) for r in data["rivers"]["keep"].values() if r.get("label") and r.get("name")]
+    points += [(r["label"][0], r["label"][1], 0.5) for r in data["rivers"]["added"] if r.get("label")]
+    points += [(r["point"][0], r["point"][1], 0.5) for r in data["ranges"]]
+    return points
+
+
+def place_label(geometry, obstacles) -> list[float]:
+    """在区域内找一个既离边界远、又离已有文字远的点。横向按字宽放宽（州名约两个大字宽、一个字高）。"""
+    main = max([geometry] if geometry.geom_type == "Polygon" else list(geometry.geoms), key=lambda g: g.area)
+    inner = main.buffer(-0.35)
+    if inner.is_empty:
+        p = polylabel(main, 0.02)
+        return [round(p.x, 2), round(p.y, 2)]
+    minx, miny, maxx, maxy = inner.bounds
+    best, best_score = None, -1.0
+    for x in np.arange(minx, maxx, 0.1):
+        for y in np.arange(miny, maxy, 0.1):
+            point = Point(x, y)
+            if not inner.contains(point):
+                continue
+            edge = main.exterior.distance(point)
+            clear = min((np.hypot((x - ox) / 1.8, y - oy) / w for ox, oy, w in obstacles), default=9.0)
+            score = min(edge, 0.9) + min(clear, 1.2) * 1.5  # 先保证不压字，再尽量居中
+            if score > best_score:
+                best, best_score = (x, y), score
+    if best is None:
+        p = polylabel(main, 0.02)
+        return [round(p.x, 2), round(p.y, 2)]
+    return [round(best[0], 2), round(best[1], 2)]
+
+
+def province_features(data: dict, realm, surface: np.ndarray) -> list[dict]:
+    """东汉州部：各时期分别以郡治为种子在地势面上做分水岭划分。
+
+    分水岭从各郡治按地势由低到高“灌水”，不同州的水在山脊相遇，州界因此大致落在分水岭上；
+    compactness 让平原上的分界仍接近等距，不至于随微小起伏乱跑。
+    """
     eras = []
     for era in data["eras"]["list"]:
-        seeds = era_assignment(data, era)
-        ids = [pid for pid in data["provinces"] if any(s[2] == pid for s in seeds)]
-        markers = np.zeros(surface.shape, dtype=np.int32)
-        for x, y, pid in seeds:
-            markers[to_cell(x, y)] = ids.index(pid) + 1
-        owner = watershed(surface, markers, compactness=WATERSHED_COMPACTNESS) - 1
+        move_prov, move_cmd = era.get("moveProvinces", {}), era.get("moveCommanderies", {})
+        owner = {c[0]: move_cmd.get(c[0], move_prov.get(c[1], c[1])) for c in data["commanderies"]}
+        seeds = seeds_by_owner(data, owner)
+        ids = [pid for pid in data["provinces"] if pid in owner.values()]
+        shapes = watershed_partition(seeds, ids, surface, realm)
+        obstacles = map_obstacles(data)
         provinces = []
-        for index, pid in enumerate(ids):
-            # 先略微模糊再取 0.5 等值线：相邻两州的轮廓落在同一条线上，且边界平滑。
-            mask = ndimage.gaussian_filter((owner == index).astype(np.float32), 1.1)
-            padded = np.pad(mask, 1)
-            rings = []
-            for contour in find_contours(padded, 0.5):
-                if len(contour) < 8:
-                    continue
-                coords = [(WEST + (c - 1 + 0.5) / GRID, NORTH - (r - 1 + 0.5) / GRID) for r, c in contour]
-                ring = Polygon(coords).buffer(0)
-                if not ring.is_empty:
-                    rings.append(ring)
-            rings.sort(key=lambda g: -g.area)
-            region = Polygon()
-            for ring in rings:
-                region = region.difference(ring) if region.contains(ring.representative_point()) else region.union(ring)
-            region = region.intersection(realm)
-            if region.is_empty:
+        for pid in ids:
+            if pid not in shapes:
                 continue
-            parts = [region] if region.geom_type == "Polygon" else [g for g in region.geoms if g.geom_type == "Polygon"]
-            parts = [p.simplify(0.035) for p in parts if p.area > 0.03]
-            if not parts:
-                continue
-            main = max(parts, key=lambda g: g.area)
-            label = polylabel(main, 0.02)
+            geometry, _ = shapes[pid]
+            label = place_label(geometry, obstacles)
             meta = data["provinces"][pid]
-            members = sorted({name for name, x, y, base in [(c[0], c[2], c[3], c[1]) for c in data["commanderies"]]
-                              if era.get("moveCommanderies", {}).get(name, era.get("moveProvinces", {}).get(base, base)) == pid},
-                             key=[c[0] for c in data["commanderies"]].index)
-            provinces.append({"id": pid, "name": meta["name"], "color": meta["color"],
-                              "d": path_of(MultiPolygon(parts) if len(parts) > 1 else parts[0], close=True),
-                              "label": [round(label.x, 2), round(label.y, 2)], "commanderies": members})
+            members = [c[0] for c in data["commanderies"] if owner[c[0]] == pid]
+            item = {"id": pid, "name": meta["name"], "color": meta["color"], "d": path_of(geometry, close=True), "label": label, "commanderies": members}
+            if geometry.area < 9:  # 中原诸州面积小、城池密，州名用小一号的字
+                item["compact"] = True
+            provinces.append(item)
         eras.append({"id": era["id"], "from": era["from"], "to": era["to"], "label": era["label"], "note": era["note"], "provinces": provinces})
         print(f"  {era['id']}: {len(provinces)} provinces")
     return eras
+
+
+def strategy_region_paths(data: dict, realm, surface: np.ndarray) -> dict:
+    """游戏 14 个策略区域的轮廓：同样做分水岭划分，种子是各区域所含郡国。"""
+    members = data["strategyRegions"]["members"]
+    owner = {name: rid for rid, names in members.items() for name in names}
+    shapes = watershed_partition(seeds_by_owner(data, owner), list(members), surface, realm)
+    print(f"  strategy regions: {len(shapes)}")
+    return {rid: path_of(shapes[rid][0], close=True) for rid in members if rid in shapes}
 
 
 def js_value(value, indent: int = 4) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
-def write_geo_js(land, rivers, lakes, eras, ranges, seats) -> None:
+def write_geo_js(land, rivers, lakes, eras, regions, ranges, seats) -> None:
     source = GEO_JS.read_text(encoding="utf-8")
     land_parts = [land] if land.geom_type == "Polygon" else list(land.geoms)
     land_parts = sorted([p.simplify(0.025) for p in land_parts if p.area > 0.01], key=lambda p: -p.area)
@@ -345,6 +405,7 @@ def write_geo_js(land, rivers, lakes, eras, ranges, seats) -> None:
         f"  const rivers = Object.freeze({js_value(rivers)});",
         f"  const lakes = Object.freeze({js_value(lakes)});",
         f"  const provinceEras = Object.freeze({js_value(eras)});",
+        f"  const strategyRegionPaths = Object.freeze({js_value(regions)});",
         f"  const ranges = Object.freeze({js_value(ranges)});",
         f"  const commanderySeats = Object.freeze({js_value(seats)});",
         "  // </GENERATED>",
@@ -372,10 +433,12 @@ def main() -> None:
 
     rivers = river_features(args.rivers, data["rivers"], land)
     lakes = lake_features(args.lakes, data["lakes"])
-    eras = province_features(data, land, elevation_level(hyp))
+    realm, surface = realm_geometry(data, land), province_surface(elevation_level(hyp))
+    eras = province_features(data, realm, surface)
+    regions = strategy_region_paths(data, realm, surface)
     ranges = [{"name": r["name"], "point": r["point"]} for r in data["ranges"]]
     seats = [{"name": c[0], "province": c[1], "point": [c[2], c[3]]} for c in data["commanderies"] if FRAME.contains(Point(c[2], c[3]))]
-    write_geo_js(land, rivers, lakes, eras, ranges, seats)
+    write_geo_js(land, rivers, lakes, eras, regions, ranges, seats)
     print(f"{GEO_JS.relative_to(ROOT)}: {len(rivers)} rivers, {len(lakes)} lakes, {len(eras)} eras, {GEO_JS.stat().st_size:,} bytes")
 
 

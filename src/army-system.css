@@ -132,3 +132,6 @@ body.army-system-open{overflow:hidden}
 @media(max-width:980px){.army-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.army-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.army-system-overlay{padding:.45rem}.army-system-window{width:100%;height:96vh;border-radius:12px}.army-system-window>header{padding:.9rem}#army-system-content{padding:.8rem}.army-brief-content,.army-card-grid,.movement-list,.army-order-list,.siege-list,.captive-list,.judgment-history{grid-template-columns:1fr}.judgment-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.battle-report-card{grid-column:auto}}
 @media(max-width:480px){.army-summary{grid-template-columns:1fr}.battle-sides{grid-template-columns:1fr}.battle-sides section:last-child{text-align:left}.battle-sides>i{margin:auto}.siege-stances,.judgment-actions{grid-template-columns:1fr}}
+
+/* v2.32 文字对比度 */
+.army-brief-content span,.army-summary span{color:#97866c}

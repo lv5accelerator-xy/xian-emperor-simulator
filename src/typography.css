@@ -115,3 +115,13 @@ html[data-font-mode="classic"] :where(.event-text, .full-chronicle p, .chronicle
   .typography-controls { gap: .35rem; }
   .typography-label { font-size: .8rem; }
 }
+
+/* v2.32：手机工具条上的“存档工具”等按钮原先没有样式，显示为浏览器默认灰底 */
+.mobile-reading-toolbar button {
+  padding: .4rem .75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .04);
+  color: var(--gold2);
+  font: inherit;
+}

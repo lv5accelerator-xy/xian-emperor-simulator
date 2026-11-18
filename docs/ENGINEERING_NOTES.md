@@ -40,7 +40,7 @@ v2.30.3 起的工程约定。每条都有对应的回归测试或 CI 任务把�
 ## 舆图数据
 
 - `src/historical-geography-data.js` 里 `GENERATED` 标记之间的陆地、水系、湖泽、州界与山名由 `scripts/build-map-terrain.py` 生成，不要手改；改 `scripts/map-data/eastern-han.json` 后重新生成，方法见[地图数据](MAP_DATA.md)。
-- 标记之外的城池坐标、策略区域与地名仍手工维护。
+- 策略区域的郡国归属在 `eastern-han.json` 的 `strategyRegions` 里维护，形状同样由脚本生成；标记之外的城池坐标与地名仍手工维护。
 - 底图偏好 `xian_map_basemap_v1` 是本机显示设置，写入同样经过 `storageWrite`。
 - 把关：`tests/grand-map-regression.js`（十三州、典型归属、汉代故道、底图切换）。
 
@@ -53,6 +53,8 @@ v2.30.3 起的工程约定。每条都有对应的回归测试或 CI 任务把�
 
 - 不要写死 `behavior: "smooth"`；用 `window.XianMotion?.scrollBehavior() || "smooth"`，系统开启“减少动态效果”时自动改为直接定位。把关：`tests/reduced-motion-regression.js`。
 - 全局的 `button:hover` 会把 `transform` 改写成上移 1px。靠 `transform` 定位的元素（如舆图上的城池与军团标记）要用不低于它的优先级保住自己的 `transform`。把关：`tests/map-hover-regression.js`。
+
+- 新增文字色时注意对比度：普通文字不低于 4.5:1，大字 3:1。把关：`scripts/browser-contrast.cjs`（按实际渲染测量开局、朝政、月报、舆图等 12 个屏幕）。
 
 ## 浏览器回归
 

@@ -103,7 +103,7 @@
     return `
       <section class="grand-map-shell${isFocusMode() ? " focus-map" : ""}${state.command ? " commanding" : ""}${state.inspectorCollapsed ? " inspector-collapsed" : ""}" data-map-layer="${escapeHtml(state.layer)}" data-basemap="${escapeHtml(state.basemap)}">
         <header class="grand-map-toolbar">
-          <div><span class="section-kicker">v2.31 · 郡国全图</span><h3>汉末山河军政图</h3><p>全屏舆图 · 实测地形、汉代水系、十三州界与军路同图推演</p></div>
+          <div><span class="section-kicker">v2.33 · 郡国全图</span><h3>汉末山河军政图</h3><p>全屏舆图 · 实测地形、汉代水系、十三州界与军路同图推演</p></div>
           <div class="grand-map-actions" aria-label="地图图层">
             ${layerButton("all", "全局")}${layerButton("politics", "势力")}${layerButton("routes", "军路")}${layerButton("armies", "军团")}${layerButton("pressure", "战线")}
             <span class="grand-map-basemap" role="group" aria-label="底图">${basemapButton("terrain", "地形")}${basemapButton("provinces", "州界")}</span>
@@ -189,7 +189,7 @@
   function renderProvinceLabels(era) {
     return (era.provinces || []).map(item => {
       const [x, y] = GEO.project?.(item.label) || [0, 0];
-      return `<text class="province-name-label" x="${x}" y="${y}">${escapeHtml(item.name)}</text>`;
+      return `<text class="province-name-label${item.compact ? " compact" : ""}" x="${x}" y="${y}">${escapeHtml(item.name)}</text>`;
     }).join("");
   }
 

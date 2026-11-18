@@ -5,7 +5,7 @@
  */
 
 window.GAME_DATA = {
-  version: "2.32.0",
+  version: "2.33.0",
   title: "天子蒙尘：献帝模拟器",
   scenarios: [
     {

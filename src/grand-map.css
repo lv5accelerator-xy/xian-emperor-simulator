@@ -154,3 +154,17 @@
 .grand-map-legend .legend-historic i,.grand-map-legend .legend-province i{border-radius:0;background:none;box-shadow:none}
 .grand-map-legend .legend-historic i{width:18px;height:0;border:0;border-top:2px dashed #6aaec0}
 .grand-map-legend .legend-province i{width:14px;height:10px;border:1.5px dashed #f0d58f}
+/* “关中”“巴蜀”“荆襄”等地带名与州名重复且常压住城池，不再显示；海名保留 */
+.grand-map-shell .geography-label.region{display:none}
+.grand-map-shell .province-name-label.compact{font-size:17px;letter-spacing:.2em;stroke-width:3.6}
+/* v2.32 文字对比度：按实际渲染背景测量后调亮（WCAG 普通文字 4.5:1） */
+.grand-map-legend{color:#929d97}
+.map-inspector-metrics span{color:#8b968f}
+.map-inspector-head p{color:#86938b}
+.grand-map-actions button,.grand-map-zoom button,.grand-map-shell .grand-map-basemap button,.map-inspector-list>strong{color:#96a49c}
+/* 城池数值小字直接压在地形上，加一层半透明深底 */
+.grand-city small{padding:0 .3em;border-radius:3px;background:rgba(22,16,11,.62)}
+/* 聚焦模式下次要城池只淡化圆点图标和名牌底色，城名文字保持可读（原先整体 30% 不透明，城名对比度约 1.7:1） */
+.focus-map .grand-city:not(.priority){opacity:1}
+.focus-map .grand-city:not(.priority)>span{opacity:.35}
+.focus-map .grand-city:not(.priority) strong{background:rgba(43,29,20,.5);color:#d9cba4}

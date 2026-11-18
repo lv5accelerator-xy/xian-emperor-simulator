@@ -423,3 +423,6 @@
     flex-direction: column;
   }
 }
+
+/* v2.32 文字对比度 */
+.action-category-group > header small { color: #90816b; }
