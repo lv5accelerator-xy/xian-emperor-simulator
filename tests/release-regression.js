@@ -109,34 +109,42 @@ assert.ok(read("index.html").indexOf("src/save-backups.js") > read("index.html")
 assert.ok(read("index.html").indexOf("src/edict-rules.js") < read("index.html").indexOf("src/game.js"), "shared decree rules must load before the core");
 assert.match(read("index.html"), /imperial-progress\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /imperial-progress-data\.js\?v=1\.5\.1/);
-assert.match(read("index.html"), /imperial-progress\.js\?v=2\.31\.0/);
-assert.match(read("index.html"), /grand-map\.css\?v=2\.31\.0/);
-assert.match(read("index.html"), /historical-geography-data\.js\?v=2\.31\.0/);
-assert.match(read("index.html"), /grand-map\.js\?v=2\.31\.0/);
+assert.match(read("index.html"), /imperial-progress\.js\?v=2\.32\.0/);
+assert.match(read("index.html"), /grand-map\.css\?v=2\.32\.0/);
+assert.match(read("index.html"), /historical-geography-data\.js\?v=2\.32\.0/);
+assert.match(read("index.html"), /grand-map\.js\?v=2\.32\.0/);
 assert.match(read("index.html"), /campaign-evolution\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /campaign-evolution-data\.js\?v=1\.5\.1/);
-assert.match(read("index.html"), /campaign-evolution\.js\?v=2\.31\.0/);
+assert.match(read("index.html"), /campaign-evolution\.js\?v=2\.32\.0/);
 assert.match(read("index.html"), /src\/ui\.css\?v=1\.5\.1/);
 assert.match(read("index.html"), /src\/ui\.js\?v=2\.6\.1/);
-assert.match(read("index.html"), /src\/visual-refresh\.css\?v=2\.31\.0/);
+assert.match(read("index.html"), /src\/visual-refresh\.css\?v=2\.32\.0/);
 assert.match(read("index.html"), /src\/ui-refresh-v280\.css\?v=2\.8\.0/);
-assert.match(read("index.html"), /src\/ui-refresh-v280\.js\?v=2\.31\.0/);
+assert.match(read("index.html"), /src\/ui-refresh-v280\.js\?v=2\.32\.0/);
 assert.match(read("index.html"), /src\/causal-court\.css\?v=2\.9\.0/);
-assert.match(read("index.html"), /src\/causal-court\.js\?v=2\.31\.0/);
+assert.match(read("index.html"), /src\/causal-court\.js\?v=2\.32\.0/);
 assert.match(read("index.html"), /id="causal-court-panel"/);
 assert.match(read("index.html"), /src\/quarterly-agenda\.css\?v=2\.10\.0/);
-assert.match(read("index.html"), /src\/quarterly-agenda\.js\?v=2\.31\.0/);
+assert.match(read("index.html"), /src\/quarterly-agenda\.js\?v=2\.32\.0/);
 assert.match(read("index.html"), /id="quarterly-agenda-panel"/);
 assert.match(read("index.html"), /src\/council-advice\.css\?v=2\.11\.0/);
-assert.match(read("index.html"), /src\/council-advice\.js\?v=2\.31\.0/);
+assert.match(read("index.html"), /src\/council-advice\.js\?v=2\.32\.0/);
 assert.match(read("index.html"), /src\/regional-echoes\.css\?v=2\.12\.0/);
-assert.match(read("index.html"), /src\/regional-echoes\.js\?v=2\.31\.0/);
+assert.match(read("index.html"), /src\/regional-echoes\.js\?v=2\.32\.0/);
 assert.match(read("index.html"), /src\/imperial-paths\.css\?v=2\.13\.0/);
-assert.match(read("index.html"), /src\/imperial-paths\.js\?v=2\.31\.0/);
+assert.match(read("index.html"), /src\/imperial-paths\.js\?v=2\.32\.0/);
 assert.match(read("src/ui-refresh-v280.css"), /@media \(max-width: 820px\)[\s\S]+\.mobile-imperial-nav/);
 assert.match(read("src/ui-refresh-v280.css"), /\.topbar-v110 \.utility-nav-upgraded\s*{\s*display:\s*none/);
 assert.match(read("src/ui-refresh-v280.js"), /data-mobile-destination="month"[\s\S]+data-mobile-destination="actions"[\s\S]+data-mobile-destination="map"[\s\S]+data-mobile-destination="archive"/);
 assert.match(read("index.html"), /preload[^>]+zcool-xiaowei-game\.woff2/);
+// 预加载的字体地址必须与样式表 @font-face 实际请求的地址一致（含缓存参数），否则预加载白白多下载一次。
+// 版本工具会改写 index.html 里所有等于旧版本号的参数，字体未更新时要把预加载改回样式表中的参数。
+{
+  const preloaded = read("index.html").match(/assets\/fonts\/zcool-xiaowei-game\.woff2\?v=[\w.-]+/)?.[0];
+  const declared = ["src/visual-refresh.css", "src/typography.css"].map(read).join("\n").match(/assets\/fonts\/zcool-xiaowei-game\.woff2\?v=[\w.-]+/)?.[0];
+  assert.ok(preloaded && declared, "display font is both preloaded and declared");
+  assert.equal(preloaded, declared, "font preload URL matches the stylesheet's @font-face URL");
+}
 for (const font of ["zcool-xiaowei-game.woff2", "noto-serif-sc-game.woff2", "noto-sans-sc-game.woff2", "wenkai-game-regular.woff2", "wenkai-game-medium.woff2"]) {
   const file = path.join(root, "assets", "fonts", font);
   assert.ok(fs.existsSync(file), `${font} should be included`);
@@ -154,16 +162,16 @@ for (const illustration of [
   assert.ok(fs.statSync(path.join(root, "assets", "images", "illustrations", illustration)).size > 40000, `${illustration} should contain a real WebP illustration`);
 }
 for (const resource of [
-  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.31.0",
-  "character-memory.css?v=1.7.0", "character-memory.js?v=2.31.0",
-  "world-marks.css?v=1.8.0", "world-marks.js?v=2.31.0",
-  "historian.css?v=1.9.0", "historian.js?v=2.31.0",
-  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.31.0",
-  "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.31.0",
-  "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.31.0",
-  "short-challenges.css?v=2.31.0", "short-challenges.js?v=2.31.0", "short-review.js?v=2.31.0",
-  "weekly-challenge.css?v=2.4.0", "weekly-challenge.js?v=2.31.0",
-  "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.31.0",
+  "command-center.css?v=2.5.0-r2", "command-center.js?v=2.32.0",
+  "character-memory.css?v=1.7.0", "character-memory.js?v=2.32.0",
+  "world-marks.css?v=1.8.0", "world-marks.js?v=2.32.0",
+  "historian.css?v=1.9.0", "historian.js?v=2.32.0",
+  "dynasty-saga.css?v=2.0.0", "dynasty-saga.js?v=2.32.0",
+  "monthly-flow.css?v=2.1.0", "monthly-flow.js?v=2.32.0",
+  "consequence-echoes.css?v=2.2.0", "consequence-echoes.js?v=2.32.0",
+  "short-challenges.css?v=2.32.0", "short-challenges.js?v=2.32.0", "short-review.js?v=2.32.0",
+  "weekly-challenge.css?v=2.4.0", "weekly-challenge.js?v=2.32.0",
+  "final-verdict.css?v=2.5.0", "final-verdict.js?v=2.32.0",
 ]) assert.ok(read("index.html").includes(resource), `${resource} should be referenced`);
 assert.match(read("src/game.js"), /xian-emperor-full-save/);
 assert.ok(read("index.html").indexOf("src/short-score.js") < read("index.html").indexOf("src/short-review.js"), "score explanation must load before review rendering");

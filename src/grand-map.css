@@ -124,17 +124,25 @@
 .grand-map-stage[data-map-detail="overview"] .terrain-rivers .river-name:not(.rank-1),.grand-map-stage[data-map-detail="overview"] .lake-name,.grand-map-stage[data-map-detail="overview"] .range-name{display:none}
 .grand-map-stage[data-map-detail="standard"] .terrain-rivers .river-name.rank-3,.grand-map-stage[data-map-detail="standard"] .lake-name{display:none}
 /* 地形底图：州界与州名隐藏，玩法用的策略区域照旧 */
-.grand-map-shell .han-provinces,.grand-map-shell .province-name-labels{display:none}
+.grand-map-shell .han-provinces{display:none}
 .grand-map-shell .legend-historic i{display:inline-block;width:18px;height:0;border-top:2px dashed #6aaec0;vertical-align:middle;margin-right:4px}
 .grand-map-shell .legend-province{display:none}
 .grand-map-shell .legend-province i{display:inline-block;width:14px;height:10px;border:1.5px dashed #f0d58f;vertical-align:middle;margin-right:4px}
 /* 州界底图：地形退为浅底，十三州着色并标名，策略区域与地带名让位 */
 .grand-map-shell[data-basemap="provinces"] .geography-terrain{filter:sepia(.45) saturate(.55) brightness(1.08) contrast(.85);opacity:.72}
-.grand-map-shell[data-basemap="provinces"] .han-provinces,.grand-map-shell[data-basemap="provinces"] .province-name-labels{display:inline}
+.grand-map-shell[data-basemap="provinces"] .han-provinces{display:inline}
 .grand-map-shell[data-basemap="provinces"] .legend-province{display:inline-flex;align-items:center}
-.grand-map-shell[data-basemap="provinces"] .grand-regions,.grand-map-shell[data-basemap="provinces"] .region-name-labels,.grand-map-shell[data-basemap="provinces"] .geography-label.region{display:none}
+.grand-map-shell[data-basemap="provinces"] .grand-regions,.grand-map-shell[data-basemap="provinces"] .geography-label.region{display:none}
 .grand-map-shell .han-province{fill:color-mix(in srgb,var(--province-color) 62%,transparent);stroke:rgba(248,228,170,.92);stroke-width:1.5;stroke-dasharray:6 3;stroke-linejoin:round;mix-blend-mode:multiply}
-.grand-map-shell .province-name-label{fill:#fff3d2;font:800 23px var(--serif);letter-spacing:.3em;text-anchor:middle;paint-order:stroke;stroke:rgba(44,28,16,.86);stroke-width:4.5;pointer-events:none}
+/* 州名两种底图都标：地形底图上是旧图的墨书大字，州界底图上改为浅色描边 */
+.grand-map-shell .province-name-label{fill:rgba(47,25,16,.8);font:800 23px var(--serif);letter-spacing:.3em;text-anchor:middle;paint-order:stroke;stroke:rgba(232,199,134,.6);stroke-width:4.5;pointer-events:none}
+.grand-map-shell[data-basemap="provinces"] .province-name-label{fill:#fff3d2;stroke:rgba(44,28,16,.86)}
+.grand-map-shell[data-basemap="provinces"] .han-province{cursor:pointer;transition:filter .15s}
+.grand-map-shell[data-basemap="provinces"] .han-province:hover,.grand-map-shell[data-basemap="provinces"] .han-province:focus{filter:brightness(1.18);outline:none;stroke-width:2.4}
+.grand-map-legend .legend-era{color:#d8c690;white-space:nowrap}
+.map-province-note{margin:.5rem 0;color:#a99578;font-size:.68rem;line-height:1.6}
+.map-province-commanderies{display:flex;flex-wrap:wrap;gap:.3rem;margin:.6rem 0;padding:0;list-style:none}
+.map-province-commanderies li{padding:.18rem .45rem;border:1px solid rgba(222,185,105,.28);border-radius:5px;color:#e6d6a8;font-size:.7rem}
 .grand-map-shell .grand-map-basemap{display:inline-flex;flex:0 0 auto;gap:.3rem;margin-left:.35rem;padding-left:.55rem;border-left:1px solid rgba(222,185,105,.28)}
 .grand-map-shell .grand-map-basemap button{min-height:38px;padding:.38rem .62rem;border:1px solid rgba(150,184,164,.16);border-radius:7px;background:rgba(255,255,255,.025);color:#8e9d94;font-size:.66rem;cursor:pointer}
 .grand-map-shell .grand-map-basemap button[aria-pressed="true"]{border-color:rgba(210,180,104,.56);background:rgba(187,145,64,.13);color:#ebd99e}

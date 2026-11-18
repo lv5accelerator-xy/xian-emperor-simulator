@@ -26,7 +26,9 @@ import numpy as np
 import tifffile
 from PIL import Image, ImageDraw, ImageFilter
 from scipy import ndimage
-from shapely import concave_hull, voronoi_polygons
+from skimage.segmentation import watershed
+from skimage.measure import find_contours
+from shapely import concave_hull
 from shapely.geometry import LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon, box, shape
 from shapely.ops import linemerge, polylabel, unary_union
 
@@ -132,14 +134,18 @@ def crop_raster(path: Path) -> np.ndarray:
     return np.array(data[r0:r1, c0:c1], dtype=np.float32)
 
 
-def terrain_image(hyp_path: Path, gray_path: Path, land) -> Image.Image:
-    hyp, gray = crop_raster(hyp_path), crop_raster(gray_path)
+def elevation_level(hyp: np.ndarray) -> np.ndarray:
+    """由 Natural Earth 分层设色推回 0..1 的“高程层级”：低地偏绿、丘陵偏褐、高原偏灰白。"""
     r, g, b = hyp[..., 0], hyp[..., 1], hyp[..., 2]
-    # Natural Earth 设色：低地偏绿、丘陵偏褐、高原偏灰白。由此推回一个 0..1 的“高程层级”。
     level = np.clip(0.5 - 2.2 * (g - r) / 255, 0, 1)
     white = np.clip((np.minimum(np.minimum(r, g), b) - 170) / 50, 0, 1)
     level = level + white * (1 - level) * 0.75
-    level = ndimage.gaussian_filter(level, 2.5)
+    return ndimage.gaussian_filter(level, 2.5)
+
+
+def terrain_image(hyp: np.ndarray, gray: np.ndarray, land) -> Image.Image:
+    r, g, b = hyp[..., 0], hyp[..., 1], hyp[..., 2]
+    level = elevation_level(hyp)
     stops = np.array([0.0, 0.22, 0.42, 0.62, 0.8, 1.0])
     colors = np.array([
         [104, 106, 72],   # 平原：暗橄榄
@@ -240,45 +246,95 @@ def lake_features(lakes_path: Path, spec: dict) -> list[dict]:
     return out
 
 
-def province_features(data: dict, land) -> list[dict]:
-    """东汉十三州部：郡治与辅助点的 Voronoi 按州合并，再限定在汉境与陆地内。"""
-    seeds = [(item[2], item[3], item[1]) for item in data["commanderies"]] + [(item[2], item[3], item[1]) for item in data["auxiliarySeeds"]["points"]]
-    # 等经纬度下经度方向被拉长；按中纬度余弦压缩经度再算距离，使分界更接近等距。
-    k = np.cos(np.radians(32))
-    to_metric = lambda x, y: (x * k, y)
-    from_metric = lambda x, y: (x / k, y)
-    points = MultiPoint([to_metric(x, y) for x, y, _ in seeds])
-    cells = voronoi_polygons(points, extend_to=box(WEST * k - 10, SOUTH - 10, EAST * k + 10, NORTH + 10))
-    by_province: dict[str, list] = {}
-    for cell in cells.geoms:
-        owner = min(seeds, key=lambda s: Point(to_metric(s[0], s[1])).distance(cell.representative_point()) if cell.contains(Point(to_metric(s[0], s[1]))) else 1e9)
-        inside = [s for s in seeds if cell.contains(Point(to_metric(s[0], s[1])))]
-        owner = inside[0] if inside else owner
-        by_province.setdefault(owner[2], []).append(Polygon([from_metric(x, y) for x, y in cell.exterior.coords]))
+GRID = 20  # 州界计算网格：每度 20 格（0.05°）
+WATERSHED_COMPACTNESS = 0.002  # 越大越接近等距划分，越小越贴合山脊
+
+
+def era_assignment(data: dict, era: dict) -> list[tuple[float, float, str]]:
+    """某一时期每个划界点所属的州：基础建制上先整州合并，再改属个别郡国；辅助点随最近的同州郡国。"""
+    move_prov, move_cmd = era.get("moveProvinces", {}), era.get("moveCommanderies", {})
+    commanderies = [(c[0], c[2], c[3], c[1]) for c in data["commanderies"]]
+    owner = {name: move_cmd.get(name, move_prov.get(base, base)) for name, _, _, base in commanderies}
+    seeds = [(x, y, owner[name]) for name, x, y, _ in commanderies]
+    for _, base, x, y in data["auxiliarySeeds"]["points"]:
+        same = [c for c in commanderies if c[3] == base]
+        nearest = min(same, key=lambda c: (c[1] - x) ** 2 + (c[2] - y) ** 2)
+        seeds.append((x, y, owner[nearest[0]]))
+    return seeds
+
+
+def province_surface(level: np.ndarray) -> np.ndarray:
+    """划界用的地势面：高程层级降到 1/20° 网格并适度平滑，只保留大山脊、去掉细碎起伏。"""
+    coarse = level.reshape(level.shape[0] // 3, 3, level.shape[1] // 3, 3).mean(axis=(1, 3))  # 1/60° → 1/20°
+    return ndimage.gaussian_filter(coarse, 3)
+
+
+def province_features(data: dict, land, level: np.ndarray) -> list[dict]:
+    """东汉州部：各时期分别以郡治为种子在地势面上做分水岭划分，按州描出轮廓，再限定在汉境与陆地内。
+
+    分水岭从各郡治按地势由低到高“灌水”，不同州的水在山脊相遇，州界因此大致落在分水岭上；
+    compactness 让平原上的分界仍接近等距，不至于随微小起伏乱跑。
+    """
     frontier_spec = data["frontier"]
-    hull = concave_hull(MultiPoint([(x, y) for x, y, _ in seeds]), ratio=frontier_spec["concaveRatio"])
+    all_points = [(c[2], c[3]) for c in data["commanderies"]] + [(a[2], a[3]) for a in data["auxiliarySeeds"]["points"]]
+    hull = concave_hull(MultiPoint(all_points), ratio=frontier_spec["concaveRatio"])
     frontier = hull.buffer(frontier_spec["bufferDegrees"], quad_segs=12).buffer(-0.3).buffer(0.3)
     realm = frontier.intersection(land).intersection(FRAME)
-    out = []
-    for pid, meta in data["provinces"].items():
-        region = unary_union(by_province.get(pid, [])).intersection(realm)
-        if region.is_empty:
-            continue
-        region = region.simplify(0.03)
-        parts = [region] if region.geom_type == "Polygon" else [g for g in region.geoms if g.geom_type == "Polygon"]
-        parts = [p for p in parts if p.area > 0.02]
-        region = MultiPolygon(parts) if len(parts) > 1 else parts[0]
-        main = max(parts, key=lambda g: g.area)
-        label = polylabel(main, 0.02)
-        out.append({"id": pid, "name": meta["name"], "color": meta["color"], "d": path_of(region, close=True), "label": [round(label.x, 2), round(label.y, 2)]})
-    return out
+
+    surface = province_surface(level)
+    rows, cols = surface.shape
+    to_cell = lambda x, y: (min(rows - 1, max(0, int((NORTH - y) * GRID))), min(cols - 1, max(0, int((x - WEST) * GRID))))
+    eras = []
+    for era in data["eras"]["list"]:
+        seeds = era_assignment(data, era)
+        ids = [pid for pid in data["provinces"] if any(s[2] == pid for s in seeds)]
+        markers = np.zeros(surface.shape, dtype=np.int32)
+        for x, y, pid in seeds:
+            markers[to_cell(x, y)] = ids.index(pid) + 1
+        owner = watershed(surface, markers, compactness=WATERSHED_COMPACTNESS) - 1
+        provinces = []
+        for index, pid in enumerate(ids):
+            # 先略微模糊再取 0.5 等值线：相邻两州的轮廓落在同一条线上，且边界平滑。
+            mask = ndimage.gaussian_filter((owner == index).astype(np.float32), 1.1)
+            padded = np.pad(mask, 1)
+            rings = []
+            for contour in find_contours(padded, 0.5):
+                if len(contour) < 8:
+                    continue
+                coords = [(WEST + (c - 1 + 0.5) / GRID, NORTH - (r - 1 + 0.5) / GRID) for r, c in contour]
+                ring = Polygon(coords).buffer(0)
+                if not ring.is_empty:
+                    rings.append(ring)
+            rings.sort(key=lambda g: -g.area)
+            region = Polygon()
+            for ring in rings:
+                region = region.difference(ring) if region.contains(ring.representative_point()) else region.union(ring)
+            region = region.intersection(realm)
+            if region.is_empty:
+                continue
+            parts = [region] if region.geom_type == "Polygon" else [g for g in region.geoms if g.geom_type == "Polygon"]
+            parts = [p.simplify(0.035) for p in parts if p.area > 0.03]
+            if not parts:
+                continue
+            main = max(parts, key=lambda g: g.area)
+            label = polylabel(main, 0.02)
+            meta = data["provinces"][pid]
+            members = sorted({name for name, x, y, base in [(c[0], c[2], c[3], c[1]) for c in data["commanderies"]]
+                              if era.get("moveCommanderies", {}).get(name, era.get("moveProvinces", {}).get(base, base)) == pid},
+                             key=[c[0] for c in data["commanderies"]].index)
+            provinces.append({"id": pid, "name": meta["name"], "color": meta["color"],
+                              "d": path_of(MultiPolygon(parts) if len(parts) > 1 else parts[0], close=True),
+                              "label": [round(label.x, 2), round(label.y, 2)], "commanderies": members})
+        eras.append({"id": era["id"], "from": era["from"], "to": era["to"], "label": era["label"], "note": era["note"], "provinces": provinces})
+        print(f"  {era['id']}: {len(provinces)} provinces")
+    return eras
 
 
 def js_value(value, indent: int = 4) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
-def write_geo_js(land, rivers, lakes, provinces, ranges, seats) -> None:
+def write_geo_js(land, rivers, lakes, eras, ranges, seats) -> None:
     source = GEO_JS.read_text(encoding="utf-8")
     land_parts = [land] if land.geom_type == "Polygon" else list(land.geoms)
     land_parts = sorted([p.simplify(0.025) for p in land_parts if p.area > 0.01], key=lambda p: -p.area)
@@ -288,7 +344,7 @@ def write_geo_js(land, rivers, lakes, provinces, ranges, seats) -> None:
         f"  const landPaths = Object.freeze({js_value(land_paths)});",
         f"  const rivers = Object.freeze({js_value(rivers)});",
         f"  const lakes = Object.freeze({js_value(lakes)});",
-        f"  const provinces = Object.freeze({js_value(provinces)});",
+        f"  const provinceEras = Object.freeze({js_value(eras)});",
         f"  const ranges = Object.freeze({js_value(ranges)});",
         f"  const commanderySeats = Object.freeze({js_value(seats)});",
         "  // </GENERATED>",
@@ -308,18 +364,19 @@ def main() -> None:
     data = json.loads(DATA.read_text(encoding="utf-8"))
 
     land = land_geometry(args.land, data["hanSeas"]["polygons"])
-    image = terrain_image(args.hyp, args.gray, land)
+    hyp, gray = crop_raster(args.hyp), crop_raster(args.gray)
+    image = terrain_image(hyp, gray, land)
     TERRAIN_OUT.parent.mkdir(parents=True, exist_ok=True)
     image.save(TERRAIN_OUT, "WEBP", quality=args.quality, method=6)
     print(f"{TERRAIN_OUT.relative_to(ROOT)}: {image.size[0]}×{image.size[1]}, {TERRAIN_OUT.stat().st_size:,} bytes")
 
     rivers = river_features(args.rivers, data["rivers"], land)
     lakes = lake_features(args.lakes, data["lakes"])
-    provinces = province_features(data, land)
+    eras = province_features(data, land, elevation_level(hyp))
     ranges = [{"name": r["name"], "point": r["point"]} for r in data["ranges"]]
     seats = [{"name": c[0], "province": c[1], "point": [c[2], c[3]]} for c in data["commanderies"] if FRAME.contains(Point(c[2], c[3]))]
-    write_geo_js(land, rivers, lakes, provinces, ranges, seats)
-    print(f"{GEO_JS.relative_to(ROOT)}: {len(rivers)} rivers, {len(lakes)} lakes, {len(provinces)} provinces, {GEO_JS.stat().st_size:,} bytes")
+    write_geo_js(land, rivers, lakes, eras, ranges, seats)
+    print(f"{GEO_JS.relative_to(ROOT)}: {len(rivers)} rivers, {len(lakes)} lakes, {len(eras)} eras, {GEO_JS.stat().st_size:,} bytes")
 
 
 if __name__ == "__main__":

@@ -82,7 +82,15 @@
     return grouped;
   }
 
+  // 按当前游戏年份取当时的州制：189 年为东汉十三州，194 年起分出河西雍州，213 年起复为九州。
+  function provinceEra(coreState) {
+    const year = Number(coreState?.year);
+    const era = Number.isFinite(year) && GEO.provincesForYear ? GEO.provincesForYear(year) : null;
+    return era || { id: "base", label: "东汉十三州", note: "", provinces: GEO.provinces || [] };
+  }
+
   function render(worldState, coreState) {
+    const era = state.provinceEra = provinceEra(coreState);
     const strategyData = window.XIAN_STRATEGY_DATA || { cities: [], routes: [] };
     const worldData = window.XIAN_WORLD_DATA || { regions: [], controllers: {} };
     const runtime = readRuntime();
@@ -121,14 +129,13 @@
                   <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#mapSea)"/>
                   <image class="geography-terrain" href="${escapeHtml(GEO.terrainImage || "")}" width="${WIDTH}" height="${HEIGHT}" preserveAspectRatio="none"/>
                   <g class="geography-land">${renderLandPaths("land")}</g>
-                  <g class="han-provinces" clip-path="url(#mapLandClip)">${renderProvinces()}</g>
+                  <g class="han-provinces" clip-path="url(#mapLandClip)">${renderProvinces(era)}</g>
                   <g class="grand-regions" clip-path="url(#mapLandClip)">${worldData.regions.map(region => renderRegion(region, regionStates[region.id])).join("")}</g>
                   <g class="terrain-lakes">${renderLakes()}</g>
                   <g class="terrain-rivers">${renderRivers()}</g>
                   <g class="terrain-ranges">${renderRangeNames()}</g>
                   <g class="geography-labels">${renderGeographyLabels()}</g>
-                  <g class="region-name-labels">${renderRegionLabels(worldData.regions)}</g>
-                  <g class="province-name-labels">${renderProvinceLabels()}</g>
+                  <g class="province-name-labels">${renderProvinceLabels(era)}</g>
                   <g class="minor-place-labels">${renderMinorPlaces()}</g>
                   <g class="grand-routes">${strategyData.routes.map(route => renderRoute(route, runtime.strategy)).join("")}</g>
                 </svg>
@@ -141,7 +148,7 @@
           <aside class="grand-map-inspector" data-map-inspector>${renderOverviewInspector(coreState, activeArmies, criticalRoutes, weakCities)}</aside>
         </div>
         <footer class="grand-map-legend">
-          <span><i class="legend-river"></i>水系</span><span class="legend-historic"><i></i>汉代故道（示意）</span><span class="legend-province"><i></i>州界</span><span><i class="legend-city"></i>城池</span><span><i class="legend-route"></i>军路</span><span><i class="legend-hot"></i>高压战线</span><span><i class="legend-army"></i>军团</span>
+          <span><i class="legend-river"></i>水系</span><span class="legend-historic"><i></i>汉代故道（示意）</span><span class="legend-province"><i></i>州界</span><span class="legend-era" data-province-era="${escapeHtml(era.id)}">州制：${escapeHtml(era.label)}</span><span><i class="legend-city"></i>城池</span><span><i class="legend-route"></i>军路</span><span><i class="legend-hot"></i>高压战线</span><span><i class="legend-army"></i>军团</span>
           <p>${escapeHtml(GEO.disclaimer || "海岸山河按真实方位简化；汉末州郡与势力范围为策略近似。")}</p>
         </footer>${renderMapGuide()}
       </section>`;
@@ -175,12 +182,12 @@
     }).join("");
   }
 
-  function renderProvinces() {
-    return (GEO.provinces || []).map(item => `<path class="han-province" data-province="${escapeHtml(item.id)}" d="${item.d || ""}" style="--province-color:${escapeHtml(item.color || "#8a7a55")}"/>`).join("");
+  function renderProvinces(era) {
+    return (era.provinces || []).map(item => `<path class="han-province" data-province="${escapeHtml(item.id)}" d="${item.d || ""}" style="--province-color:${escapeHtml(item.color || "#8a7a55")}" tabindex="0" role="button" aria-label="${escapeHtml(item.name)}，领${(item.commanderies || []).length}个郡国"/>`).join("");
   }
 
-  function renderProvinceLabels() {
-    return (GEO.provinces || []).map(item => {
+  function renderProvinceLabels(era) {
+    return (era.provinces || []).map(item => {
       const [x, y] = GEO.project?.(item.label) || [0, 0];
       return `<text class="province-name-label" x="${x}" y="${y}">${escapeHtml(item.name)}</text>`;
     }).join("");
@@ -194,14 +201,6 @@
     return (GEO.labels || []).map(item => {
       const [x, y] = GEO.project?.(item.point) || [0, 0];
       return `<text class="geography-label ${escapeHtml(item.kind || "region")}" x="${x}" y="${y}">${escapeHtml(item.text)}</text>`;
-    }).join("");
-  }
-
-  function renderRegionLabels(regions = []) {
-    const names = Object.fromEntries(regions.map(region => [region.id, region.short || region.name]));
-    return (GEO.regionLabels || []).map(item => {
-      const [x, y] = GEO.project?.(item.point) || [0, 0];
-      return `<text class="region-name-label" x="${x}" y="${y}">${escapeHtml(item.text || names[item.id] || "")}</text>`;
     }).join("");
   }
 
@@ -322,6 +321,11 @@
       const open = () => { if (!state.justDragged) inspectRegion(shell, region.dataset.grandRegion, onRegion); };
       region.addEventListener("click", open);
       region.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } });
+    });
+    shell.querySelectorAll("[data-province]").forEach(province => {
+      const open = () => { if (!state.justDragged) inspectProvince(shell, province.dataset.province); };
+      province.addEventListener("click", open);
+      province.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } });
     });
     shell.querySelectorAll("[data-grand-army-city]").forEach(button => button.addEventListener("click", () => inspectArmies(shell, button.dataset.grandArmyCity)));
     shell.querySelectorAll("[data-map-locate-city]").forEach(button => button.addEventListener("click", () => locateCity(shell, button.dataset.mapLocateCity, onRegion)));
@@ -532,6 +536,17 @@
     const controller = controllerMeta(current.controller || region.controller);
     inspector(shell).innerHTML = `<div class="map-inspector-head"><span>${escapeHtml(region.importance)}</span><h4>${escapeHtml(region.name)}</h4><p>${escapeHtml(region.capital)} · ${escapeHtml(controller.name)}</p></div>${gauge("地方稳定", current.stability)}${gauge("军事压力", current.military, true)}${gauge("朝廷态度", current.courtAttitude)}<div class="map-inspector-note"><strong>局势摘要</strong><p>${escapeHtml(region.summary)}</p></div><button type="button" class="map-inspector-primary" data-open-region="${escapeHtml(id)}">打开州郡档案与急递</button>`;
     inspector(shell).querySelector("[data-open-region]")?.addEventListener("click", () => onRegion?.(id));
+  }
+
+  function inspectProvince(shell, id) {
+    const era = state.provinceEra || provinceEra(null);
+    const province = (era.provinces || []).find(item => item.id === id);
+    if (!province) return;
+    const seats = (GEO.commanderySeats || []).filter(seat => (province.commanderies || []).includes(seat.name));
+    inspector(shell).innerHTML = `<div class="map-inspector-head"><span>州部 · ${escapeHtml(era.label)}</span><h4>${escapeHtml(province.name)}</h4><p>领 ${(province.commanderies || []).length} 个郡国</p></div>`
+      + (era.note ? `<p class="map-province-note">${escapeHtml(era.note)}</p>` : "")
+      + `<ul class="map-province-commanderies">${(province.commanderies || []).map(name => `<li>${escapeHtml(name)}</li>`).join("")}</ul>`
+      + `<p class="map-province-note">州界据各郡国治所推算，为近似范围。${seats.length < (province.commanderies || []).length ? "部分郡国治所在本图范围以外。" : ""}</p>`;
   }
 
   function inspectArmies(shell, cityId) {
