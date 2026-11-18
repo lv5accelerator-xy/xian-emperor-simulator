@@ -40,7 +40,7 @@ const api = context.window.XianGrandMap;
 const worldSystemCode = read("src/world-system.js");
 assert.ok(api, "grand map API should load");
 assert.equal(Object.keys(api.positions).length, 16, "all sixteen strategic cities need map coordinates");
-assert.equal(api.geography.version, "2.32.0", "real geography data should match the map release");
+assert.equal(api.geography.version, "2.33.0", "real geography data should match the map release");
 const geo = api.geography;
 assert.match(geo.terrainImage, /^assets\/images\/map\/terrain\.webp/, "terrain basemap image is bundled locally");
 assert.ok(fs.existsSync(path.join(root, geo.terrainImage.split("?")[0])), "terrain basemap image exists");
@@ -76,7 +76,7 @@ for (const river of geo.rivers) assert.match(river.d, /^M[\d.]+ [\d.]+ L/, `rive
 const provinceNames = ["司隶", "豫州", "冀州", "兖州", "徐州", "青州", "荆州", "扬州", "益州", "凉州", "并州", "幽州", "交州"];
 assert.deepEqual(Array.from(geo.provinces, item => item.name).sort(), [...provinceNames].sort(), "thirteen Eastern Han provinces");
 assert.equal((html.match(/class="han-province"/g) || []).length, 13);
-assert.equal((html.match(/class="province-name-label"/g) || []).length, 13);
+assert.equal((html.match(/class="province-name-label(?: compact)?"/g) || []).length, 13);
 assert.equal(geo.commanderySeats.length, 104, "all commandery seats inside the map frame (Rinan lies south of it)");
 const seatsByProvince = geo.commanderySeats.reduce((map, seat) => ({ ...map, [seat.province]: [...(map[seat.province] || []), seat] }), {});
 for (const province of geo.provinces) assert.ok(seatsByProvince[province.id]?.length, `${province.name} has commandery seats`);
