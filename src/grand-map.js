@@ -396,7 +396,12 @@
       });
       observer.observe(viewport);
     }
-    requestAnimationFrame(() => { applyZoom(shell); centerMap(viewport, false); layoutLabels(shell); });
+    syncPanelTop(shell);
+    if (typeof window.ResizeObserver === "function") {
+      const toolbar = shell.querySelector(".grand-map-toolbar");
+      if (toolbar) new window.ResizeObserver(() => { if (shell.isConnected) syncPanelTop(shell); }).observe(toolbar);
+    }
+    requestAnimationFrame(() => { syncPanelTop(shell); applyZoom(shell); centerMap(viewport, false); layoutLabels(shell); });
     document.fonts?.ready?.then(() => layoutLabels(shell));
   }
 
@@ -518,10 +523,13 @@
     const stage = shell.querySelector("[data-map-stage]");
     const space = shell.querySelector("[data-map-space]");
     if (!stage || !space) return;
+    const inset = panelInsets(viewport);
     stage.style.transform = `scale(${scale})`;
+    stage.style.left = `${inset.left}px`;
+    stage.style.top = `${inset.top}px`;
     stage.dataset.mapDetail = ZOOMS[state.zoomIndex] < .9 ? "overview" : ZOOMS[state.zoomIndex] >= 1.18 ? "detail" : "standard";
-    space.style.width = `${WIDTH * scale}px`;
-    space.style.height = `${HEIGHT * scale}px`;
+    space.style.width = `${WIDTH * scale + inset.left + inset.right}px`;
+    space.style.height = `${HEIGHT * scale + inset.top + inset.bottom}px`;
     const readout = shell.querySelector('[data-map-zoom="reset"]');
     if (readout) readout.textContent = `${Math.round(ZOOMS[state.zoomIndex] * 100)}%`;
   }
@@ -538,13 +546,52 @@
     return smooth && !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "smooth" : "auto";
   }
 
+  // 舆图铺满窗口，工具栏、两侧栏与图例浮在上面。算出它们在四边各遮住多少，
+  // 地图四周留出同样的滚动余量（边缘的城池能拖到没被遮住的地方），归中、定位也以没被遮住的区域为准。
+  function panelInsets(viewport) {
+    const none = { left: 0, right: 0, top: 0, bottom: 0 };
+    const area = viewport?.getBoundingClientRect?.();
+    if (!area?.width || !area.height) return none;
+    const shell = viewport.closest?.(".grand-map-shell"), page = viewport.closest?.(".world-map-page");
+    if (!page) return none;
+    let { left, right, top, bottom } = area;
+    const midX = area.left + area.width / 2, midY = area.top + area.height / 2;
+    const box = node => { const rect = node?.getBoundingClientRect?.(); return rect?.width && rect.height && getComputedStyle(node).opacity !== "0" ? rect : null; };
+    const toolbar = box(shell?.querySelector(".grand-map-toolbar")), inspectorBox = !state.inspectorCollapsed && box(shell?.querySelector(".grand-map-inspector"));
+    const rail = box(page.querySelector(".world-map-status-rail")), legend = box(shell?.querySelector(".grand-map-legend"));
+    if (toolbar && toolbar.bottom < midY) top = Math.max(top, toolbar.bottom);
+    if (rail && rail.right < midX && rail.bottom < bottom) left = Math.max(left, rail.right);
+    if (inspectorBox && inspectorBox.left > midX) right = Math.min(right, inspectorBox.left);
+    else if (inspectorBox && inspectorBox.top > midY) bottom = Math.min(bottom, inspectorBox.top);
+    if (legend && legend.top > midY) bottom = Math.min(bottom, legend.top);
+    if (right - left < 120 || bottom - top < 120) return none;
+    return { left: Math.round(left - area.left), right: Math.round(area.right - right), top: Math.round(top - area.top), bottom: Math.round(area.bottom - bottom) };
+  }
+  function visibleCenter(viewport) {
+    const inset = panelInsets(viewport);
+    return { x: inset.left + (viewport.clientWidth - inset.left - inset.right) / 2, y: inset.top + (viewport.clientHeight - inset.top - inset.bottom) / 2 };
+  }
+  // 地图在滚动区里的偏移（即留出的左、上余量）。
+  function stageOffset(viewport) {
+    const stage = viewport?.querySelector?.("[data-map-stage]");
+    return { x: parseFloat(stage?.style.left) || 0, y: parseFloat(stage?.style.top) || 0 };
+  }
+
+  // 两侧栏贴在工具栏下方：工具栏高度随宽度、字号变化，按实际底边设变量 --map-top。
+  function syncPanelTop(shell) {
+    const page = shell.closest?.(".world-map-page"), toolbar = shell.querySelector(".grand-map-toolbar");
+    if (!page || !toolbar?.offsetHeight) return;
+    page.style.setProperty("--map-top", `${Math.round(toolbar.offsetTop + toolbar.offsetHeight)}px`);
+  }
+
   function centerMap(viewport, smooth = true) {
     if (!viewport) return;
     const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
     const focus = CITY_POSITIONS.xudu || [WIDTH * .64, HEIGHT * .42];
+    const center = visibleCenter(viewport), offset = stageOffset(viewport);
     viewport.scrollTo?.({
-      left: Math.max(0, focus[0] * scale - viewport.clientWidth * .52),
-      top: Math.max(0, focus[1] * scale - viewport.clientHeight * .48),
+      left: Math.max(0, focus[0] * scale + offset.x - center.x),
+      top: Math.max(0, focus[1] * scale + offset.y - center.y),
       behavior: scrollBehavior(smooth),
     });
   }
@@ -608,7 +655,8 @@
     const pos = CITY_POSITIONS[id];
     if (viewport && pos) {
       const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
-      viewport.scrollTo?.({ left: Math.max(0, pos[0] * scale - viewport.clientWidth / 2), top: Math.max(0, pos[1] * scale - viewport.clientHeight / 2), behavior: scrollBehavior() });
+      const center = visibleCenter(viewport), offset = stageOffset(viewport);
+      viewport.scrollTo?.({ left: Math.max(0, pos[0] * scale + offset.x - center.x), top: Math.max(0, pos[1] * scale + offset.y - center.y), behavior: scrollBehavior() });
     }
     inspectCity(shell, id, onRegion);
   }
@@ -621,7 +669,8 @@
     const viewport = shell.querySelector("[data-grand-viewport]");
     if (viewport && from && to) {
       const scale = fitScale(viewport) * ZOOMS[state.zoomIndex];
-      viewport.scrollTo?.({ left: Math.max(0, ((from[0] + to[0]) / 2) * scale - viewport.clientWidth / 2), top: Math.max(0, ((from[1] + to[1]) / 2) * scale - viewport.clientHeight / 2), behavior: scrollBehavior() });
+      const center = visibleCenter(viewport), offset = stageOffset(viewport);
+      viewport.scrollTo?.({ left: Math.max(0, ((from[0] + to[0]) / 2) * scale + offset.x - center.x), top: Math.max(0, ((from[1] + to[1]) / 2) * scale + offset.y - center.y), behavior: scrollBehavior() });
     }
     inspectRoute(shell, id);
   }
