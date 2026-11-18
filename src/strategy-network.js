@@ -414,7 +414,12 @@
   }
 
   function detectCityTargets(text) {
-    return orderedMatches(window.XianEdictRules?.affirmativeText(text) ?? String(text || ""), DATA.cities);
+    const effective = window.XianEdictRules?.affirmativeText(text) ?? String(text || "");
+    const cities = orderedMatches(effective, DATA.cities);
+    // 倒装：先写目标、后点明起点（“攻许都，再从邺城出发”“向洛阳进兵，起点是长安”），把起点提到最前。
+    const origin = cities.slice(1).find(id => DATA.cities.find(city => city.id === id)?.aliases.some(alias =>
+      new RegExp(`(?:从|自|由)${alias}(?:出发|起兵|发兵|出兵|启程)|起点(?:是|为|在)${alias}|以${alias}为起点`).test(effective)));
+    return origin ? [origin, ...cities.filter(id => id !== origin)] : cities;
   }
 
   function detectLordTargets(text) {
