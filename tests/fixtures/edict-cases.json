@@ -1,6 +1,6 @@
 {
   "context": {
-    "version": "2.30.0",
+    "version": "2.35.0",
     "scenario": "jianan_196",
     "difficulty": "standard",
     "seed": 42424242,
@@ -8,10 +8,10 @@
     "mode": "Read-only analysis/preview; desired fields are human semantic expectations, not rule changes."
   },
   "sourceHashes": {
-    "src/edict-rules.js": "54ed3acb612e4e533c7e9cd0fb44a3263a9635899590e1746b61fe3eba7c76b1",
-    "src/strategy-network.js": "4e4273fc0ac73a4e1e8534ae33284b95c6aabacfb2bdda8adbf6b2c45aeac4bf",
+    "src/edict-rules.js": "035ac1818e92f90d2f710cdc013df9ebd92524802063ea8b6a9918b3565bfb39",
+    "src/strategy-network.js": "944efbe5987c6c0c4bd6be0ebb2478f6bcb072217430c6bef4e2d6293eecd59b",
     "src/strategy-network-data.js": "d342894e0260fc423eba580dca4cef06bfeb302f5f7042f02cc5f880029053b6",
-    "src/character-availability.js": "f03cda8e7a980c180e6ba08dbab2557a1f2da36fcfa947fa57dd53ccee1a3fd4"
+    "src/character-availability.js": "d77672631044d3f9084cf651f43d835257d76cefa0d0b8c8396b5750116c9188"
   },
   "cases": [
     {
@@ -34,13 +34,13 @@
           "不得曹操出兵邺城"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
           "actionCost": 1
         }
       },
@@ -66,13 +66,13 @@
           "不许赈济灾民"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
           "actionCost": 1
         }
       },
@@ -98,13 +98,13 @@
           "不要减赋"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
           "actionCost": 1
         }
       },
@@ -130,13 +130,13 @@
           "毋联络董承"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
           "actionCost": 1
         }
       },
@@ -162,13 +162,13 @@
           "停止输粮邺城"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
           "actionCost": 1
         }
       },
@@ -194,13 +194,13 @@
           "暂停任命曹操"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
           "actionCost": 1
         }
       },
@@ -226,13 +226,13 @@
           "拒绝与袁绍结盟"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
           "actionCost": 1
         }
       },
@@ -258,13 +258,13 @@
           "不再进贡袁绍"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
           "actionCost": 1
         }
       },
@@ -280,28 +280,27 @@
       },
       "observed": {
         "categories": [
-          "military"
+          "generic"
         ],
         "targets": [],
         "targetDisposition": {},
-        "effectiveText": "不应出兵邺城",
-        "hasEffectiveOrder": true,
-        "ignoredClauses": [],
-        "warnings": [],
-        "blocked": false,
-        "cityOrder": [
-          "ye"
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不应出兵邺城"
         ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "请先裁决本月奏报，草稿可以保留。",
-          "actionCost": 1,
-          "treasuryCost": 5
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
         }
       },
-      "differences": [
-        "hasEffectiveOrder"
-      ]
+      "differences": []
     },
     {
       "id": "N10",
@@ -313,30 +312,27 @@
       },
       "observed": {
         "categories": [
-          "military"
+          "generic"
         ],
-        "targets": [
-          "yuan_shao"
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不宜讨伐袁绍"
         ],
-        "targetDisposition": {
-          "yuan_shao": "punitive"
-        },
-        "effectiveText": "不宜讨伐袁绍",
-        "hasEffectiveOrder": true,
-        "ignoredClauses": [],
-        "warnings": [],
-        "blocked": false,
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "请先裁决本月奏报，草稿可以保留。",
-          "actionCost": 1,
-          "treasuryCost": 5
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
         }
       },
-      "differences": [
-        "hasEffectiveOrder"
-      ]
+      "differences": []
     },
     {
       "id": "N11",
@@ -348,29 +344,24 @@
       },
       "observed": {
         "categories": [
-          "generic"
+          "relief"
         ],
         "targets": [],
         "targetDisposition": {},
-        "effectiveText": "",
-        "hasEffectiveOrder": false,
-        "ignoredClauses": [
-          "不得不赈济灾民"
-        ],
-        "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
-        ],
-        "blocked": true,
+        "effectiveText": "不得不赈济灾民",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
-          "actionCost": 1
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 7
         }
       },
-      "differences": [
-        "hasEffectiveOrder"
-      ]
+      "differences": []
     },
     {
       "id": "N12",
@@ -382,28 +373,27 @@
       },
       "observed": {
         "categories": [
-          "military"
+          "generic"
         ],
         "targets": [],
         "targetDisposition": {},
-        "effectiveText": "未必需要出兵邺城",
-        "hasEffectiveOrder": true,
-        "ignoredClauses": [],
-        "warnings": [],
-        "blocked": false,
-        "cityOrder": [
-          "ye"
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "未必需要出兵邺城"
         ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "请先裁决本月奏报，草稿可以保留。",
-          "actionCost": 1,
-          "treasuryCost": 5
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
         }
       },
-      "differences": [
-        "hasEffectiveOrder"
-      ]
+      "differences": []
     },
     {
       "id": "N13",
@@ -415,32 +405,27 @@
       },
       "observed": {
         "categories": [
-          "military"
+          "generic"
         ],
-        "targets": [
-          "cao_cao"
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "曹操并非要出兵邺城"
         ],
-        "targetDisposition": {
-          "cao_cao": "positive"
-        },
-        "effectiveText": "曹操并非要出兵邺城",
-        "hasEffectiveOrder": true,
-        "ignoredClauses": [],
-        "warnings": [],
-        "blocked": false,
-        "cityOrder": [
-          "ye"
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
+        "blocked": true,
+        "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "请先裁决本月奏报，草稿可以保留。",
-          "actionCost": 1,
-          "treasuryCost": 5
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
         }
       },
-      "differences": [
-        "hasEffectiveOrder"
-      ]
+      "differences": []
     },
     {
       "id": "N14",
@@ -452,29 +437,24 @@
       },
       "observed": {
         "categories": [
-          "generic"
+          "relief"
         ],
         "targets": [],
         "targetDisposition": {},
-        "effectiveText": "",
-        "hasEffectiveOrder": false,
-        "ignoredClauses": [
-          "勿忘赈济灾民"
-        ],
-        "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
-        ],
-        "blocked": true,
+        "effectiveText": "勿忘赈济灾民",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
-          "actionCost": 1
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 7
         }
       },
-      "differences": [
-        "hasEffectiveOrder"
-      ]
+      "differences": []
     },
     {
       "id": "N15",
@@ -486,32 +466,28 @@
       },
       "observed": {
         "categories": [
-          "military"
+          "generic"
         ],
-        "targets": [
-          "cao_cao"
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "闻曹操欲出兵邺城",
+          "暂不下诏"
         ],
-        "targetDisposition": {
-          "cao_cao": "positive"
-        },
-        "effectiveText": "闻曹操欲出兵邺城",
-        "hasEffectiveOrder": true,
-        "ignoredClauses": [],
-        "warnings": [],
-        "blocked": false,
-        "cityOrder": [
-          "ye"
+        "warnings": [
+          "已排除 2 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
+        "blocked": true,
+        "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "请先裁决本月奏报，草稿可以保留。",
-          "actionCost": 1,
-          "treasuryCost": 5
+          "reason": "已排除 2 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
         }
       },
-      "differences": [
-        "hasEffectiveOrder"
-      ]
+      "differences": []
     },
     {
       "id": "N16",
@@ -523,32 +499,28 @@
       },
       "observed": {
         "categories": [
-          "secret"
+          "generic"
         ],
-        "targets": [
-          "dong_cheng",
-          "yuan_shao"
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "传言董承密令联络袁绍",
+          "并非朕意"
         ],
-        "targetDisposition": {
-          "dong_cheng": "positive",
-          "yuan_shao": "positive"
-        },
-        "effectiveText": "传言董承密令联络袁绍",
-        "hasEffectiveOrder": true,
-        "ignoredClauses": [],
-        "warnings": [],
-        "blocked": false,
+        "warnings": [
+          "已排除 2 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "请先裁决本月奏报，草稿可以保留。",
-          "actionCost": 1,
-          "treasuryCost": 0
+          "reason": "已排除 2 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
         }
       },
-      "differences": [
-        "hasEffectiveOrder"
-      ]
+      "differences": []
     },
     {
       "id": "M01",
@@ -718,24 +690,23 @@
         ],
         "targetDisposition": {
           "dong_cheng": "punitive",
-          "xun_yu": "punitive"
+          "xun_yu": "positive"
         },
         "effectiveText": "褒奖荀彧并问罪董承",
         "hasEffectiveOrder": true,
         "ignoredClauses": [],
-        "warnings": [],
-        "blocked": false,
+        "warnings": [
+          "褒奖与问罪对象请分开拟旨，避免承办对象混淆。"
+        ],
+        "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "请先裁决本月奏报，草稿可以保留。",
-          "actionCost": 1,
-          "treasuryCost": 0
+          "reason": "褒奖与问罪对象请分开拟旨，避免承办对象混淆。",
+          "actionCost": 1
         }
       },
-      "differences": [
-        "blocked"
-      ]
+      "differences": []
     },
     {
       "id": "M06",
@@ -1013,7 +984,7 @@
           "勿令袁绍出兵"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": false,
         "cityOrder": [],
@@ -1543,8 +1514,8 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [
-          "xudu",
-          "ye"
+          "ye",
+          "xudu"
         ],
         "preview": {
           "ok": false,
@@ -1553,9 +1524,7 @@
           "treasuryCost": 0
         }
       },
-      "differences": [
-        "cityOrder"
-      ]
+      "differences": []
     },
     {
       "id": "C13",
@@ -1580,8 +1549,8 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [
-          "luoyang",
-          "changan"
+          "changan",
+          "luoyang"
         ],
         "preview": {
           "ok": false,
@@ -1590,9 +1559,7 @@
           "treasuryCost": 5
         }
       },
-      "differences": [
-        "cityOrder"
-      ]
+      "differences": []
     },
     {
       "id": "C14",
@@ -1614,13 +1581,13 @@
           "不得从邺城向许都出兵"
         ],
         "warnings": [
-          "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。"
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
         ],
         "blocked": true,
         "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "已排除 1 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。",
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
           "actionCost": 1
         }
       },
@@ -1636,29 +1603,27 @@
       },
       "observed": {
         "categories": [
-          "military"
+          "generic"
         ],
         "targets": [],
         "targetDisposition": {},
-        "effectiveText": "不应从许都向邺城出兵",
-        "hasEffectiveOrder": true,
-        "ignoredClauses": [],
-        "warnings": [],
-        "blocked": false,
-        "cityOrder": [
-          "xudu",
-          "ye"
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不应从许都向邺城出兵"
         ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
         "preview": {
           "ok": false,
-          "reason": "请先裁决本月奏报，草稿可以保留。",
-          "actionCost": 1,
-          "treasuryCost": 5
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
         }
       },
-      "differences": [
-        "cityOrder"
-      ]
+      "differences": []
     },
     {
       "id": "C16",
@@ -1696,6 +1661,77 @@
         }
       },
       "differences": []
+    },
+    {
+      "id": "N17",
+      "group": "否定与语境",
+      "text": "闻袁绍南下，令曹操守备许都",
+      "note": "转述只排除转述的一句，后面朕的命令照常生效",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "cityOrder": [
+          "xudu"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [
+          "cao_cao"
+        ],
+        "targetDisposition": {
+          "cao_cao": "positive"
+        },
+        "effectiveText": "令曹操守备许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [
+          "闻袁绍南下"
+        ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "N18",
+      "group": "否定与语境",
+      "text": "处置不当者问罪",
+      "note": "“不当”是“不恰当”，不是否定",
+      "desired": {
+        "hasEffectiveOrder": true
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "investigation"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "处置不当者问罪",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
     }
   ]
 }

@@ -11,7 +11,15 @@
     ["diplomacy", /遣使|结盟|盟约|会盟|同盟|联盟|外援|牵制|贡赋|进贡|朝贡|输贡|纳贡|援军|救援|救应|勤王|奉表|互市|通商|停战|罢兵|休兵|议和|送质|质子/],
     ["appease", /安抚|嘉奖|褒奖|信任|赐宴|军务便宜/],
   ];
-  const negation = /不得|不可|不许|不准|不要|不再|不予|勿|毋|禁止|严禁|无需|不必|停止|暂停|暂缓|取消|拒绝|不(?:练兵|出兵|任命|加封|赈济|进贡|奉表|结盟|驰援)/;
+  const negation = /不得|不可|不许|不准|不要|不再|不予|勿|毋|禁止|严禁|无需|不必|停止|暂停|暂缓|取消|拒绝|不应|不宜|不该|未必|并非|并不|暂不|非朕|不(?:练兵|出兵|任命|加封|赈济|进贡|奉表|结盟|驰援)/;
+  // 双重否定与提醒是肯定：“不得不赈济”“勿忘赈济”。先去掉这些说法再判断否定。
+  const affirmingIdioms = /不得不|不可不|不能不|不敢不|勿忘|毋忘|莫忘|不忘/g;
+  // 转述与传闻不是朕的命令：“闻曹操欲出兵”“传言董承密令”。
+  const hearsay = /^(?:闻|听闻|据闻|风闻|传闻|传言|有人言|据报|探报)/;
+  const ignored = clause => hearsay.test(clause) || negation.test(clause.replace(affirmingIdioms, ""));
+  // 同一句里用“并且”“同时”或“并＋褒贬动词”连接的几件事分开判断褒贬，如“褒奖荀彧并问罪董承”。
+  // 只在“并”后紧跟褒贬动词时拆开，“并州”“并力讨伐”“并非”都不拆。
+  const subClauses = clause => clause.split(/并且|同时|并(?=褒|奖|嘉|赏|赐|拜|任|加封|问罪|罢免|黜|斥责|削|追责|讨伐|征讨)/).filter(Boolean);
   const punitive = /罢免|黜|问罪|讨伐|征讨|斥责|削爵|追责/;
 
   function analyze(text, characters = window.GAME_DATA?.characters || [], core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.()) {
@@ -19,8 +27,8 @@
     if (availability && core) characters = availability.availableCharacters(core);
     const clauses = String(text || "").split(/[，,；;。.!！?？\n]+/).map(item => item.trim()).filter(Boolean);
     // 否定句不转成正面命令。复合句不能确定否定范围时，要求玩家拆句。
-    const ignoredClauses = clauses.filter(item => negation.test(item));
-    const affirmative = clauses.filter(item => !negation.test(item));
+    const ignoredClauses = clauses.filter(ignored);
+    const affirmative = clauses.filter(item => !ignored(item));
     const treaty = affirmative.some(item => /结盟|盟约|会盟|同盟|联盟/.test(item));
     const joint = /共讨|合攻|共同进攻|共同攻打|共同防守|协同防守/;
     const policyClauses = affirmative.filter(item => patterns.some(([, pattern]) => pattern.test(item)) || (treaty && joint.test(item)));
@@ -30,7 +38,7 @@
     const targetText = treaty ? effectiveText.split(joint)[0] : effectiveText;
     const targets = characters.filter(character => targetText.includes(character.name)).map(character => character.id);
     const targetDisposition = Object.fromEntries(characters.filter(character => targets.includes(character.id)).map(character => [character.id,
-      policyClauses.some(clause => clause.includes(character.name) && punitive.test(clause)) ? "punitive" : "positive",
+      policyClauses.flatMap(subClauses).some(part => part.includes(character.name) && punitive.test(part)) ? "punitive" : "positive",
     ]));
     const orderRules = window.XIAN_STRATEGY_DATA?.orderRules || [];
     const orders = orderRules.filter(rule => new RegExp(rule.pattern).test(effectiveText)).map(rule => rule.id);
@@ -38,7 +46,7 @@
     const warnings = [];
     const currentTargets = availability && core ? availability.validateTargets(effectiveText, core) : { ok: true };
     if (!currentTargets.ok) warnings.push(currentTargets.reason);
-    if (ignoredClauses.length) warnings.push(`已排除 ${ignoredClauses.length} 句否定或停止指令；如需禁止某事，请使用事件或对应行动处理。`);
+    if (ignoredClauses.length) warnings.push(`已排除 ${ignoredClauses.length} 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。`);
     if (categories.length > 2) warnings.push("一份圣旨最多办理两类政务，请拆成多次行动。" );
     if (substantiveOrders.length > 1) warnings.push("一份圣旨只指定一种军略行动，请将进攻、补给或停战分开下达。" );
     const dispositions = Object.values(targetDisposition);
@@ -52,7 +60,7 @@
   }
 
   function effectiveText(text) { const result = analyze(text); return result.blocked ? "" : result.effectiveText; }
-  function affirmativeText(text) { return String(text || "").split(/[，,；;。.!！?？\n]+/).filter(item => !negation.test(item)).join("；"); }
+  function affirmativeText(text) { return String(text || "").split(/[，,；;。.!！?？\n]+/).map(item => item.trim()).filter(item => item && !ignored(item)).join("；"); }
   function reportText(report) { return report.edict?.effectiveText ?? effectiveText(String(report.text || "").match(/“([^”]+)”/)?.[1] || ""); }
   window.XianEdictRules = Object.freeze({ analyze, affirmativeText, effectiveText, reportText, labels });
 })();

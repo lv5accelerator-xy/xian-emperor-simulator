@@ -15,4 +15,4 @@ for (const row of fixture.cases) {
   assert.deepEqual(differences(actual, row.desired), row.differences, `${row.id}: known semantic mismatch classification`);
 }
 assert.deepEqual(plain(h.api.getState()), before, "observing parsing and preview must not execute any order or consume RNG");
-console.log(`${fixture.cases.length} edict behavior snapshots passed; ${fixture.cases.filter(row => row.differences.length).length} known semantic mismatches recorded, parser unchanged.`);
+console.log(`${fixture.cases.length} edict behavior snapshots passed; ${fixture.cases.filter(row => row.differences.length).length} known semantic mismatches recorded.`);
