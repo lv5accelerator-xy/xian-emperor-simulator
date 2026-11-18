@@ -314,7 +314,11 @@
         event.preventDefault();
         if (state && !state.ended) saveGame(false);
       }
-      if (event.key === "Escape") closeModal();
+      if (event.key === "Escape" && !el["modal-backdrop"].classList.contains("hidden")) {
+        // 通用弹窗可能叠在舆图、军团等窗口上：这一下 Esc 只关弹窗，不再传给下层窗口。
+        closeModal();
+        event.stopImmediatePropagation();
+      }
     });
   }
 
@@ -2183,7 +2187,7 @@
     el["modal-backdrop"].classList.add("hidden");
     el["modal-backdrop"].classList.remove("wide");
     modalConfirmHandler = null;
-    window.XianModalFocus?.deactivate();
+    window.XianModalFocus?.deactivate(true, el["modal-backdrop"]);
   }
 
   function addReport(title, text, type = "neutral", metadata = {}) {

@@ -210,7 +210,7 @@
       if (event.target === overlay) closeOverlay();
     });
     document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && overlay && !overlay.classList.contains("hidden")) closeOverlay();
+      if (event.key === "Escape" && overlay && !overlay.classList.contains("hidden") && !overlay.closest("[inert]")) closeOverlay();
     });
   }
 

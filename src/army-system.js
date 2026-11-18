@@ -1862,7 +1862,7 @@
     overlay.querySelector("#army-system-close")?.addEventListener("click", closeOverlay);
     overlay.addEventListener("click", event => { if (event.target === overlay) closeOverlay(); });
     overlay.querySelectorAll("[data-army-tab]").forEach(button => button.addEventListener("click", () => { activeTab = button.dataset.armyTab; renderOverlay(); }));
-    document.addEventListener("keydown", event => { if (event.key === "Escape" && !overlay.classList.contains("hidden")) closeOverlay(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !overlay.classList.contains("hidden") && !overlay.closest("[inert]")) closeOverlay(); });
   }
 
   function openOverlay() {

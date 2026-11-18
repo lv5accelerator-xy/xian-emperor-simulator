@@ -58,6 +58,12 @@ v2.30.3 起的工程约定。每条都有对应的回归测试或 CI 任务把�
 
 - 新增文字色时注意对比度：普通文字不低于 4.5:1，大字 3:1。把关：`scripts/browser-contrast.cjs`（按实际渲染测量开局、朝政、月报、舆图等 12 个屏幕）。
 
+## 窗口与焦点
+
+- 新窗口写成 `role="dialog" aria-modal="true"` 即可：`src/modal-focus.js` 会自动接管焦点移入、Tab 限制、背景 inert 与关闭后归还焦点，无需在模块里另写。通用弹窗由 `game.js` 显式调用 `activate`／`deactivate(true, backdrop)`；月报自管焦点，列在 `SELF_MANAGED`。
+- 窗口自己的 Esc 处理要加上 `!overlay.closest("[inert]")`：被上层窗口盖住时不响应。
+- 整块替换窗口内容时，若焦点原在被替换的部分里，要把焦点放回新内容。把关：`scripts/browser-keyboard-screens.cjs`。
+
 ## 浏览器回归
 
 - 共用的“真实点击”在 `scripts/browser-tap.cjs`：等元素位置稳定，把指针移过去确认悬停在目标上，再在同一坐标按下。被遮挡、移出视口或仍在移动的控件会像真人操作一样点不中。

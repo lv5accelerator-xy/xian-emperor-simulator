@@ -5,7 +5,7 @@
   const patterns = [
     ["relief", /赈|救灾|开仓|安置流民/], ["tax", /免税|减税|减赋|免赋|减轻赋役/],
     ["investigation", /彻查|查办|整顿吏治|问罪|追责/],
-    ["military", /练兵|整军|整顿宿卫|武备|讨伐|征讨|出兵|调兵|驰援|协防|坚守|守备|驻防|布防|输粮|运粮|补给|攻取|攻城|进兵/],
+    ["military", /练兵|整军|整顿宿卫|武备|讨伐|征讨|出兵|发兵|派兵|起兵|调兵|驰援|增援|协防|坚守|固守|守备|驻防|布防|设防|屯兵|输粮|运粮|补给|攻取|攻城|攻打|进攻|围攻|攻占|夺取|收复|击破|进兵|北伐|南征|东征|西征/],
     ["ritual", /宗庙|祭祀|朝仪|礼制|经筵|大朝会/], ["secret", /密诏|密令|秘密|暗中|衣带|联络/],
     ["appointment", /任命|加封|封爵|拜为|授官|罢免|黜|封为|赐爵/],
     ["diplomacy", /遣使|结盟|盟约|会盟|同盟|联盟|外援|牵制|贡赋|进贡|朝贡|输贡|纳贡|援军|救援|救应|勤王|奉表|互市|通商|停战|罢兵|休兵|议和|送质|质子/],
@@ -20,7 +20,9 @@
   // 同一句里用“并且”“同时”或“并＋褒贬动词”连接的几件事分开判断褒贬，如“褒奖荀彧并问罪董承”。
   // 只在“并”后紧跟褒贬动词时拆开，“并州”“并力讨伐”“并非”都不拆。
   const subClauses = clause => clause.split(/并且|同时|并(?=褒|奖|嘉|赏|赐|拜|任|加封|问罪|罢免|黜|斥责|削|追责|讨伐|征讨)/).filter(Boolean);
-  const punitive = /罢免|黜|问罪|讨伐|征讨|斥责|削爵|追责/;
+  const punitive = /罢免|黜|问罪|讨伐|征讨|斥责|削爵|追责|进攻|攻打|围攻|击破/;
+  // 受命出兵的一方不是被讨伐的对象：“令曹操进攻邺城”“与袁绍并力讨伐刘表”中的曹操、袁绍。
+  const actor = (part, name) => new RegExp(`(?:令|命|着|遣|派|诏|使)${name}|与${name}(?:并力|合力|协力|共同|一同|会师|联兵|共)`).test(part);
 
   function analyze(text, characters = window.GAME_DATA?.characters || [], core = (window.XianEmperorGame?.peekState || window.XianEmperorGame?.getState)?.()) {
     const availability = window.XianCharacterAvailability;
@@ -38,7 +40,7 @@
     const targetText = treaty ? effectiveText.split(joint)[0] : effectiveText;
     const targets = characters.filter(character => targetText.includes(character.name)).map(character => character.id);
     const targetDisposition = Object.fromEntries(characters.filter(character => targets.includes(character.id)).map(character => [character.id,
-      policyClauses.flatMap(subClauses).some(part => part.includes(character.name) && punitive.test(part)) ? "punitive" : "positive",
+      policyClauses.flatMap(subClauses).some(part => part.includes(character.name) && punitive.test(part) && !actor(part, character.name)) ? "punitive" : "positive",
     ]));
     const orderRules = window.XIAN_STRATEGY_DATA?.orderRules || [];
     const orders = orderRules.filter(rule => new RegExp(rule.pattern).test(effectiveText)).map(rule => rule.id);
@@ -49,7 +51,9 @@
     if (ignoredClauses.length) warnings.push(`已排除 ${ignoredClauses.length} 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。`);
     if (categories.length > 2) warnings.push("一份圣旨最多办理两类政务，请拆成多次行动。" );
     if (substantiveOrders.length > 1) warnings.push("一份圣旨只指定一种军略行动，请将进攻、补给或停战分开下达。" );
-    const dispositions = Object.values(targetDisposition);
+    // 受命出兵的一方记为 positive，但不算“褒奖”，不与被讨伐者构成褒贬混杂。
+    const actors = new Set(characters.filter(character => targets.includes(character.id) && policyClauses.some(clause => actor(clause, character.name))).map(character => character.id));
+    const dispositions = Object.entries(targetDisposition).filter(([id]) => !actors.has(id)).map(([, value]) => value);
     const mixedTargets = dispositions.includes("positive") && dispositions.includes("punitive");
     if (mixedTargets) warnings.push("褒奖与问罪对象请分开拟旨，避免承办对象混淆。" );
     const maxTargets = treaty ? 3 : 2;

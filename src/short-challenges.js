@@ -224,6 +224,7 @@
     store.results = store.results.slice(0, 40);
     const old = store.best[definition.id];
     if (!old || old.rulesVersion !== result.rulesVersion || result.score > old.score) store.best[definition.id] = result;
+    pruneStore();
     if (grade.medal !== "none" && !store.rewards.includes(result.reward)) store.rewards.push(result.reward);
     store.active = null;
     saveStore();
@@ -333,6 +334,17 @@
 
   function activeDefinition() { return store.active ? challengeById(store.active.challengeId) || store.customDefinitions[store.active.challengeId] : null; }
   function challengeById(id) { return CHALLENGES.find(item => item.id === id); }
+  // 跨局累计的记录要有上限（v2.36 起）：内置挑战的最佳成绩全部保留；同题与每周挑战的最佳成绩按完成时间只留最近 40 个；
+  // 自定义题目定义只保留仍被成绩、最佳成绩或进行中的对局引用的，以及最近加入的 40 个。每条成绩约 5 KB，不设上限会随周数一直增长。
+  const RECENT_LIMIT = 40;
+  function pruneStore() {
+    const custom = Object.entries(store.best).filter(([id]) => !challengeById(id))
+      .sort((a, b) => String(b[1]?.completedAt || "").localeCompare(String(a[1]?.completedAt || "")));
+    for (const [id] of custom.slice(RECENT_LIMIT)) delete store.best[id];
+    const used = new Set([...store.results.map(item => item.challengeId), ...Object.keys(store.best), store.active?.challengeId].filter(Boolean));
+    const spare = Object.keys(store.customDefinitions).filter(id => !used.has(id));
+    for (const id of spare.slice(0, Math.max(0, spare.length - RECENT_LIMIT))) delete store.customDefinitions[id];
+  }
   function readPath(value, path) { return Number(String(path).split(".").reduce((result, key) => result?.[key], value) || 0); }
   function medalName(id) { return ({ gold: "金章", silver: "银章", bronze: "铜章", none: "未获章" })[id] || "未获章"; }
   function defaultStore() { return { version: 1, active: null, results: [], best: {}, rewards: [], customDefinitions: {} }; }

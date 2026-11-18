@@ -426,7 +426,7 @@
   }
 
   function classifyLordAction(lordId, text) {
-    if (/(出兵|攻取|兵锋|清剿|战线|军粮)/.test(text)) return "military";
+    if (/(出兵|发兵|攻取|进攻|攻打|围攻|增援|兵锋|清剿|战线|军粮)/.test(text)) return "military";
     if (/(奉表|官爵|朝廷|诏令|名分)/.test(text)) return "diplomacy";
     if (lordId === "yuan_shu" || /(帝号|符瑞|僭)/.test(text)) return "threat";
     return "administration";
@@ -600,7 +600,7 @@
       if (card) setTimeout(() => augmentCharacterModal(card.dataset.characterId), 10);
     }, true);
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !document.getElementById("xian-world-overlay")?.classList.contains("hidden")) closeOverlay();
+      if (event.key === "Escape" && !document.getElementById("xian-world-overlay")?.classList.contains("hidden") && !document.getElementById("xian-world-overlay")?.closest("[inert]")) closeOverlay();
     });
   }
 
@@ -723,9 +723,12 @@
     const renderers = { world: renderWorldPanel, people: renderPeoplePanel, timeline: renderTimelinePanel, sources: renderSourcesPanel };
     const titles = { world: "九州舆图与天下军政", people: "人物政治人格四维模型", timeline: "汉末历史与本局时间线", sources: "史料库与事件依据" };
     title.textContent = titles[overlayState.tab] || titles.world;
+    const hadFocus = content.contains(document.activeElement);
     content.innerHTML = (renderers[overlayState.tab] || renderWorldPanel)();
     content.scrollTop = 0;
     bindOverlayContentEvents();
+    // 整块重绘会带走原来的焦点；键盘用户原本在内容区里操作时，把焦点放回当前标签页按钮。
+    if (hadFocus) document.querySelector(`[data-world-panel="${overlayState.tab}"]`)?.focus();
   }
 
   function renderWorldPanel() {
@@ -812,6 +815,7 @@
     content.closest(".xian-world-window")?.classList.remove("map-mode");
     content.innerHTML = `<button class="world-back-button" type="button" data-world-back>← 返回全国舆图</button><section class="region-detail-card" style="--controller:${controller.color}"><header><span>${region.short}</span><div><p>${escapeHtml(region.importance)}</p><h3>${escapeHtml(region.name)}</h3><small>${escapeHtml(region.capital)} · ${escapeHtml(controller.name)}</small></div></header><p class="region-summary">${escapeHtml(region.summary)}</p><div class="region-metrics">${renderRegionGauge("地方稳定", runtime.stability)}${renderRegionGauge("军事压力", runtime.military)}${renderRegionGauge("对朝廷态度", runtime.courtAttitude)}</div><div class="region-last-change"><strong>最近变化</strong><p>${escapeHtml(runtime.lastChange || "暂无")}</p></div></section><section class="region-log-card"><div class="world-section-head"><div><span class="section-kicker">地方档案</span><h3>近期急递</h3></div></div>${relatedLogs.length ? relatedLogs.map(renderWorldLogEntry).join("") : '<p class="empty-state">暂无该地区动态。</p>'}</section><section class="region-source-card"><button type="button" data-region-sources>查阅此地区史料依据</button></section>`;
     content.querySelector("[data-world-back]")?.addEventListener("click", () => openOverlay("world"));
+    content.querySelector("[data-world-back]")?.focus();
     content.querySelector("[data-region-sources]")?.addEventListener("click", () => openOverlay("sources", { sourceFilter: region.sourceIds || [] }));
   }
 

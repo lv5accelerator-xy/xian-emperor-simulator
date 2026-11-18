@@ -51,7 +51,7 @@
     overlay.querySelector("#decree-confirmation-confirm")?.addEventListener("click", confirmIssue);
     overlay.addEventListener("click", event => { if (event.target === overlay) closeOverlay(); });
     document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && !overlay.classList.contains("hidden")) closeOverlay();
+      if (event.key === "Escape" && !overlay.classList.contains("hidden") && !overlay.closest("[inert]")) closeOverlay();
     });
   }
 

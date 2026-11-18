@@ -99,7 +99,7 @@
     overlay?.addEventListener("change", event => {
       if (event.target.matches?.("#assignment-role")) renderAssignmentTargets(event.target.value);
     });
-    document.addEventListener("keydown", event => { if (event.key === "Escape" && overlay && !overlay.classList.contains("hidden")) closeOverlay(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && overlay && !overlay.classList.contains("hidden") && !overlay.closest("[inert]")) closeOverlay(); });
   }
 
   function defaultState(coreState) {
