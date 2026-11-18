@@ -40,7 +40,7 @@ const api = context.window.XianGrandMap;
 const worldSystemCode = read("src/world-system.js");
 assert.ok(api, "grand map API should load");
 assert.equal(Object.keys(api.positions).length, 16, "all sixteen strategic cities need map coordinates");
-assert.equal(api.geography.version, "2.33.0", "real geography data should match the map release");
+assert.equal(api.geography.version, "2.34.0", "real geography data should match the map release");
 const geo = api.geography;
 assert.match(geo.terrainImage, /^assets\/images\/map\/terrain\.webp/, "terrain basemap image is bundled locally");
 assert.ok(fs.existsSync(path.join(root, geo.terrainImage.split("?")[0])), "terrain basemap image exists");
@@ -157,3 +157,31 @@ for (const route of context.window.XIAN_STRATEGY_DATA.routes) {
 }
 
 console.log("grand map regression ok: real terrain, Han waterways, 13 provinces, basemap toggle, 16 cities, 18 routes, layers and armies");
+
+// 舆图数据按需载入：首页不直接引用数据脚本，地址写在 grand-map.js 标签的 data-geography-src 上；
+// 数据尚未载入时 render 先给出“载入中”，并插入一个指向该地址的经典脚本（双击运行同样可用）。
+{
+  const indexHtml = read("index.html");
+  assert.doesNotMatch(indexHtml, /<script src="src\/historical-geography-data\.js/, "geography data is not a blocking script on the first page");
+  const tag = indexHtml.match(/<script src="src\/grand-map\.js\?v=([\d.]+)" data-geography-src="(src\/historical-geography-data\.js)\?v=([\d.]+)"><\/script>/);
+  assert.ok(tag, "grand-map.js carries the geography data address");
+  assert.ok(fs.existsSync(path.join(root, tag[2])), "the lazily loaded data file exists");
+  const appended = [];
+  const lazy = {
+    console, localStorage, requestAnimationFrame(callback) { callback(); }, window: {},
+    document: { currentScript: { dataset: { geographySrc: "src/historical-geography-data.js?v=test" } }, head: { appendChild(node) { appended.push(node); } }, createElement: tagName => ({ tagName }) },
+  };
+  for (const file of ["src/world-data.js", "src/strategy-network-data.js", "src/army-data.js", "src/grand-map.js"]) vm.runInNewContext(read(file), lazy, { filename: file });
+  const loading = lazy.window.XianGrandMap.render({ regions: {} }, { year: 196, turn: 1 });
+  assert.match(loading, /data-grand-map-loading/, "map shows a loading state before its data arrives");
+  assert.equal(appended.length, 1, "the data script is requested once");
+  assert.equal(appended[0].src, "src/historical-geography-data.js?v=test");
+  lazy.window.XianGrandMap.render({ regions: {} }, { year: 196, turn: 1 });
+  assert.equal(appended.length, 1, "repeated renders reuse the pending request");
+  vm.runInNewContext(read("src/historical-geography-data.js"), lazy, { filename: "src/historical-geography-data.js" });
+  appended[0].onload();
+  const loaded = lazy.window.XianGrandMap.render({ regions: {} }, { year: 196, turn: 1 });
+  assert.match(loaded, /grand-map-viewport/, "after loading the full map renders");
+  assert.equal(Object.keys(lazy.window.XianGrandMap.positions).length, 16, "city positions become available after loading");
+  console.log("grand map lazy-load ok");
+}

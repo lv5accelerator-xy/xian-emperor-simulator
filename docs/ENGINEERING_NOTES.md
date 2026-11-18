@@ -42,6 +42,8 @@ v2.30.3 起的工程约定。每条都有对应的回归测试或 CI 任务把�
 - `src/historical-geography-data.js` 里 `GENERATED` 标记之间的陆地、水系、湖泽、州界与山名由 `scripts/build-map-terrain.py` 生成，不要手改；改 `scripts/map-data/eastern-han.json` 后重新生成，方法见[地图数据](MAP_DATA.md)。
 - 策略区域的郡国归属在 `eastern-han.json` 的 `strategyRegions` 里维护，形状同样由脚本生成；标记之外的城池坐标与地名仍手工维护。
 - 底图偏好 `xian_map_basemap_v1` 是本机显示设置，写入同样经过 `storageWrite`。
+- 舆图数据按需载入：`index.html` 不直接引用 `historical-geography-data.js`，地址写在 `grand-map.js` 标签的 `data-geography-src` 上；数据未到时 `render` 先返回“载入中”。依赖舆图数据的新代码要经 `XianGrandMap.loadGeography()` 取。
+- 军情栏一律用 `setInspector` 替换内容，它负责焦点与读屏播报；不要直接写 `innerHTML`。把关：`scripts/browser-map-keyboard.cjs`。
 - 把关：`tests/grand-map-regression.js`（十三州、典型归属、汉代故道、底图切换）。
 
 ## 缓存参数
