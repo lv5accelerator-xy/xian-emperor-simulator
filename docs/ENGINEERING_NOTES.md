@@ -27,15 +27,16 @@ v2.30.3 起的工程约定。每条都有对应的回归测试或 CI 任务把�
 
 ## 玩法等价
 
-- 性能、整理、缓存类改动不应改变任何玩法结果。PR 的 `equivalence` 任务会对照基线跑 15 条固定种子完整对局，比较终局时的全部存储。
+- 性能、整理、缓存类改动不应改变任何玩法结果。PR 的 `equivalence` 任务会对照基线跑 15 条固定种子完整对局，比较终局时的全部存储。每局还会用一次玩家常写的军令说法下圣旨（如“派兵增援许都”“围攻寿春”），所以圣旨解析的改动也在对照范围内。
 - 本地运行 `node scripts/playthrough-equivalence.cjs <基线提交>`；它会忽略时间戳、时钟生成的编号与存档里的产品版本号。
 - 确实要改规则、数值或随机序列的 PR，加 `changes-gameplay` 标签跳过该任务，并在说明里写明改变了什么。
 
 ## 字体子集
 
 - 五个字体文件只包含游戏运行文件里实际出现的字符。新文案用到子集外的字时，浏览器会逐字回退到系统字体。
-- 出现缺字时用 `scripts/build-font-subsets.py` 重建（来源与用法见[字体说明](../assets/fonts/README.md)），再更新样式表与 `index.html` 里字体地址的缓存参数，并同步 [CREDITS.md](../CREDITS.md) 中的 SHA-256。
-- 把关：`tests/font-coverage-regression.js`。
+- 出现缺字时用 `scripts/build-font-subsets.py` 重建（来源与用法见[字体说明](../assets/fonts/README.md)），再运行 `scripts/split-font-slices.py` 切成常用片与其余片（生成 `src/font-faces.css`），同步 `index.html` 题名字体常用片的预加载地址与 [CREDITS.md](../CREDITS.md) 中的 SHA-256。
+- 页面只加载切片；不要在其他样式表里再写 `@font-face`。把关：`tests/font-slices-regression.js`。
+- 把关：`tests/font-coverage-regression.js`、`tests/font-slices-regression.js`。
 
 ## 舆图数据
 

@@ -16,6 +16,8 @@
 | noto-sans-sc-game.woff2 / Noto Sans SC | 仓内固定google/fonts@5e8a3ba，ofl/notosanssc | Adobe，2014–2021；字体与附件署名对应 | [SIL OFL 1.1](assets/fonts/licenses/Noto-Sans-SC-OFL.txt) | 按附件条件允许，保留声明与许可文本 |
 | noto-serif-sc-game.woff2 / Noto Serif SC | 仓内固定google/fonts@5e8a3ba，ofl/notoserifsc；v2.30.3由该来源的`NotoSerifSC[wght].ttf`重新生成，产物来源已核实 | 字体名称表：Adobe 2017–2024；附件：Google Inc. 2012，二者不一致 | [随附文本](assets/fonts/licenses/Noto-Serif-SC-OFL.txt)为SIL OFL 1.1，与上游同一提交的`ofl/notoserifsc/OFL.txt`逐字一致；署名不一致来自上游本身 | 按附件条件允许；是否另行补充Adobe版权声明待所有者决定(TODO)，本轮不擅自更换附件 |
 
+页面实际加载的 `*-core.woff2`／`*-rest.woff2`（v2.37.0 起）由下表完整子集经 `scripts/split-font-slices.py` 按码位切出，字形、名称表与许可证均与完整子集相同。
+
 字体文件SHA-256（v2.31.0按上述固定来源重新生成后的值，用于对应上述证据）：
 
 | 文件 | SHA-256 |

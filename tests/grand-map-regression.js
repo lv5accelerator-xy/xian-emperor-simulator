@@ -57,6 +57,7 @@ assert.match(html, /data-grand-viewport/);
 assert.match(html, /测试勤王军|1支军团/);
 assert.match(html, /军压 86/);
 assert.match(html, /郡国全图/);
+assert.doesNotMatch(read("src/grand-map.js"), /section-kicker">v\d/, "map title version comes from GAME_DATA, not a hardcoded string");
 assert.match(html, /汉末山河军政图/);
 assert.match(html, /geography-land/);
 assert.match(html, /黄河/);
