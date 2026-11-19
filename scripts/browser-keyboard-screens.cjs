@@ -30,10 +30,19 @@ fs.mkdirSync(out, { recursive: true });
     await page.evaluate(() => window.XianEmperorGame.startNewGame("standard", "jianan_196", { randomSeed: 20261017 }));
     await page.waitForTimeout(1200);
     for (const selector of ["[data-tutorial-move='skip']", "#modal-confirm"]) { const target = page.locator(selector).first(); if (await target.isVisible().catch(() => false)) await target.click().catch(() => {}); }
+    // 等教程等窗口都关闭、焦点归还（下一轮事件循环）完成后再开始，免得归还焦点恰好落在下一步“聚焦—回车”之间。
+    await page.waitForFunction(() => ![...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].some(node => node.getClientRects().length && !node.closest(".hidden,[hidden]")));
+    await page.waitForTimeout(200);
   }
   async function pressOn(selector) {
     if (!await page.locator(selector).isVisible()) { await page.locator("#utility-more-toggle").focus(); await page.keyboard.press("Enter"); }
-    await page.locator(selector).focus();
+    await page.locator(selector).waitFor({ state: "visible" });
+    // 像真人一样：确认焦点确实落在按钮上再按回车。
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await page.locator(selector).focus();
+      if (await page.evaluate(sel => document.activeElement === document.querySelector(sel), selector)) break;
+      await page.waitForTimeout(100);
+    }
     await page.keyboard.press("Enter");
     await page.waitForTimeout(500);
   }
