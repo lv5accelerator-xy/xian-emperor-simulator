@@ -33,7 +33,7 @@ for (const scenario of scenarios) for (const seed of seeds) {
   run.api.startNewGame("standard", scenario.id, { randomSeed: seed });
   click(run, "path-select", "guard");
   const trace = [], settlements = [], checkpoints = [snapshot(run, 1, "start")];
-  let treasurySpent = 0, armyOrdered = false;
+  let treasurySpent = 0, armyOrdered = false, edictIssued = null;
   run.document.addEventListener("xian:settlement-completed", event => {
     const detail = event.detail;
     settlements.push({ turn: detail.after.turn, treasury: detail.after.stats.treasury, stages: detail.settlement?.stages || detail.settlement?.phases || [] });
@@ -76,6 +76,21 @@ for (const scenario of scenarios) for (const seed of seeds) {
         if (result.ok) { armyOrdered = true; treasurySpent += preview.treasuryCost; trace.push({ turn: core.turn, kind: "army", task, target }); }
       }
     }
+    // 自然语言圣旨（v2.37 起）：每局从第 3 月起用一次玩家常写的军令说法，让长局对照也覆盖圣旨解析与军令识别。
+    // 依次尝试，取第一句复核通过的；剧本、局势不同，能下的不同。
+    core = run.api.getState();
+    if (!edictIssued && core.turn >= 3 && core.actionPoints && !run.api.getState().ended) {
+      const phrases = ["派兵增援许都", "发兵驻防洛阳", "进攻宛城", "围攻寿春", "令曹操进攻邺城", "派兵驻防长安", "收复洛阳", "发兵攻打南郑"];
+      const start = (scenarios.indexOf(scenario) * seeds.length + seeds.indexOf(seed)) % phrases.length;
+      for (const text of [...phrases.slice(start), ...phrases.slice(0, start)]) {
+        const preview = run.api.previewEdict(text);
+        if (!preview?.ok) continue;
+        const before = run.api.getState().totalActions;
+        run.edict(text);
+        if (run.api.getState().totalActions > before) { edictIssued = text; treasurySpent += Number(preview.treasuryCost || 0); trace.push({ turn: core.turn, kind: "edict", text }); }
+        break;
+      }
+    }
     for (let action = 0; action < 2 && !run.api.getState().ended; action++) {
       core = run.api.getState(); if (!core.actionPoints) break;
       const recommendation = run.window.XianCommandCenter.recommendAction(core);
@@ -92,15 +107,18 @@ for (const scenario of scenarios) for (const seed of seeds) {
   const final = run.api.getState();
   checkpoints.push(snapshot(run, final.turn, "ending"));
   const pick = fraction => checkpoints.filter(point => point.turn <= Math.max(1, Math.round(scenario.maxTurns * fraction))).at(-1) || checkpoints[0];
-  rows.push({ scenario: scenario.id, seed, deadline: scenario.maxTurns, finalTurn: final.turn, early: final.turn < scenario.maxTurns,
+  rows.push({ scenario: scenario.id, seed, deadline: scenario.maxTurns, finalTurn: final.turn, early: final.turn < scenario.maxTurns, edict: edictIssued,
     ending: final.ending.title, treasurySpent, actionDistribution: trace.filter(item => item.kind === "action").reduce((counts, item) => ({ ...counts, [item.actionId]: (counts[item.actionId] || 0) + 1 }), {}),
     stages: { early: pick(.2), middle: pick(.5), late: pick(.9), final: checkpoints.at(-1) }, checkpoints, settlements, trace });
   if (storesOutput) finalStores.push({ scenario: scenario.id, seed, stores: Object.fromEntries(Object.entries(run.stores()).map(([key, raw]) => { try { return [key, JSON.parse(raw)]; } catch (_) { return [key, raw]; } })) });
   console.log(JSON.stringify({ scenario: scenario.id, seed, turn: final.turn, ending: final.ending.title, treasury: final.stats.treasury, treasurySpent,
     campaignStages: rows.at(-1).stages.final.campaign.completed.length, armyOrders: rows.at(-1).stages.final.army.orders, conquests: rows.at(-1).stages.final.army.conquests }));
-  fs.writeFileSync(output, JSON.stringify({ rulesVersion: final.rulesVersion, seeds, policy: "risk-aware actual choices, quarterly advisers, guard progression, one court army order, shared action recommendation", rows }, null, 2));
+  fs.writeFileSync(output, JSON.stringify({ rulesVersion: final.rulesVersion, seeds, policy: "risk-aware actual choices, quarterly advisers, guard progression, one court army order, one natural-language military edict, shared action recommendation", rows }, null, 2));
 }
 if (storesOutput) fs.writeFileSync(storesOutput, JSON.stringify(finalStores));
 assert.equal(rows.length, 15);
 assert.ok(rows.every(row => row.stages.early && row.stages.middle && row.stages.final));
+// 至少三分之一的对局真的下过自然语言军令，否则长局对照对圣旨解析的覆盖就形同虚设。
+assert.ok(rows.filter(row => row.edict).length >= 5, `natural-language edicts issued in ${rows.filter(row => row.edict).length}/15 games`);
+console.log(`natural-language edicts: ${rows.filter(row => row.edict).map(row => `${row.scenario}/${row.seed}「${row.edict}」`).join("，") || "无"}`);
 console.log(`PASS ${rows.length} complete normal-scenario trajectories; ${rows.filter(row => !row.early).length} reached the deadline.`);

@@ -8,6 +8,18 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const root = path.resolve(__dirname, ".."), out = path.resolve(process.env.MAP_KEYBOARD_OUTPUT || path.join(root, "../browser-map-keyboard"));
 fs.mkdirSync(out, { recursive: true });
 
+// 等舆图停稳：字体到齐后，反复测量城池与军团标记的位置，连续三次（每次间隔 150 毫秒）不变才算停稳，最多等 5 秒。
+// 地图缩放有过渡动画、名牌在字体换好后会重新排布，机器繁忙时固定等待时间不够。
+async function waitForStableMap(page) {
+  await page.evaluate(() => document.fonts.ready);
+  let last = "", same = 0;
+  for (let i = 0; i < 34 && same < 3; i++) {
+    const now = await page.evaluate(() => [...document.querySelectorAll(".grand-city, .grand-army-marker")].map(el => { const r = el.getBoundingClientRect(); return `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)}`; }).join(";"));
+    same = now === last ? same + 1 : 0; last = now;
+    await page.waitForTimeout(150);
+  }
+}
+
 // 浮层检查：工具栏不能压住两侧栏；地图归中后许都不在任何浮层底下；最东的城池能滚到没被遮住的区域。
 const panelCheck = () => {
   const rect = selector => document.querySelector(selector)?.getBoundingClientRect();
@@ -69,7 +81,8 @@ const panelCheck = () => {
       if (await page.locator("[data-map-guide-skip]").isVisible()) { await page.locator("[data-map-guide-skip]").focus(); await page.keyboard.press("Enter"); }
 
       // 标注避让：城池名牌之间、军团标记与城池名牌之间基本不重叠（允许名牌边缘少量相交）。
-      await page.waitForTimeout(300);
+      // 先等字体到齐、页面再渲染两帧：名牌排布在打开舆图后的下一帧进行，机器繁忙时 300 毫秒可能还没排完。
+      await waitForStableMap(page);
       const overlaps = await page.evaluate(() => {
         const boxes = [...document.querySelectorAll(".grand-city, .grand-army-marker")].map(el => ({ name: el.dataset.grandCity || `军@${el.dataset.grandArmyCity}`, r: el.getBoundingClientRect() })).filter(item => item.r.width);
         const bad = [];
@@ -90,6 +103,8 @@ const panelCheck = () => {
 
       const panels = await page.evaluate(panelCheck);
       check("toolbar does not cover the side panels, and Xudu is not hidden behind any panel", panels.ok, panels);
+      const collapsedAtStart = await page.evaluate(() => document.querySelector(".grand-map-shell").classList.contains("inspector-collapsed"));
+      check(width < 760 ? "phone: the inspector drawer starts collapsed" : "desktop: the inspector starts open", collapsedAtStart === (width < 760), collapsedAtStart);
 
       // 找一支可以直接下令的军团所在城池。
       const target = await page.evaluate(() => {
@@ -116,6 +131,15 @@ const panelCheck = () => {
       await page.keyboard.press("Enter");
       let info = await focusInfo();
       check("opening an army moves focus to the inspector heading", Boolean(info.heading), info);
+      if (width < 760) {
+        await page.waitForTimeout(600);
+        const drawer = await page.evaluate(cityId => {
+          const shell = document.querySelector(".grand-map-shell"), dot = document.querySelector(`[data-grand-city="${cityId}"] span`).getBoundingClientRect();
+          const panel = document.querySelector(".grand-map-inspector").getBoundingClientRect();
+          return { expanded: !shell.classList.contains("inspector-collapsed"), dotBottom: Math.round(dot.bottom), drawerTop: Math.round(panel.top) };
+        }, target.cityId);
+        check("phone: selecting an army opens the drawer and keeps its city above it", drawer.expanded && drawer.dotBottom <= drawer.drawerTop, drawer);
+      }
       check("inspector change is announced", (await page.locator("[data-map-announce]").textContent()).includes("军团集群"), await page.locator("[data-map-announce]").textContent());
 
       const firstTask = await tabUntil(i => Boolean(i.task), 40);
@@ -186,7 +210,7 @@ const panelCheck = () => {
       await page.locator("#world-map-btn").click();
       await page.locator(".grand-map-viewport").waitFor(); await page.waitForTimeout(800);
       if (await page.locator("[data-map-guide-skip]").isVisible()) await page.locator("[data-map-guide-skip]").click();
-      await page.waitForTimeout(300);
+      await waitForStableMap(page);
       const panels = await page.evaluate(panelCheck);
       const ok = panels.ok;
       console.log(ok ? "PASS" : "FAIL", 1530, `${size}: panels clear of the toolbar and every city reachable`, ok ? "" : JSON.stringify(panels));

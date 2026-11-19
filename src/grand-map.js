@@ -110,8 +110,15 @@
     return era || { id: "base", label: "东汉十三州", note: "", provinces: GEO.provinces || [] };
   }
 
+  // 标题上的版本号取当前发布号（只显示主次版本），不再写死。
+  function releaseLabel() {
+    const version = String(window.GAME_DATA?.version || "").match(/^(\d+)\.(\d+)/);
+    return version ? `v${version[1]}.${version[2]} · ` : "";
+  }
+
   function render(worldState, coreState) {
     lastRender = { worldState, coreState };
+    if (!state.inspectorTouched) state.inspectorCollapsed = isPhone();
     if (!adoptGeography()) {
       loadGeography().catch(() => {});
       return `<section class="grand-map-shell grand-map-loading" data-grand-map-loading role="status"><p>舆图载入中……</p></section>`;
@@ -129,7 +136,7 @@
     return `
       <section class="grand-map-shell${isFocusMode() ? " focus-map" : ""}${state.command ? " commanding" : ""}${state.inspectorCollapsed ? " inspector-collapsed" : ""}" data-map-layer="${escapeHtml(state.layer)}" data-basemap="${escapeHtml(state.basemap)}">
         <header class="grand-map-toolbar">
-          <div><span class="section-kicker">v2.34 · 郡国全图</span><h3>汉末山河军政图</h3><p>全屏舆图 · 实测地形、汉代水系、十三州界与军路同图推演</p></div>
+          <div><span class="section-kicker">${releaseLabel()}郡国全图</span><h3>汉末山河军政图</h3><p>全屏舆图 · 实测地形、汉代水系、十三州界与军路同图推演</p></div>
           <div class="grand-map-actions" aria-label="地图图层">
             ${layerButton("all", "全局")}${layerButton("politics", "势力")}${layerButton("routes", "军路")}${layerButton("armies", "军团")}${layerButton("pressure", "战线")}
             <span class="grand-map-basemap" role="group" aria-label="底图">${basemapButton("terrain", "地形")}${basemapButton("provinces", "州界")}</span>
@@ -340,12 +347,10 @@
       if (command === "reset") centerMap(viewport);
     }));
     shell.querySelector("[data-map-home]")?.addEventListener("click", () => centerMap(viewport));
-    shell.querySelector("[data-map-inspector-toggle]")?.addEventListener("click", event => {
-      state.inspectorCollapsed = !state.inspectorCollapsed;
-      shell.classList.toggle("inspector-collapsed", state.inspectorCollapsed);
-      event.currentTarget.setAttribute("aria-expanded", String(!state.inspectorCollapsed));
-      event.currentTarget.textContent = state.inspectorCollapsed ? "展开军情" : "收起军情";
-      requestAnimationFrame(() => { applyZoom(shell); centerMap(viewport, false); });
+    shell.querySelector("[data-map-inspector-toggle]")?.addEventListener("click", () => {
+      state.inspectorTouched = true;
+      setCollapsed(shell, !state.inspectorCollapsed);
+      requestAnimationFrame(() => centerMap(viewport, false));
     });
 
     shell.querySelectorAll("[data-grand-city]").forEach(button => button.addEventListener("click", () => state.command ? previewCommand(shell, button.dataset.grandCity) : inspectCity(shell, button.dataset.grandCity, onRegion)));
@@ -403,6 +408,9 @@
     }
     requestAnimationFrame(() => { syncPanelTop(shell); applyZoom(shell); centerMap(viewport, false); layoutLabels(shell); });
     document.fonts?.ready?.then(() => layoutLabels(shell));
+    // 字体按需分片下载（v2.37 起）：舆图上的生僻字可能在打开后才触发下载其余片，字形换过后名牌宽度会变，需要重新排布。
+    const relayout = () => { if (shell.isConnected) layoutLabels(shell); else document.fonts?.removeEventListener?.("loadingdone", relayout); };
+    document.fonts?.addEventListener?.("loadingdone", relayout);
   }
 
   function bindGuide(shell) {
@@ -632,6 +640,7 @@
     const panel = inspector(shell);
     if (!panel) return;
     const hadFocus = panel.contains(document.activeElement);
+    if (state.inspectorCollapsed) setCollapsed(shell, false);
     panel.innerHTML = html;
     const heading = panel.querySelector("h4");
     if (heading) heading.tabIndex = -1;
@@ -639,6 +648,39 @@
     if (announce) announce.textContent = [panel.querySelector(".map-inspector-head span"), heading, panel.querySelector(".map-inspector-head p")].filter(Boolean).map(node => node.textContent.trim()).join("，");
     const target = focus === "heading" || (focus === "auto" && hadFocus) ? heading : focus !== "auto" ? panel.querySelector(focus) : null;
     target?.focus({ preventScroll: false });
+  }
+
+  // 手机上军情栏是底部抽屉，展开时遮住约三分之一屏。默认收起，点选城池、军团、军路时自动展开；
+  // 玩家自己点过“展开／收起军情”后就按玩家的选择。桌面默认展开。
+  function isPhone() { return Boolean(window.matchMedia?.("(max-width: 760px)")?.matches); }
+  function setCollapsed(shell, collapsed) {
+    state.inspectorCollapsed = collapsed;
+    shell.classList.toggle("inspector-collapsed", collapsed);
+    const toggle = shell.querySelector("[data-map-inspector-toggle]");
+    if (toggle) { toggle.setAttribute("aria-expanded", String(!collapsed)); toggle.textContent = collapsed ? "展开军情" : "收起军情"; }
+    requestAnimationFrame(() => applyZoom(shell));
+  }
+  // 展开抽屉后，若刚点选的地点被抽屉盖住，把它移到没被遮住的区域中央。
+  function reveal(shell, point) {
+    const viewport = shell.querySelector("[data-grand-viewport]");
+    if (!viewport || !point) return;
+    // 抽屉有展开动画，等动画结束（或最多 450 毫秒）再量，否则量到的是半途的位置。
+    const panel = inspector(shell);
+    let done = false;
+    const run = () => {
+      if (done || !shell.isConnected) return;
+      done = true;
+      panel?.removeEventListener("transitionend", onEnd);
+      const scale = fitScale(viewport) * ZOOMS[state.zoomIndex], offset = stageOffset(viewport), inset = panelInsets(viewport);
+      const x = point[0] * scale + offset.x - viewport.scrollLeft, y = point[1] * scale + offset.y - viewport.scrollTop;
+      const margin = 14;
+      if (x > inset.left + margin && x < viewport.clientWidth - inset.right - margin && y > inset.top + margin && y < viewport.clientHeight - inset.bottom - margin) return;
+      const center = visibleCenter(viewport);
+      viewport.scrollTo?.({ left: Math.max(0, point[0] * scale + offset.x - center.x), top: Math.max(0, point[1] * scale + offset.y - center.y), behavior: scrollBehavior() });
+    };
+    const onEnd = event => { if (event.target === panel) run(); };
+    panel?.addEventListener("transitionend", onEnd);
+    setTimeout(run, 450);
   }
 
   function cancelCommand(shell) {
@@ -734,6 +776,7 @@
     const pressure = Number(current.pressure || 0);
     const advice = Number(current.supply || 0) < 35 ? "优先转运粮秣；继续增兵会加快库存消耗。" : Number(current.defense || 0) < 45 ? "城防偏低，适合派军驻防或任命人物镇守。" : pressure >= 65 ? "周边军压较高，先查看相连军路再决定是否出战。" : armies.length ? "驻军和补给尚可，可作为驰援或进攻起点。" : "局势暂稳，可保留行动处理更紧迫的战线。";
     setInspector(shell, `<div class="map-inspector-head"><span>城池</span><h4>${escapeHtml(city.name)}</h4><p>${escapeHtml(city.importance)} · ${escapeHtml(controller.name)}</p></div>${gauge("城防", current.defense)}${gauge("粮秣", current.supply)}${gauge("朝廷向心", current.courtLoyalty)}<div class="map-inspector-note"><strong>驻军</strong><p>${armies.length ? `${armies.map(army => escapeHtml(armyName(army))).join("、")}，合计 ${formatNumber(armies.reduce((sum, army) => sum + Number(army.troops || 0), 0))} 人。` : "当前没有成建制军团驻扎。"}</p></div><div class="map-city-advice"><strong>建议操作</strong><p>${escapeHtml(advice)}</p></div><button type="button" class="map-inspector-primary" data-open-region="${escapeHtml(city.regionId)}">查看州郡完整档案</button>`);
+    reveal(shell, CITY_POSITIONS[id]);
     inspector(shell).querySelector("[data-open-region]")?.addEventListener("click", () => onRegion?.(city.regionId));
   }
 
@@ -746,6 +789,7 @@
     const to = window.XIAN_STRATEGY_DATA.cities.find(item => item.id === route.to);
     const blocked = Number(current.blockadedUntil || 0) >= Number(runtime.strategy?.lastProcessedTurn || 0);
     setInspector(shell, `<div class="map-inspector-head"><span>${escapeHtml(route.type)} · 军路${blocked ? " · 已封锁" : ""}</span><h4>${escapeHtml(route.name)}</h4><p>${escapeHtml(from?.name)} → ${escapeHtml(to?.name)} · ${escapeHtml(route.terrain)}</p></div>${gauge("补给通畅", current.supply)}${gauge("军事压力", current.pressure, true)}<div class="map-inspector-note"><strong>御前判断</strong><p>${blocked ? "道路正被封锁，军团可能停滞并遭受额外减员；可转运补给、改道或等待封锁解除。" : Number(current.pressure) >= 70 ? "此路已接近战线激化，应先补给、调兵或降低附近军压。" : Number(current.supply) < 40 ? "此路补给困难，大军经过容易停滞与减员。" : "此路目前尚可通行，可用于转运、驰援或建立外部联系。"}</p></div><small class="map-inspector-change">${escapeHtml(current.lastChange || "暂无最新军路变化")}</small>`);
+    if (from && to) { const a = CITY_POSITIONS[from.id], b = CITY_POSITIONS[to.id]; if (a && b) reveal(shell, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]); }
   }
 
   function inspectRegion(shell, id, onRegion) {
@@ -774,6 +818,7 @@
     const armies = Object.values(runtime.army?.armies || {}).filter(army => army?.cityId === cityId && army.status !== "destroyed");
     const city = window.XIAN_STRATEGY_DATA?.cities?.find(item => item.id === cityId);
     setInspector(shell, `<div class="map-inspector-head"><span>军团集群</span><h4>${escapeHtml(city?.name || "城外")}</h4><p>${armies.length} 支军团 · ${formatNumber(armies.reduce((sum, army) => sum + Number(army.troops || 0), 0))} 人</p></div><div class="map-army-list">${armies.map(army => `<article><div><strong>${escapeHtml(armyName(army))}</strong><span>${escapeHtml(armyStatus(army))}</span></div><p>${formatNumber(army.troops)} 人 · 士气 ${Math.round(army.morale || 0)} · 粮秣 ${Math.round(army.supply || 0)}</p><small>${escapeHtml(army.lastChange || "暂无最新变化")}</small><p>${escapeHtml(window.XianArmySystem?.getCommandAccess?.(army)?.message || "军籍复核中")}</p><div class="map-army-actions">${[["attack","进攻"],["support","驰援"],["defend","驻防"],["supply","补给"],["retreat","撤退"]].map(([task,label]) => `<button type="button" data-map-command-army="${escapeHtml(army.id)}" data-map-command-task="${escapeHtml(task)}" ${window.XianArmySystem?.getCommandAccess?.(army)?.allowed === false ? "disabled" : ""}>${label}</button>`).join("")}</div></article>`).join("")}</div>`, focus);
+    reveal(shell, CITY_POSITIONS[cityId]);
     bindInspectorActions(shell);
   }
 
