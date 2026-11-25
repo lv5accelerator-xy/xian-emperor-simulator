@@ -18,15 +18,15 @@
 
 页面实际加载的 `*-core.woff2`／`*-rest.woff2`（v2.37.0 起）由下表完整子集经 `scripts/split-font-slices.py` 按码位切出，字形、名称表与许可证均与完整子集相同。
 
-字体文件SHA-256（v2.31.0按上述固定来源重新生成后的值，用于对应上述证据）：
+字体文件SHA-256（v2.38.0按上述固定来源重新生成后的值，用于对应上述证据；文楷两份来源的 Git blob 已再次核对一致）：
 
 | 文件 | SHA-256 |
 | --- | --- |
-| noto-sans-sc-game.woff2 | 2347f733660633e3e3b55915745e4c8066cd12b5acde6f7165b52737d649c4a2 |
-| noto-serif-sc-game.woff2 | 78da81db23b7ab78c92e103a5f1d2cee42f100a9dabd6be9cac338519c77e65a |
-| wenkai-game-medium.woff2 | 5fbc9e53775b62e19ba45f1048ea209bf67e193fbe6afc89554ea61436b49d92 |
-| wenkai-game-regular.woff2 | f40ec8855cbbac5b078eb734f52cfae2e98db5e3728411c0a5cff45c4fec79d4 |
-| zcool-xiaowei-game.woff2 | 6463d874df5d91b46086c1d134b67c57bb2ef6b1b669d20b796d39700c9f3f84 |
+| noto-sans-sc-game.woff2 | f0f3880f90534b13cf5f23f3f209bc6b80593949c4d7e6844e3cf71511aa4239 |
+| noto-serif-sc-game.woff2 | 45288b7108f0c5202a5e6b2fe9e5b0531a30b9d13b4d20d121eb2042af08aa08 |
+| wenkai-game-medium.woff2 | d211f49d5fe8c31591885666bc1252df264f09deeac2591daa9b4ef7229eba07 |
+| wenkai-game-regular.woff2 | 5ab408aaae7026144a94e382e31110f9498e35f728487004a1884e9f2e195637 |
+| zcool-xiaowei-game.woff2 | afc48679fbf338aa76d193bf367026723ab8092f5a8026a33b527a00f681cadf |
 
 ## 地图数据
 

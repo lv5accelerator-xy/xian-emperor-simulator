@@ -4,7 +4,7 @@ function observe(h, text) {
   const parsed = h.window.XianEdictRules.analyze(text), preview = h.api.previewEdict(text);
   return JSON.parse(JSON.stringify({ categories: parsed.categories, targets: parsed.targets, targetDisposition: parsed.targetDisposition,
     effectiveText: parsed.effectiveText, hasEffectiveOrder: Boolean(parsed.effectiveText), ignoredClauses: parsed.ignoredClauses,
-    warnings: parsed.warnings, blocked: parsed.blocked, cityOrder: h.window.XianStrategyNetwork.detectCityTargets(text),
+    warnings: parsed.warnings, blocked: parsed.blocked, cityOrder: h.window.XianStrategyNetwork.detectCityTargets(text), orders: h.window.XianStrategyNetwork.detectOrders(text),
     preview: { ok: preview.ok, reason: preview.reason, actionCost: preview.actionCost, treasuryCost: preview.treasuryCost } }));
 }
 function differences(observed, desired) {

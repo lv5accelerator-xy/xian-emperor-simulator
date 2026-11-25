@@ -146,6 +146,9 @@
       planned.timer = setTimeout(() => {
         if (pendingReturn !== planned) return;
         pendingReturn = null;
+        // 关闭窗口的代码已主动把焦点放到页面上别处（如点选示范写法后聚焦圣旨输入框），就不再改回打开窗口前的位置。
+        const current = document.activeElement;
+        if (current && current !== document.body && !session.dialog.contains(current) && available(current) && !top()) return;
         const above = top();
         if (above && open(above) && above.dialog.contains(document.activeElement)) return;
         // 另有窗口（含月报等自管焦点的）已经打开并接手焦点时，不把焦点拉回背景。

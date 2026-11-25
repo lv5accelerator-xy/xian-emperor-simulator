@@ -8,9 +8,9 @@
     "mode": "Read-only analysis/preview; desired fields are human semantic expectations, not rule changes."
   },
   "sourceHashes": {
-    "src/edict-rules.js": "67950b781047d7b74289b025cb8ec7ca7f51deff01c23272f06526ee1d9a17e8",
-    "src/strategy-network.js": "944efbe5987c6c0c4bd6be0ebb2478f6bcb072217430c6bef4e2d6293eecd59b",
-    "src/strategy-network-data.js": "86cb31f9b894d6605e204eabc03e193ddc13fef5c242d9a330c12ee4397bc70b",
+    "src/edict-rules.js": "7b5db3c0d1e67699975615647d09d97770e093051bcc9f2512cd666717e3ae26",
+    "src/strategy-network.js": "cb1e0b5ab728176a75a83a861e83f23c73a32f96731170512a939bf7f4c33f81",
+    "src/strategy-network-data.js": "fc0d40171e7a1e1864560d61b33160a807915f126bb2730b6d14c7fbe76f10c3",
     "src/character-availability.js": "d77672631044d3f9084cf651f43d835257d76cefa0d0b8c8396b5750116c9188"
   },
   "cases": [
@@ -38,6 +38,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -70,6 +71,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -102,6 +104,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -134,6 +137,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -166,6 +170,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -198,6 +203,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -230,6 +236,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -262,6 +269,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -294,6 +302,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -326,6 +335,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -354,6 +364,7 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -387,6 +398,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -419,6 +431,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -447,6 +460,7 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -481,6 +495,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 2 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -514,6 +529,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 2 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -548,6 +564,7 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -585,6 +602,7 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -626,6 +644,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "共同盟约最多列明三方。",
@@ -663,6 +682,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "褒奖与问罪对象请分开拟旨，避免承办对象混淆。",
@@ -700,6 +720,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "褒奖与问罪对象请分开拟旨，避免承办对象混淆。",
@@ -738,6 +759,10 @@
         "cityOrder": [
           "ye"
         ],
+        "orders": [
+          "attack",
+          "defend"
+        ],
         "preview": {
           "ok": false,
           "reason": "一份圣旨只指定一种军略行动，请将进攻、补给或停战分开下达。",
@@ -774,6 +799,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "一份圣旨最多办理两类政务，请拆成多次行动。",
@@ -803,6 +829,7 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -840,6 +867,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "褒奖与问罪对象请分开拟旨，避免承办对象混淆。",
@@ -874,6 +902,7 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -911,6 +940,9 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [
+          "ceasefire"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -950,6 +982,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "一份圣旨最多明确处分两名人物，请将其他对象分开办理。",
@@ -988,6 +1021,7 @@
         ],
         "blocked": false,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1026,6 +1060,7 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1065,6 +1100,7 @@
         "cityOrder": [
           "xudu"
         ],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1098,6 +1134,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "一份圣旨最多办理两类政务，请拆成多次行动。",
@@ -1131,6 +1168,9 @@
         "cityOrder": [
           "ye",
           "xudu"
+        ],
+        "orders": [
+          "supply"
         ],
         "preview": {
           "ok": false,
@@ -1167,6 +1207,9 @@
           "xudu",
           "ye"
         ],
+        "orders": [
+          "supply"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1201,6 +1244,9 @@
         "cityOrder": [
           "changan",
           "luoyang"
+        ],
+        "orders": [
+          "attack"
         ],
         "preview": {
           "ok": false,
@@ -1237,6 +1283,9 @@
           "luoyang",
           "changan"
         ],
+        "orders": [
+          "attack"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1271,6 +1320,9 @@
         "cityOrder": [
           "xiangyang",
           "wan"
+        ],
+        "orders": [
+          "support"
         ],
         "preview": {
           "ok": false,
@@ -1307,6 +1359,9 @@
           "wan",
           "xiangyang"
         ],
+        "orders": [
+          "support"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1341,6 +1396,9 @@
         "cityOrder": [
           "wujun",
           "shouchun"
+        ],
+        "orders": [
+          "supply"
         ],
         "preview": {
           "ok": false,
@@ -1377,6 +1435,9 @@
           "shouchun",
           "wujun"
         ],
+        "orders": [
+          "supply"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1411,6 +1472,9 @@
         "cityOrder": [
           "changan",
           "luoyang"
+        ],
+        "orders": [
+          "supply"
         ],
         "preview": {
           "ok": false,
@@ -1447,6 +1511,9 @@
           "jinyang",
           "ye"
         ],
+        "orders": [
+          "advance"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1481,6 +1548,9 @@
         "cityOrder": [
           "xudu",
           "ye"
+        ],
+        "orders": [
+          "supply"
         ],
         "preview": {
           "ok": false,
@@ -1517,6 +1587,7 @@
           "ye",
           "xudu"
         ],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1552,6 +1623,9 @@
           "changan",
           "luoyang"
         ],
+        "orders": [
+          "attack"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1585,6 +1659,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -1617,6 +1692,7 @@
         ],
         "blocked": true,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
@@ -1652,6 +1728,9 @@
           "wuwei",
           "changan",
           "luoyang"
+        ],
+        "orders": [
+          "supply"
         ],
         "preview": {
           "ok": false,
@@ -1696,6 +1775,9 @@
         "cityOrder": [
           "xudu"
         ],
+        "orders": [
+          "defend"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1725,6 +1807,7 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1761,6 +1844,9 @@
         "blocked": false,
         "cityOrder": [
           "xudu"
+        ],
+        "orders": [
+          "attack"
         ],
         "preview": {
           "ok": false,
@@ -1800,6 +1886,9 @@
         "cityOrder": [
           "ye"
         ],
+        "orders": [
+          "attack"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1833,6 +1922,10 @@
         "blocked": false,
         "cityOrder": [
           "wan"
+        ],
+        "orders": [
+          "attack",
+          "advance"
         ],
         "preview": {
           "ok": false,
@@ -1868,6 +1961,9 @@
         "cityOrder": [
           "shouchun"
         ],
+        "orders": [
+          "attack"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1901,6 +1997,10 @@
         "blocked": false,
         "cityOrder": [
           "xudu"
+        ],
+        "orders": [
+          "support",
+          "advance"
         ],
         "preview": {
           "ok": false,
@@ -1942,6 +2042,9 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [
+          "attack"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -1981,6 +2084,9 @@
         "warnings": [],
         "blocked": false,
         "cityOrder": [],
+        "orders": [
+          "attack"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
@@ -2015,11 +2121,2015 @@
         "cityOrder": [
           "luoyang"
         ],
+        "orders": [
+          "attack"
+        ],
         "preview": {
           "ok": false,
           "reason": "请先裁决本月奏报，草稿可以保留。",
           "actionCost": 1,
           "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P01",
+      "group": "常用写法",
+      "text": "命夏侯惇守住许都",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "defend"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "命夏侯惇守住许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "orders": [
+          "defend"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P02",
+      "group": "常用写法",
+      "text": "令夏侯惇镇守许都",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "defend"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "令夏侯惇镇守许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "orders": [
+          "defend"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P03",
+      "group": "常用写法",
+      "text": "保卫许都",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "defend"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "保卫许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "orders": [
+          "defend"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P04",
+      "group": "常用写法",
+      "text": "派兵守卫洛阳",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "defend",
+          "advance"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "派兵守卫洛阳",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "luoyang"
+        ],
+        "orders": [
+          "defend",
+          "advance"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P05",
+      "group": "常用写法",
+      "text": "据守宛城",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "defend"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "据守宛城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "wan"
+        ],
+        "orders": [
+          "defend"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P06",
+      "group": "常用写法",
+      "text": "增兵宛城",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "support"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "增兵宛城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "wan"
+        ],
+        "orders": [
+          "support"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P07",
+      "group": "常用写法",
+      "text": "支援襄阳",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "support"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "支援襄阳",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xiangyang"
+        ],
+        "orders": [
+          "support"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P08",
+      "group": "常用写法",
+      "text": "发兵策应寿春",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "support",
+          "advance"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "发兵策应寿春",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "shouchun"
+        ],
+        "orders": [
+          "support",
+          "advance"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P09",
+      "group": "常用写法",
+      "text": "派兵援助许都",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "support",
+          "advance"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "派兵援助许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "orders": [
+          "support",
+          "advance"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P10",
+      "group": "常用写法",
+      "text": "向寿春运送粮草",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "supply"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "向寿春运送粮草",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "shouchun"
+        ],
+        "orders": [
+          "supply"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P11",
+      "group": "常用写法",
+      "text": "押运军粮至宛城",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "supply"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "押运军粮至宛城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "wan"
+        ],
+        "orders": [
+          "supply"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P12",
+      "group": "常用写法",
+      "text": "转运粮草接济洛阳",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "supply"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "转运粮草接济洛阳",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "luoyang"
+        ],
+        "orders": [
+          "supply"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P13",
+      "group": "常用写法",
+      "text": "撤军回许都",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "advance"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "撤军回许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "orders": [
+          "advance"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P14",
+      "group": "常用写法",
+      "text": "退兵至洛阳",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "advance"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "退兵至洛阳",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "luoyang"
+        ],
+        "orders": [
+          "advance"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P15",
+      "group": "常用写法",
+      "text": "班师回许都",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "advance"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "班师回许都",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "xudu"
+        ],
+        "orders": [
+          "advance"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P16",
+      "group": "常用写法",
+      "text": "移师宛城",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "advance"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "移师宛城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "wan"
+        ],
+        "orders": [
+          "advance"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P17",
+      "group": "常用写法",
+      "text": "进军洛阳",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "attack"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "进军洛阳",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "luoyang"
+        ],
+        "orders": [
+          "attack"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P18",
+      "group": "常用写法",
+      "text": "出兵攻打宛城",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": [
+          "attack",
+          "advance"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "出兵攻打宛城",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [
+          "wan"
+        ],
+        "orders": [
+          "attack",
+          "advance"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P19",
+      "group": "常用写法",
+      "text": "整顿禁军",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": []
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "整顿禁军",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P20",
+      "group": "常用写法",
+      "text": "操练士卒",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": []
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "操练士卒",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P21",
+      "group": "常用写法",
+      "text": "整饬武备",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "military"
+        ],
+        "orders": []
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "military"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "整饬武备",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P22",
+      "group": "常用写法",
+      "text": "给灾民发放粮食",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "relief"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "relief"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "给灾民发放粮食",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 7
+        }
+      }
+    },
+    {
+      "id": "P23",
+      "group": "常用写法",
+      "text": "开仓放粮",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "relief"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "relief"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "开仓放粮",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 7
+        }
+      }
+    },
+    {
+      "id": "P24",
+      "group": "常用写法",
+      "text": "施粥救济流民",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "relief"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "relief"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "施粥救济流民",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 7
+        }
+      }
+    },
+    {
+      "id": "P25",
+      "group": "常用写法",
+      "text": "减免今年的赋税",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "tax"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "tax"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "减免今年的赋税",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P26",
+      "group": "常用写法",
+      "text": "蠲免灾区田租",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "tax"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "tax"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "蠲免灾区田租",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P27",
+      "group": "常用写法",
+      "text": "轻徭薄赋",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "tax"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "tax"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "轻徭薄赋",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 5
+        }
+      }
+    },
+    {
+      "id": "P28",
+      "group": "常用写法",
+      "text": "严查贪官污吏",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "investigation"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "investigation"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "严查贪官污吏",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P29",
+      "group": "常用写法",
+      "text": "惩治贪腐",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "investigation"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "investigation"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "惩治贪腐",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P30",
+      "group": "常用写法",
+      "text": "查处不法官吏",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "investigation"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "investigation"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "查处不法官吏",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P31",
+      "group": "常用写法",
+      "text": "命荀彧主持朝会",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "ritual"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "ritual"
+        ],
+        "targets": [
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "xun_yu": "positive"
+        },
+        "effectiveText": "命荀彧主持朝会",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 3
+        }
+      }
+    },
+    {
+      "id": "P32",
+      "group": "常用写法",
+      "text": "祭天告庙",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "ritual"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "ritual"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "祭天告庙",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 3
+        }
+      }
+    },
+    {
+      "id": "P33",
+      "group": "常用写法",
+      "text": "修缮太庙",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "ritual"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "ritual"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "修缮太庙",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 3
+        }
+      }
+    },
+    {
+      "id": "P34",
+      "group": "常用写法",
+      "text": "派密使联络袁绍",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "secret"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "secret"
+        ],
+        "targets": [
+          "yuan_shao"
+        ],
+        "targetDisposition": {
+          "yuan_shao": "positive"
+        },
+        "effectiveText": "派密使联络袁绍",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P35",
+      "group": "常用写法",
+      "text": "以密信告知董承",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "secret"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "secret"
+        ],
+        "targets": [
+          "dong_cheng"
+        ],
+        "targetDisposition": {
+          "dong_cheng": "positive"
+        },
+        "effectiveText": "以密信告知董承",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P36",
+      "group": "常用写法",
+      "text": "册封荀彧为侍中",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "appointment"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "appointment"
+        ],
+        "targets": [
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "xun_yu": "positive"
+        },
+        "effectiveText": "册封荀彧为侍中",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 2
+        }
+      }
+    },
+    {
+      "id": "P37",
+      "group": "常用写法",
+      "text": "擢升荀彧为尚书令",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "appointment"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "appointment"
+        ],
+        "targets": [
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "xun_yu": "positive"
+        },
+        "effectiveText": "擢升荀彧为尚书令",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 2
+        }
+      }
+    },
+    {
+      "id": "P38",
+      "group": "常用写法",
+      "text": "罢免董承的官职",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "appointment"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "appointment"
+        ],
+        "targets": [
+          "dong_cheng"
+        ],
+        "targetDisposition": {
+          "dong_cheng": "punitive"
+        },
+        "effectiveText": "罢免董承的官职",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 2
+        }
+      }
+    },
+    {
+      "id": "P39",
+      "group": "常用写法",
+      "text": "革除董承官职",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "appointment"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "appointment"
+        ],
+        "targets": [
+          "dong_cheng"
+        ],
+        "targetDisposition": {
+          "dong_cheng": "positive"
+        },
+        "effectiveText": "革除董承官职",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 2
+        }
+      }
+    },
+    {
+      "id": "P40",
+      "group": "常用写法",
+      "text": "派使者去见袁绍",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "diplomacy"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "diplomacy"
+        ],
+        "targets": [
+          "yuan_shao"
+        ],
+        "targetDisposition": {
+          "yuan_shao": "positive"
+        },
+        "effectiveText": "派使者去见袁绍",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P41",
+      "group": "常用写法",
+      "text": "出使荆州修好刘表",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "diplomacy"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "diplomacy"
+        ],
+        "targets": [
+          "liu_biao"
+        ],
+        "targetDisposition": {
+          "liu_biao": "positive"
+        },
+        "effectiveText": "出使荆州修好刘表",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P42",
+      "group": "常用写法",
+      "text": "与刘表讲和",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "diplomacy"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "diplomacy"
+        ],
+        "targets": [
+          "liu_biao"
+        ],
+        "targetDisposition": {
+          "liu_biao": "positive"
+        },
+        "effectiveText": "与刘表讲和",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [
+          "ceasefire"
+        ],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P43",
+      "group": "常用写法",
+      "text": "遣使与袁绍通好",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "diplomacy"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "diplomacy"
+        ],
+        "targets": [
+          "yuan_shao"
+        ],
+        "targetDisposition": {
+          "yuan_shao": "positive"
+        },
+        "effectiveText": "遣使与袁绍通好",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P44",
+      "group": "常用写法",
+      "text": "赏赐荀彧黄金百两",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "appease"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "appease"
+        ],
+        "targets": [
+          "xun_yu"
+        ],
+        "targetDisposition": {
+          "xun_yu": "positive"
+        },
+        "effectiveText": "赏赐荀彧黄金百两",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P45",
+      "group": "常用写法",
+      "text": "犒赏三军",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "appease"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "appease"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "犒赏三军",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "P46",
+      "group": "常用写法",
+      "text": "慰劳守城将士",
+      "note": "玩家常写的说法",
+      "desired": {
+        "hasEffectiveOrder": true,
+        "categories": [
+          "appease"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "appease"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "慰劳守城将士",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "Q01",
+      "group": "常用写法",
+      "text": "不要增兵宛城",
+      "note": "新增近义词的否定形式不能变成命令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不要增兵宛城"
+        ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      }
+    },
+    {
+      "id": "Q02",
+      "group": "常用写法",
+      "text": "不得撤军",
+      "note": "新增近义词的否定形式不能变成命令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不得撤军"
+        ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      }
+    },
+    {
+      "id": "Q03",
+      "group": "常用写法",
+      "text": "不必赏赐荀彧",
+      "note": "新增近义词的否定形式不能变成命令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不必赏赐荀彧"
+        ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      }
+    },
+    {
+      "id": "Q04",
+      "group": "常用写法",
+      "text": "暂不册封荀彧",
+      "note": "新增近义词的否定形式不能变成命令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "暂不册封荀彧"
+        ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      }
+    },
+    {
+      "id": "Q05",
+      "group": "常用写法",
+      "text": "不支援襄阳",
+      "note": "新增近义词的否定形式不能变成命令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不支援襄阳"
+        ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      }
+    },
+    {
+      "id": "Q06",
+      "group": "常用写法",
+      "text": "不镇守许都",
+      "note": "新增近义词的否定形式不能变成命令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [
+          "不镇守许都"
+        ],
+        "warnings": [
+          "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。"
+        ],
+        "blocked": true,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "已排除 1 句否定、存疑或转述的话；如需禁止某事，请使用事件或对应行动处理。",
+          "actionCost": 1
+        }
+      }
+    },
+    {
+      "id": "Q07",
+      "group": "常用写法",
+      "text": "粮草不足，望陛下体恤",
+      "note": "只提到粮草不是运粮命令",
+      "desired": {
+        "hasEffectiveOrder": false
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "generic"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "",
+        "hasEffectiveOrder": false,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 0
+        }
+      }
+    },
+    {
+      "id": "Q08",
+      "group": "常用写法",
+      "text": "整饬朝仪",
+      "note": "“整饬”是通用词，整饬朝仪属礼制，不应带出军务",
+      "desired": {
+        "categories": [
+          "ritual"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "ritual"
+        ],
+        "targets": [],
+        "targetDisposition": {},
+        "effectiveText": "整饬朝仪",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 3
+        }
+      }
+    },
+    {
+      "id": "Q09",
+      "group": "常用写法",
+      "text": "任命伏皇后为朝廷使者",
+      "note": "“使者”作官职时是任官，不是派人出使",
+      "desired": {
+        "categories": [
+          "appointment"
+        ]
+      },
+      "differences": [],
+      "observed": {
+        "categories": [
+          "appointment"
+        ],
+        "targets": [
+          "empress_fu"
+        ],
+        "targetDisposition": {
+          "empress_fu": "positive"
+        },
+        "effectiveText": "任命伏皇后为朝廷使者",
+        "hasEffectiveOrder": true,
+        "ignoredClauses": [],
+        "warnings": [],
+        "blocked": false,
+        "cityOrder": [],
+        "orders": [],
+        "preview": {
+          "ok": false,
+          "reason": "请先裁决本月奏报，草稿可以保留。",
+          "actionCost": 1,
+          "treasuryCost": 2
         }
       }
     }
