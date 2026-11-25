@@ -97,6 +97,21 @@ fs.mkdirSync(out, { recursive: true });
     info = await focusInfo();
     check(1366, "月报: report keeps focus after the preflight dialog closes", info.layer === "monthly-addon-dialog", info);
 
+    // 圣旨识别不出具体政务时，复核窗口给出示范写法；用键盘选一条，填回输入框且焦点回到输入框。
+    await fresh(1366, 900);
+    await page.locator("[data-choice-index='0']").click(); await page.waitForTimeout(300);
+    if (!await page.locator("#decree-input").isVisible()) await page.locator("#decree-helper-open").click();
+    await page.locator("#decree-input").fill("让曹操去许都看看");
+    await pressOn("#issue-decree-btn");
+    const examples = await page.locator("[data-decree-suggestion]").allTextContents();
+    check(1366, "圣旨示范: unrecognized edict shows example rewrites using its city and person", examples.length >= 3 && examples.some(text => text.includes("许都")), examples);
+    if (examples.length) {
+      await page.locator("[data-decree-suggestion]").first().focus();
+      await page.keyboard.press("Enter"); await page.waitForTimeout(400);
+      const after = await page.evaluate(() => ({ value: document.getElementById("decree-input").value, focus: document.activeElement.id }));
+      check(1366, "圣旨示范: choosing one fills the edict box and returns focus to it", after.value === examples[0] && after.focus === "decree-input", after);
+    }
+
     // 手机宽度：舆图入口在底部导航。
     await fresh(390, 844);
     await page.locator("[data-mobile-destination='map']").focus(); await page.keyboard.press("Enter"); await page.waitForTimeout(600);

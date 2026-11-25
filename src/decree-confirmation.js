@@ -112,6 +112,7 @@
     return {
       text,
       interpretation,
+      suggestion: window.XianEdictRules?.suggest?.(text) || null,
       costPreview,
       cityIds,
       lordIds,
@@ -157,8 +158,19 @@
         ${(analysis.contracts || []).map(renderContractPreview).join("")}
         ${analysis.promises.some(type => !["tribute", "military_aid", "ceasefire", "alliance"].includes(type)) ? "<p>其他承诺沿用信任与准备度推演，仅影响关系和地方忠诚；不表示钱粮、军团或质子已经实际交付。</p>" : ""}
       </section>
+      ${analysis.suggestion ? `<section class="decree-confirmation-suggestions"><strong>可改写为</strong><p>${escapeHtml(analysis.suggestion.message)}</p><div>${analysis.suggestion.examples.map(example => `<button type="button" data-decree-suggestion="${escapeHtml(example)}">${escapeHtml(example)}</button>`).join("")}</div></section>` : ""}
       ${analysis.warnings.length ? `<section class="decree-confirmation-warnings"><strong>复核提醒</strong>${analysis.warnings.map(text => `<p>${escapeHtml(text)}</p>`).join("")}</section>` : ""}
       <p class="decree-confirmation-note">最终执行度仍包含地方阻力与少量随机波动；军团命令将在圣旨正式写入御前记录后生效。</p>`;
+    // 点选示范写法：填回圣旨输入框并关闭复核，玩家可以再修改后重新用玺。
+    content.querySelectorAll("[data-decree-suggestion]").forEach(button => button.addEventListener("click", () => {
+      const input = document.getElementById("decree-input");
+      if (!input) return;
+      input.value = button.dataset.decreeSuggestion;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      closeOverlay();
+      // 复核窗口关闭后背景要到下一轮才解除 inert，此时才能把焦点放进输入框。
+      setTimeout(() => input.focus(), 0);
+    }));
   }
 
   function analysisItem(label, value, tone) {

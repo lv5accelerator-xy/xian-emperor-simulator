@@ -61,13 +61,13 @@ window.XIAN_STRATEGY_DATA = Object.freeze({
   ],
 
   orderRules: [
-    { id: "attack", label: "进攻", pattern: "讨伐|征讨|进兵|进攻|攻打|围攻|攻占|夺取|收复|攻取|攻城|北伐|南征|东征|西征|击破" },
-    { id: "support", label: "驰援", pattern: "援军|驰援|救援|增援|协防|救应" },
-    { id: "defend", label: "守备", pattern: "坚守|固守|守备|驻防|布防|屯兵|设防|保境" },
-    { id: "supply", label: "转运", pattern: "运粮|输粮|漕运|军粮|补给|屯粮|转饷" },
-    { id: "ceasefire", label: "停战", pattern: "停战|罢兵|休兵|议和|停攻|止戈" },
+    { id: "attack", label: "进攻", pattern: "讨伐|征讨|进兵|进军|进攻|攻打|围攻|攻占|夺取|收复|攻取|攻城|北伐|南征|东征|西征|击破" },
+    { id: "support", label: "驰援", pattern: "援军|驰援|救援|增援|增兵|支援|援助|策应|协防|救应" },
+    { id: "defend", label: "守备", pattern: "坚守|固守|守备|守住|镇守|保卫|守卫|据守|驻防|布防|屯兵|设防|保境" },
+    { id: "supply", label: "转运", pattern: "运粮|输粮|漕运|军粮|补给|屯粮|转饷|运送粮|送粮|押运" },
+    { id: "ceasefire", label: "停战", pattern: "停战|罢兵|休兵|议和|讲和|求和|停攻|止戈" },
     { id: "trade", label: "互市", pattern: "互市|通商|商路|市易|贸易" },
-    { id: "advance", label: "调兵", pattern: "出兵|发兵|派兵|起兵|移兵|调兵|进驻|移驻" }
+    { id: "advance", label: "调兵", pattern: "出兵|发兵|派兵|起兵|移兵|调兵|进驻|移驻|撤军|撤兵|退兵|班师|移师" }
   ],
 
   promiseRules: [

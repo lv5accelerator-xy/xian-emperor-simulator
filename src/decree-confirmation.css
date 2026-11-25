@@ -28,3 +28,11 @@ body.decree-confirmation-open{overflow:hidden}
 .decree-confirmation-note{margin:.85rem 0 0;color:#746b61;font-size:.66rem;line-height:1.5}
 .decree-confirmation-window>footer{display:flex;justify-content:flex-end;gap:.65rem;padding:.85rem 1.2rem;border-top:1px solid rgba(222,185,105,.12);background:rgba(255,255,255,.012)}
 @media(max-width:640px){.decree-confirmation-overlay{padding:.45rem}.decree-confirmation-window{max-height:96vh}.decree-confirmation-grid{grid-template-columns:1fr}.decree-confirmation-promises ul{grid-template-columns:1fr}}
+
+/* v2.38 识别不出具体政务时的示范写法，可点选填回圣旨 */
+.decree-confirmation-suggestions { margin-top: .8rem; padding: .7rem .8rem; border: 1px solid rgba(212, 173, 93, .32); border-radius: 9px; background: rgba(212, 173, 93, .07); }
+.decree-confirmation-suggestions strong { color: var(--gold2, #f0d58f); }
+.decree-confirmation-suggestions p { margin: .3rem 0 .5rem; color: #d6c6a6; font-size: .86rem; }
+.decree-confirmation-suggestions div { display: flex; flex-wrap: wrap; gap: .4rem; }
+.decree-confirmation-suggestions button { min-height: 40px; padding: .4rem .7rem; border: 1px solid rgba(212, 173, 93, .45); border-radius: 7px; background: rgba(255, 255, 255, .04); color: #f0dcb0; font: inherit; cursor: pointer; }
+.decree-confirmation-suggestions button:focus-visible { outline: 2px solid var(--gold2, #f0d58f); outline-offset: 2px; }
